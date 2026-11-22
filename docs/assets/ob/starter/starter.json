@@ -1,0 +1,56 @@
+{
+ "size": [
+  1280,
+  832
+ ],
+ "items": {
+  "lamp": {
+   "name": "Desk lamp",
+   "line": "A warm little lamp for late study sessions.",
+   "box": [
+    356,
+    456,
+    64,
+    72
+   ]
+  },
+  "clipboard": {
+   "name": "Clipboard",
+   "line": "For your plans and tiny to-do lists.",
+   "box": [
+    492,
+    428,
+    64,
+    36
+   ]
+  },
+  "piggy": {
+   "name": "Glass piggy bank",
+   "line": "It fills up with coins as you finish work orders.",
+   "box": [
+    742,
+    412,
+    60,
+    48
+   ]
+  },
+  "phone": {
+   "name": "Desk phone",
+   "line": "A classic desk phone. Very good for looking busy.",
+   "box": [
+    878,
+    496,
+    52,
+    32
+   ]
+  }
+ },
+ "char": [
+  152,
+  93
+ ],
+ "pet": [
+  116,
+  167
+ ]
+}
