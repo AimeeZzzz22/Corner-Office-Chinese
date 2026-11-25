@@ -1,3 +1,4 @@
+import { gEmit } from './Guide';
 import { useEffect, useState } from 'react';
 import { COMPANIES } from './data';
 import { Save } from './state';
@@ -18,6 +19,7 @@ function usePics() {
 export function Bakery({ s, up, close }: { s: Save; up: (p: Partial<Save>) => void; close: () => void }) {
   const pic = usePics(), t = treatsToday(s.treats), where = COMPANIES[s.company].food.name;
   const buy = (key: string, price: number) => {
+    if (s.coins >= price) gEmit('treat');
     if (s.coins < price || t.have.includes(key)) return;
     play('purchase', 0.5); up({ coins: s.coins - price, treats: { ...t, have: [...t.have, key] } });
   };

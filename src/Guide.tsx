@@ -26,6 +26,7 @@ export interface GStep {
   done?: (c: GCtx) => boolean;      // a "do" step: moves on when this comes true
   ok?: boolean;                     // a "look" step: moves on with the OK button
   hide?: (c: GCtx) => boolean;      // step back while a window of its own is open
+  chain?: [string, string][];       // a little picture row: icon and label, joined by arrows (the goal card)
 }
 const has = (sel: string) => !!document.querySelector(sel);
 const spotRect = (at: [number, number], w = 26, h = 26): Rect => [at[0] - w / 2, at[1] - h + 6, w, h];
@@ -35,7 +36,10 @@ const hostLine = (c: GCtx) => (ZH ? `去和${COWORKERS[c.co.host].name}打个招
 // the way to the practice order, from wherever the player is: desk, computer, Tasklet, the order
 const deskPath = (c: GCtx): Target => (c.s.phase === 'free' ? { sel: '.new-order' } : !c.pcOpen ? { sel: '.pc-hot', pop: false } : has('.g-practice') ? { sel: '.g-practice .pc-take' } : { sel: '.pc-icon' });
 
+// why you're here: orders give XP and coins; XP gets you promoted; coins buy blind packs and desk things
+const GOAL: [string, string][] = [['📋', t('Orders', '工作单')], ['⭐', t('XP', '经验')], ['⬆️', t('Promotion', '升职')], ['🪙', t('Coins', '金币')], ['🎁', t('Packs & things', '盲包和小东西')]];
 export const STEPS: GStep[] = [
+  { id: 'goal', at: 'any', text: () => t('Finish orders for XP and coins. XP gets you promoted; coins buy blind packs and desk things.', '做工作单赚经验和金币。经验攒满就升职，金币可以买盲包和小东西。'), target: () => null, ok: true, chain: GOAL },
   // ---- the office
   { id: 'walk', at: 'office', text: () => t('Click the floor to walk', '点地面，走过去'),
     target: (c) => { const [x, y] = c.co.start; return { map: [(x + 2) * 16, (y + 1) * 16, 16, 16] }; }, done: (c) => c.ev.has('walked') },
@@ -53,13 +57,11 @@ export const STEPS: GStep[] = [
   { id: 'food', at: 'office', text: (c) => (ZH ? `去${c.co.food.name}看看` : `Visit the ${c.co.food.name.toLowerCase()}`), target: (c) => spotOr(c.co.food.at, 'food'), done: (c) => c.spot === 'food', hide: (c) => c.week },
   { id: 'menu', at: 'office', text: () => t('Treats give a bonus for the day', '点心当天有加成'), target: (c) => (c.spot === 'food' ? { sel: '.bakery-list', pop: false } : spotOr(c.co.food.at, 'food')), ok: true, hide: (c) => !!c.spot && c.spot !== 'food' },
   { id: 'fridge', at: 'office', text: () => t('Something is in the fridge…', '冰箱里好像有东西……'), target: (c) => spotOr(c.co.fridge.at, 'fridge'), done: (c) => c.spot === 'fridge', hide: (c) => !!c.spot },
-  { id: 'shop', at: 'any', text: () => t('The shop', '逛逛商店'), target: () => ({ sel: '.shop-btn' }), done: (c) => !!c.shop, hide: (c) => !!c.spot },
-  { id: 'shop-in', at: 'any', text: () => t('Desk things, and blind packs', '工位装饰和盲包都在这'), target: (c) => (c.shop ? { sel: '.bb-maintabs', pop: false } : { sel: '.shop-btn' }), ok: true },
-  { id: 'settings', at: 'any', text: () => t('Sound and settings live here', '声音和设置在这里'), target: () => ({ sel: '.settings-btn' }), ok: true, hide: (c) => !!c.shop },
-  { id: 'desk', at: 'office', text: () => t('Now, your desk', '现在去你的工位'), target: () => ({ sel: '.new-order' }), done: (c) => c.s.phase === 'desk', hide: (c) => !!c.shop },
+  { id: 'settings', at: 'any', text: () => t('Sound and settings live here', '声音和设置在这里'), target: () => ({ sel: '.settings-btn' }), ok: true, hide: (c) => !!c.shop || !!c.spot },
+  { id: 'desk', at: 'office', text: () => t('Now, your desk', '现在去你的工位'), target: () => ({ sel: '.new-order' }), done: (c) => c.s.phase === 'desk', hide: (c) => !!c.shop || !!c.spot },
   // ---- the desk and the computer
   { id: 'pc', at: 'desk', text: () => t('Your computer', '点电脑'), target: () => ({ sel: '.pc-hot', pop: false }), done: (c) => c.pcOpen },
-  { id: 'dock', at: 'desk', text: () => t('Orders, coworkers, packs, shop', '工作单、同事、盲包、商店'), target: (c) => (c.pcOpen ? { sel: '.dock', pop: false } : { sel: '.pc-hot', pop: false }), ok: true },
+  { id: 'dock', at: 'desk', text: () => t('Orders, coworkers, blind packs and the online shop all live here', '工作单、同事、盲包和网店都在电脑里'), target: (c) => (c.pcOpen ? { sel: '.dock', pop: false } : { sel: '.pc-hot', pop: false }), ok: true },
   { id: 'tasklet', at: 'desk', text: () => t('Open Tasklet', '打开任务夹'), target: (c) => (c.pcOpen ? { sel: '.pc-icon' } : { sel: '.pc-hot', pop: false }), done: (c) => c.ev.has('tasklet') || has('.g-practice') },
   { id: 'practice', at: 'desk', text: () => t('A 1-minute practice order', '先接一张 1 分钟练习单'), target: (c) => deskPath(c),
     done: (c) => ['focus', 'work', 'timesup', 'result'].includes(c.s.phase) },
@@ -74,7 +76,26 @@ export const STEPS: GStep[] = [
   { id: 'back', at: 'any', text: () => t('Back to your desk', '回工位'), target: () => ({ sel: '.result-wrap .side .btn.primary' }), done: (c) => c.s.phase !== 'result', hide: (c) => c.s.phase !== 'result' },
   { id: 'mail', at: 'any', text: () => t('You have mail!', '你有一封信！'), target: () => ({ sel: '.hud-mail' }), done: (c) => c.mail || !c.s.notes.length, hide: (c) => c.s.phase === 'result' },
   { id: 'decor', at: 'desk', text: () => t('Drag things around your desk, or into the backpack', '拖动东西布置工位，或者收进背包'), target: () => ({ sel: '.desk-storage', pop: false }), ok: true, hide: (c) => c.mail },
-  { id: 'end', at: 'any', text: () => t("That's everything! Take a real order whenever you're ready", '全都会啦！准备好了就接一张真正的工作单吧'), target: () => null, ok: true, hide: (c) => c.mail },
+  { id: 'end', at: 'any', text: () => t("That's everything! Take a real order whenever you're ready", '全都会啦！准备好了就接一张真正的工作单吧'), target: () => null, ok: true, hide: (c) => c.mail, chain: GOAL },
+];
+
+// ---- little tips that show up once, at the moment they matter (and only when the first-day guide is done)
+export interface Tip { id: string; when: (c: GCtx) => boolean; keep: (c: GCtx) => boolean; steps: GStep[] }
+const firstOn = (sel: string) => { const el = [...document.querySelectorAll(sel)].find((e) => !(e as HTMLButtonElement).disabled); if (el) el.setAttribute('data-g', '1'); return el ? `${sel}[data-g="1"]` : sel; };
+export const TIPS: Tip[] = [
+  { id: 'pack', when: () => has('.bb-open:not([disabled])'), keep: () => has('.bb'),
+    steps: [{ id: 'pack-open', at: 'any', text: () => t('You have a pack and enough coins. Open it!', '有盲包，金币也够了：拆开看看！'), target: () => ({ sel: '.bb-open' }), done: (c) => c.ev.has('pack-open') }] },
+  { id: 'pack-ready', when: (c) => c.pcOpen && c.s.blind.ready > 0 && !c.shop, keep: (c) => c.pcOpen && !c.shop,
+    steps: [{ id: 'pack-app', at: 'any', text: () => t('A blind pack is ready! Open the Blind packs app', '攒够一个盲包啦！打开盲包应用'), target: () => ({ sel: '.dock-app[data-key="blind"]', pop: false }), done: (c) => c.shop === 'blind' }] },
+  { id: 'buy', when: () => has('.shop-grid .shop-buy:not([disabled])'), keep: () => has('.shop-grid'),
+    steps: [
+      { id: 'buy-one', at: 'any', text: () => t('You can afford this one. Buy it!', '金币够了，买一个吧！'), target: () => ({ sel: firstOn('.shop-grid .shop-buy'), pop: false }), done: (c) => c.ev.has('bought') },
+      { id: 'buy-where', at: 'any', text: () => t('Bought! It goes into your collection', '买好啦！东西会收进你的收藏'), target: () => null, ok: true },
+    ] },
+  { id: 'treat', when: (c) => c.spot === 'food' && has('.bakery-list .shop-buy:not([disabled])'), keep: (c) => c.spot === 'food',
+    steps: [{ id: 'treat-buy', at: 'any', text: () => t('Enough coins for a treat. Its bonus lasts all day', '金币够买点心了，加成持续一整天'), target: () => ({ sel: firstOn('.bakery-list .shop-buy'), pop: false }), done: (c) => c.ev.has('treat') }] },
+  { id: 'gift', when: (c) => !!c.menu && has('.menu .g-gift'), keep: (c) => !!c.menu,
+    steps: [{ id: 'gift-give', at: 'any', text: () => t('Share your macarons: +2 friendship', '把马卡龙分给TA：友情 +2'), target: () => ({ sel: '.menu .g-gift' }), done: (c) => c.ev.has('gift') }] },
 ];
 
 // a step for the wrong room points the way back
@@ -102,9 +123,8 @@ function rectOf(tg: Target, stage: HTMLElement): Rect | null {
   return toStage(r.left + m[0] * mk, r.top + m[1] * mk, m[2] * mk, m[3] * mk);
 }
 
-export function Coach({ c, step, total, next, skip, stage }: { c: GCtx; step: number; total: number; next: () => void; skip: () => void; stage: React.RefObject<HTMLDivElement> }) {
-  const st = STEPS[step];
-  const away = st ? awayStep(c, st) : null;
+export function Coach({ c, st, step, total, next, skip, stage, tip }: { c: GCtx; st: GStep | undefined; step: number; total: number; next: () => void; skip: () => void; stage: React.RefObject<HTMLDivElement>; tip?: boolean }) {
+  const away = st && !tip ? awayStep(c, st) : null;
   const hidden = !st || (!away && st.hide?.(c));
   const text = away ? away.text : st ? st.text(c) : '';
   const tg = away ? away.target : st ? st.target(c) : null;
@@ -126,7 +146,7 @@ export function Coach({ c, step, total, next, skip, stage }: { c: GCtx; step: nu
       raf = requestAnimationFrame(loop);
     };
     loop(); return () => { cancelAnimationFrame(raf); unpop(); };
-  }, [hidden, step, !!away]);
+  }, [hidden, step, st?.id, !!away]);
   useEffect(() => { if (st && !hidden) play('ui_tap', 0.25); }, [step]);
   if (hidden || !st) return null;
   const P = 10, box = r ? [r[0] - P, r[1] - P, r[2] + P * 2, r[3] + P * 2] : null;
@@ -142,8 +162,9 @@ export function Coach({ c, step, total, next, skip, stage }: { c: GCtx; step: nu
       <div className={`coach-say${box ? '' : ' mid'}`} style={box ? { left: bx, top: by, bottom: byB } : undefined}>
         <span className="head"><img src={`${A}heads/${COMPANIES[c.s.company].host}.png`} alt="" /></span>
         <b>{text}</b>
-        {(st.ok && !away) && <button className="btn primary small" onClick={() => { play('ui_tap', 0.4); next(); }}>{step === total - 1 ? t('Start!', '开始吧！') : t('OK', '好')}</button>}
-        <div className="coach-foot"><span className="coach-dots">{step + 1} / {total}</span><button className="linkish" onClick={skip}>{t('Skip the guide', '跳过引导')}</button></div>
+        {(st.ok && !away) && <button className="btn primary small" onClick={() => { play('ui_tap', 0.4); next(); }}>{step === total - 1 ? (tip ? t('Got it', '知道啦') : t('Start!', '开始吧！')) : t('OK', '好')}</button>}
+        {st.chain && <div className="coach-chain">{st.chain.map(([ic, lb], i) => <span key={i} style={{ animationDelay: `${i * 0.18}s` }}><i>{ic}</i><small>{lb}</small></span>)}</div>}
+        <div className="coach-foot"><span className="coach-dots">{tip ? t('Tip', '小提示') : `${step + 1} / ${total}`}</span><button className="linkish" onClick={skip}>{tip ? t('Not now', '先不用') : t('Skip the guide', '跳过引导')}</button></div>
       </div>
     </div>
   );

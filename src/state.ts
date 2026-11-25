@@ -22,6 +22,7 @@ export interface Save {
   v: 1; name: string; coins: number; xp: number; company: CompanyId;
   hearts: Record<CoworkerId, number>; ordersDone: Record<CoworkerId, number>;
   tray: Slip[]; picked: { mins: number; who: CoworkerId | null; job: number; practice?: boolean } | null;
+  tipsSeen: string[];   // the one-time tips already shown (Guide.tsx TIPS)
   guide: number;   // the first-day guide: the step it's on, or -1 when it's done or skipped (see Guide.tsx)
   order: Order | null; result: Result | null; phase: Phase;
   fast: boolean; sound: boolean;              // fast: demo speed, 1 minute = 1 second
@@ -54,7 +55,7 @@ export const fresh = (): Save => {
   const company: CompanyId = Math.random() < 0.5 ? 'stitchlight' : 'moonpuff';      // the offer letter comes from a random company
   return { v: 1, name: '', coins: 0, xp: 0, company, hearts: zero(), ordersDone: zero(), tray: newTray(company), picked: null, order: null, result: null, phase: 'offer', fast: false, sound: true, labelsBy: {},
     look: { ...DEFAULT_LOOK }, pet: 'orange_cat', birthday: null, badgeNo: `${String(Math.floor(Math.random() * 9000) + 1000)}`, vibe: null, vibeDraws: 0,
-    quiz: { focus: null, sound: null, reminders: null }, tourStop: 0, firstOrder: true, lookDone: false, history: [], desk: [], place: {}, blind: { mins: 0, ready: 0, day: '', earned: 0 }, pack: {}, treats: { day: '', have: [], used: [] }, fridge: { day: '', item: null, fortune: 0 }, surprise: 'none', notes: [], payWeek: '', guide: -1 };
+    quiz: { focus: null, sound: null, reminders: null }, tourStop: 0, firstOrder: true, lookDone: false, history: [], desk: [], place: {}, blind: { mins: 0, ready: 0, day: '', earned: 0 }, pack: {}, treats: { day: '', have: [], used: [] }, fridge: { day: '', item: null, fortune: 0 }, surprise: 'none', notes: [], payWeek: '', guide: -1, tipsSeen: [] };
 };
 
 const KEY = ZH ? 'corner-office-demo-v1-zh' : 'corner-office-demo-v1';   // both sites share one origin on GitHub Pages
@@ -75,6 +76,7 @@ export function load(): Save {
       out.place = { ...(s.place ?? {}) }; for (const d of out.desk) if (!(d in out.place)) out.place[d] = freeSlot(d, out.place);
       // saves from before the welcome gift: anyone already past onboarding has it waiting
       if (typeof s.guide !== 'number') out.guide = -1;
+      if (!Array.isArray(s.tipsSeen)) out.tipsSeen = [];
       if (!s.surprise) out.surprise = s.lookDone && ['free', 'tray', 'focus', 'work', 'timesup', 'result', 'desk'].includes(s.phase) ? 'waiting' : 'none';
       out.look = fixLook(out.look); out.history = out.history ?? [];
       return out;

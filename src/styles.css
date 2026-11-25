@@ -1102,3 +1102,15 @@ html:lang(zh-CN) .mail-hand { font-size: 25px; } html:lang(zh-CN) .mail-hand.bod
 .g-pop { animation: gPop 1.1s ease-in-out infinite !important; }
 @keyframes gPop { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
 .pc-row.g-practice { background: #fff4cf; outline: 3px dashed #f2c14e; outline-offset: -3px; }
+/* the shop is an online shop in the computer: a small browser bar across its top */
+.bb-browser { display: flex; align-items: center; gap: 6px; margin: -6px -6px 10px; padding: 7px 12px; border-radius: 12px; background: rgba(0, 0, 0, .06); font-size: 12px; color: var(--muted, #8a7a8a); }
+.bb-browser i { width: 10px; height: 10px; border-radius: 50%; background: #f28b82; } .bb-browser i:nth-child(2) { background: #f6d37a; } .bb-browser i:nth-child(3) { background: #9fd8a8; }
+.bb-browser span { flex: 1; margin-left: 8px; padding: 3px 12px; border-radius: 999px; background: rgba(255, 255, 255, .8); }
+/* the goal card: orders -> XP -> promotion -> coins -> packs, each popping in */
+.coach-chain { grid-column: 1 / -1; display: flex; align-items: flex-start; justify-content: center; gap: 4px; padding: 6px 0 2px; }
+.coach-chain span { display: grid; justify-items: center; gap: 2px; width: 74px; animation: chainIn .45s cubic-bezier(.3, 1.5, .5, 1) both; position: relative; }
+.coach-chain span + span::before { content: '→'; position: absolute; left: -12px; top: 12px; color: #d9a62e; font-weight: 800; }
+.coach-chain i { font-style: normal; font-size: 30px; width: 50px; height: 50px; display: grid; place-items: center; border-radius: 14px; background: #fff4cf; border: 2px solid #ffd66b; }
+.coach-chain small { font-size: 12px; font-weight: 700; text-align: center; }
+@keyframes chainIn { from { opacity: 0; transform: translateY(10px) scale(.6); } }
+.coach-say.mid { width: 500px; }

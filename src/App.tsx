@@ -18,7 +18,7 @@ import { FORTUNES, FRIDGE, fridgeToday, treat, treatsToday } from './treats';
 import { Unwrap } from './Desk';
 import { freeSlot } from './deskSlots';
 import type { Tile } from './Office';
-import { Coach, GCtx, STEPS } from './Guide';
+import { Coach, GCtx, STEPS, TIPS, gEmit } from './Guide';
 
 const A = `${import.meta.env.BASE_URL}assets/`;
 const mmss = (ms: number) => { const s = Math.max(0, Math.ceil(ms / 1000)); return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`; };
@@ -133,13 +133,26 @@ export default function App() {
 
   // ---- the first-day guide (Guide.tsx): what has happened since the current step began, and moving on
   const [gev, setGev] = useState<Set<string>>(() => new Set());
-  useEffect(() => { setGev(new Set()); }, [s.guide]);
+  const [tip, setTip] = useState<{ id: string; i: number } | null>(null);   // a one-time tip running right now
+  // tips wait for things the App doesn't see change (a shop's list loading in): look again now and then
+  const [, look] = useState(0);
+  useEffect(() => { if (s.guide >= 0 || tip || onboarding) return; const id = setInterval(() => look((x) => x + 1), 700); return () => clearInterval(id); }, [s.guide, tip, onboarding]);
+  useEffect(() => { setGev(new Set()); }, [s.guide, tip?.id, tip?.i]);
   useEffect(() => { const on = (e: Event) => setGev((o) => new Set(o).add((e as CustomEvent).detail)); window.addEventListener('guide', on); return () => window.removeEventListener('guide', on); }, []);
   const gctx: GCtx = { s, co, name: s.name || t('Juniper', '小柏'), ev: gev, menu, chat, spot, shop, week, pcOpen, mail, peek: tray };
   useEffect(() => {
     if (s.guide < 0 || onboarding) return;
     const st = STEPS[s.guide]; if (!st) { up({ guide: -1 }); return; }
     if (st.done?.(gctx)) up({ guide: s.guide + 1 >= STEPS.length ? -1 : s.guide + 1 });
+  });
+  // one-time tips, once the guide is over: start one when its moment comes, move it on, and drop it if the moment passes
+  const endTip = (seen: boolean) => { if (tip && seen) up({ tipsSeen: [...s.tipsSeen, tip.id] }); setTip(null); };
+  useEffect(() => {
+    if (s.guide >= 0 || onboarding || editing) { if (tip) setTip(null); return; }
+    if (!tip) { const tp = TIPS.find((x) => !s.tipsSeen.includes(x.id) && x.when(gctx)); if (tp) setTip({ id: tp.id, i: 0 }); return; }
+    const tp = TIPS.find((x) => x.id === tip.id)!;
+    if (tp.steps[tip.i].done?.(gctx)) { if (tip.i + 1 >= tp.steps.length) endTip(true); else setTip({ id: tip.id, i: tip.i + 1 }); return; }
+    if (!tp.keep(gctx) && !tp.steps[tip.i].ok) endTip(false);
   });
   // the coworker menu closes once the guide moves on from it
   useEffect(() => { if (STEPS[s.guide]?.id === 'stack') { setMenu(null); setChat(false); } }, [s.guide]);
@@ -166,7 +179,6 @@ export default function App() {
             {treatsToday(s.treats).have.length > 0 && <div className="card hud-treats">{treatsToday(s.treats).have.map((k) => { const t = treat(k); return (
               <span key={k} className={treatsToday(s.treats).used.includes(k) ? 'used' : ''} title={`${t.name}${t.bonus ? `${ZH ? '：' : ': '}${t.bonus}` : ''}${treatsToday(s.treats).used.includes(k) ? (ZH ? '（今天已用）' : ' (used today)') : ''}`}><img src={`${A}ob/treats/${k}.png`} alt={t.name} /></span>); })}</div>}
             <div className="card hud-right"><Coin /><b>{s.coins.toLocaleString()}</b></div>
-            <button className="btn primary shop-btn" onClick={() => { tap(); setMenu(null); setShop('shop'); }}>🛍 {t('Shop', '商店')}</button>
           </div>
         </div>
       )}
@@ -175,7 +187,7 @@ export default function App() {
         <div className="card settings">
           <label><input type="checkbox" checked={s.fast} disabled={s.phase === 'work'} onChange={(e) => up({ fast: e.target.checked })} /> {t('Fast demo time (1 minute = 1 second)', '快速演示时间（1 分钟 = 1 秒）')}</label>
           <label><input type="checkbox" checked={s.sound} onChange={(e) => up({ sound: e.target.checked })} /> {t('Sound', '声音')}</label>
-          {(s.phase === 'free' || s.phase === 'desk') && <button className="btn ghost" onClick={() => { tap(); setSettings(false); setMenu(null); up({ guide: 0 }); }}>{t('Replay the first-day guide', '重看新手引导')}</button>}
+          {(s.phase === 'free' || s.phase === 'desk') && <button className="btn ghost" onClick={() => { tap(); setSettings(false); setMenu(null); up({ guide: 0, tipsSeen: [] }); }}>{t('Replay the first-day guide', '重看新手引导')}</button>}
           {s.phase === 'free' && <button className="btn ghost" onClick={() => { tap(); setEditing(true); setSettings(false); setMenu(null); }}>{t('Edit walk labels', '编辑行走标记')}</button>}
           {s.phase === 'free' && (() => { const other: CompanyId = s.company === 'stitchlight' ? 'moonpuff' : 'stitchlight'; return (
             <button className="btn ghost" onClick={() => { tap(); setMenu(null); setSettings(false); up({ company: other, tray: newTray(other), picked: null }); }}>{t('Switch to ', '切换到')}{COMPANIES[other].name}</button>); })()}
@@ -231,7 +243,7 @@ export default function App() {
               <div className="sub">{ZH ? `离下一颗心 ${s.hearts[menu] % HEART_POINTS} / ${HEART_POINTS} · ${name}帮TA完成了 ${s.ordersDone[menu]} 张工作单` : `${s.hearts[menu] % HEART_POINTS} / ${HEART_POINTS} to the next heart · ${name} finished ${s.ordersDone[menu]} of their orders`}</div>
               {chat ? <div className="chat">“{COWORKERS[menu].chat}”</div> : <button className="opt" onClick={() => { tap(); setChat(true); }}><b>{t('Chat', '聊天')}</b><span>{t('Say hi', '打个招呼')}</span></button>}
               {(() => { const t = treatsToday(s.treats); return t.have.includes('macaron_tower') && !t.used.includes('macaron_tower')
-                ? <button className="opt" onClick={() => { play('heart_pop', 0.5); up({ hearts: { ...s.hearts, [menu]: s.hearts[menu] + 2 }, treats: { ...t, used: [...t.used, 'macaron_tower'] }, notes: [...s.notes, ...thanks(menu, s.hearts[menu], s.hearts[menu] + 2)] }); }}><b>{tr('Share your macarons', '分享马卡龙')}</b><span>{tr('+2 friendship points', '友情 +2')}</span></button>
+                ? <button className="opt g-gift" onClick={() => { play('heart_pop', 0.5); gEmit('gift'); up({ hearts: { ...s.hearts, [menu]: s.hearts[menu] + 2 }, treats: { ...t, used: [...t.used, 'macaron_tower'] }, notes: [...s.notes, ...thanks(menu, s.hearts[menu], s.hearts[menu] + 2)] }); }}><b>{tr('Share your macarons', '分享马卡龙')}</b><span>{tr('+2 friendship points', '友情 +2')}</span></button>
                 : <button className="opt" disabled><b>{tr('Give a gift', '送礼物')}</b><span>{tr('No gifts in the backpack yet', '背包里还没有礼物')}</span></button>; })()}
               <button className="opt" onClick={openTray}><b>{t('Take an order', '接工作单')}</b><span>{ZH ? `打开${name}的工作单托盘` : `Opens ${name}'s order tray`}</span></button>
             </div>
@@ -304,7 +316,9 @@ export default function App() {
         play(n.kind === 'payday' ? 'coins_many' : 'heart_pop', 0.5);
         const rest = s.notes.filter((x) => x.id !== n.id); up({ notes: rest, coins: s.coins + (n.kind === 'payday' ? n.coins : 0) });
         if (wk) { setMail(false); setWeek(true); } else if (!rest.length) setMail(false); }} />}
-      {s.guide >= 0 && !onboarding && !editing && <Coach c={gctx} step={s.guide} total={STEPS.length} stage={stage} next={() => up({ guide: s.guide + 1 >= STEPS.length ? -1 : s.guide + 1 })} skip={() => { tap(); up({ guide: -1 }); }} />}
+      {s.guide >= 0 && !onboarding && !editing && <Coach c={gctx} st={STEPS[s.guide]} step={s.guide} total={STEPS.length} stage={stage} next={() => up({ guide: s.guide + 1 >= STEPS.length ? -1 : s.guide + 1 })} skip={() => { tap(); up({ guide: -1 }); }} />}
+      {tip && s.guide < 0 && (() => { const tp = TIPS.find((x) => x.id === tip.id)!; return <Coach key={tip.id} tip c={gctx} st={tp.steps[tip.i]} step={tip.i} total={tp.steps.length} stage={stage}
+        next={() => (tip.i + 1 >= tp.steps.length ? endTip(true) : setTip({ id: tip.id, i: tip.i + 1 }))} skip={() => { tap(); endTip(true); }} />; })()}
       {vibes && <VibeGallery sheet={sheet} who={name} close={() => setVibes(false)} />}
       {week && <WeekRecap s={s} name={name} close={() => setWeek(false)} />}
     </div>

@@ -49,13 +49,21 @@ export function useTear(width: number, onDone: () => void) {
 // At most 4 circles; the last one shows "+n". Click to fan them out (40 ms apart) with names and status; click to fold back.
 export function AvatarStack({ s }: { s: Save }) {
   const [open, setOpen] = useState(false);
+  // it folds back by itself when the player moves on: clicks anywhere else, or goes somewhere (desk, an order...)
+  const me = useRef<HTMLButtonElement>(null);
+  useEffect(() => { setOpen(false); }, [s.phase]);
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: PointerEvent) => { if (!me.current?.contains(e.target as Node)) setOpen(false); };
+    window.addEventListener('pointerdown', away, true); return () => window.removeEventListener('pointerdown', away, true);
+  }, [open]);
   const clock = useClock(s.fast ? 60 : 1, 5000);
   const ids = people(s.company), n = ids.length, few = n > 4 ? 3 : n;
   const S = 40, closedStep = 27, openStep = 74;
   const PAD = 16;  // names are wider than the heads: leave room for them on both sides when open
   const w = open ? n * openStep - (openStep - S) + PAD * 2 : (few - 1) * closedStep + S + (n > 4 ? closedStep : 0);
   return (
-    <button className={`card avatar-stack${open ? ' open' : ''}`} onClick={() => { tap(); if (!open) gEmit('stack-open'); setOpen(!open); }} aria-label={tr("Who's in the office", '谁在办公室')}>
+    <button ref={me} className={`card avatar-stack${open ? ' open' : ''}`} onClick={() => { tap(); if (!open) gEmit('stack-open'); setOpen(!open); }} aria-label={tr("Who's in the office", '谁在办公室')}>
       <span className="as-label">{open ? tr('Your team', '你的团队') : tr('In the office', '在办公室')}</span>
       <span className="as-row" style={{ width: w, height: open ? S + 34 : S }}>
         {ids.map((id, i) => {
@@ -121,7 +129,7 @@ export function MagnifyDock({ apps, open }: { apps: DockApp[]; open: (key: strin
   return (
     <div className="dock" onPointerMove={measure} onPointerLeave={() => { setMx(null); setCenters([]); }}>
       {apps.map((a, i) => { const k = scale(i); return (
-        <button key={a.key} ref={(el) => { refs.current[i] = el; }} className="dock-app" style={{ transform: `translateY(${-(k - 1) * 26}px) scale(${k})` }} onClick={() => { tap(); open(a.key); }} aria-label={a.label}>
+        <button key={a.key} ref={(el) => { refs.current[i] = el; }} data-key={a.key} className="dock-app" style={{ transform: `translateY(${-(k - 1) * 26}px) scale(${k})` }} onClick={() => { tap(); open(a.key); }} aria-label={a.label}>
           <span className="dock-tile" style={{ background: a.bg }}>{a.icon}</span>
           {!!a.badge && <em>{a.badge}</em>}
           {i === big && k > 1.3 && <span className="dock-tip">{a.label}</span>}

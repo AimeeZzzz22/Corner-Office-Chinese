@@ -1,3 +1,4 @@
+import { gEmit } from './Guide';
 import { useEffect, useRef, useState } from 'react';
 import { COWORKERS, CoworkerId } from './data';
 import { Save } from './state';
@@ -62,6 +63,7 @@ export function BlindBoxTab({ s, up, close }: { s: Save; up: (p: Partial<Save>) 
     up({ blind: nb });
   };
   const open = () => {
+    gEmit('pack-open');
     if (!data || !canOpen) return;
     const it = draw(data.items, data.odds);
     up({ coins: s.coins - BOX_COST, blind: { ...b, ready: b.ready - 1 }, pack: { ...pack, [it.id]: (pack[it.id] ?? 0) + 1 } });
@@ -138,6 +140,8 @@ export default function Shop({ s, up, close, tab: tab0 = 'shop' }: { s: Save; up
   return (
     <div className="bb-dim">
       <div className="card bb">
+        {/* an online shop, opened from the computer: a little browser bar on top */}
+        <div className="bb-browser"><i /><i /><i /><span>🔒 {t('Little Things · online shop', '小物杂货铺 · 网店')}</span></div>
         <div className="bb-head">
           <div className="pix bb-title">{t('Little Things Shop', '小物杂货铺')}</div>
           <LiquidTabs className="bb-maintabs" value={tab} onChange={setTab} tabs={[{ key: 'shop', label: t('Shop', '商店') }, { key: 'blind', label: <>{t('Blind packs', '盲包')}{ready > 0 && <em>{ready}</em>}</> }]} />
@@ -157,6 +161,7 @@ function Catalogue({ s, up }: { s: Save; up: (p: Partial<Save>) => void }) {
   const [just, setJust] = useState<string | null>(null);
   useEffect(() => { loadItems().then((d) => setData(d.items.filter((i: Item) => i.tier === 'shop'))).catch(() => {}); }, []);
   const buy = (it: Item) => {
+    if (it.price && s.coins >= it.price) gEmit('bought');
     if (!it.price || s.coins < it.price) return;
     play('purchase', 0.5); up({ coins: s.coins - it.price, pack: { ...s.pack, [it.id]: (s.pack[it.id] ?? 0) + 1 } }); setJust(it.id);
   };
