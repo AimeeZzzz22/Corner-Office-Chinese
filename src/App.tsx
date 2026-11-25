@@ -209,7 +209,7 @@ export default function App() {
           {menu && (
             <div className={menuX > 256 ? 'card menu left' : 'card menu'}>
               <div className="row"><Head id={menu} /><div><b>{COWORKERS[menu].name}</b><div className="sub">{COWORKERS[menu].role}</div><Hearts points={s.hearts[menu]} /></div></div>
-              <div className="sub">{ZH ? `离下一颗心 ${s.hearts[menu] % HEART_POINTS} / ${HEART_POINTS} · ${name}帮他完成了 ${s.ordersDone[menu]} 张工作单` : `${s.hearts[menu] % HEART_POINTS} / ${HEART_POINTS} to the next heart · ${name} finished ${s.ordersDone[menu]} of their orders`}</div>
+              <div className="sub">{ZH ? `离下一颗心 ${s.hearts[menu] % HEART_POINTS} / ${HEART_POINTS} · ${name}帮TA完成了 ${s.ordersDone[menu]} 张工作单` : `${s.hearts[menu] % HEART_POINTS} / ${HEART_POINTS} to the next heart · ${name} finished ${s.ordersDone[menu]} of their orders`}</div>
               {chat ? <div className="chat">“{COWORKERS[menu].chat}”</div> : <button className="opt" onClick={() => { tap(); setChat(true); }}><b>{t('Chat', '聊天')}</b><span>{t('Say hi', '打个招呼')}</span></button>}
               {(() => { const t = treatsToday(s.treats); return t.have.includes('macaron_tower') && !t.used.includes('macaron_tower')
                 ? <button className="opt" onClick={() => { play('heart_pop', 0.5); up({ hearts: { ...s.hearts, [menu]: s.hearts[menu] + 2 }, treats: { ...t, used: [...t.used, 'macaron_tower'] }, notes: [...s.notes, ...thanks(menu, s.hearts[menu], s.hearts[menu] + 2)] }); }}><b>{tr('Share your macarons', '分享马卡龙')}</b><span>{tr('+2 friendship points', '友情 +2')}</span></button>
