@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Office from './Office';
-import { COMPANIES, COWORKERS, CompanyId, CoworkerId, HEART_POINTS, TASK_TYPES, TYPE_LABEL, TaskType, XP_TO_NEXT, pay } from './data';
+import { COMPANIES, COWORKERS, CompanyId, CoworkerId, HEART_POINTS, PRACTICE_PAY, TASK_TYPES, TYPE_LABEL, TaskType, XP_TO_NEXT, pay } from './data';
 import { Order, Result, Save, fresh, load, newTray, store, wipe } from './state';
 import { play, setSound } from './sfx';
 import { Badge, Booth, Offer, Quiz, TourCard, Vibe } from './Onboarding';
@@ -18,6 +18,7 @@ import { FORTUNES, FRIDGE, fridgeToday, treat, treatsToday } from './treats';
 import { Unwrap } from './Desk';
 import { freeSlot } from './deskSlots';
 import type { Tile } from './Office';
+import { Coach, GCtx, STEPS } from './Guide';
 
 const A = `${import.meta.env.BASE_URL}assets/`;
 const mmss = (ms: number) => { const s = Math.max(0, Math.ceil(ms / 1000)); return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`; };
@@ -103,7 +104,7 @@ export default function App() {
     const p = s.picked!; const job = p.who ? COWORKERS[p.who].jobs[p.job] : null;
     const startedAt = Date.now(), ms = (p.mins * 60000) / (s.fast ? 60 : 1);
     const order: Order = { mins: p.mins, who: p.who, jobTitle: job?.title ?? t('Custom time', '自定时间'), doing: job ? (ZH ? `帮${COWORKERS[p.who!].name}${job.doing.replace(/^正在/, '')}……` : `${job.doing} for ${COWORKERS[p.who!].name}...`) : t('Working...', '工作中……'),
-      focus: focus.trim() || t('Focus time', '专注时间'), type, steps: steps.filter((t) => t.trim()).map((text) => ({ text, done: false })), startedAt, endsAt: startedAt + ms };
+      focus: focus.trim() || t('Focus time', '专注时间'), type, steps: steps.filter((t) => t.trim()).map((text) => ({ text, done: false })), startedAt, endsAt: startedAt + ms, practice: p.practice };
     play('order_start'); setNow(startedAt); up({ order, phase: 'work', firstOrder: false });
   };
 
@@ -111,7 +112,7 @@ export default function App() {
   const end = (finished: boolean) => {
     const o = s.order!; const total = o.endsAt - o.startedAt;
     const worked = Math.min(o.mins, Math.floor((Math.min(Date.now(), o.endsAt) - o.startedAt) / total * o.mins));
-    const reward = finished ? pay(o.mins) : worked >= o.mins ? pay(o.mins) : Math.floor(pay(o.mins) * (worked / o.mins) / 5) * 5;
+    const reward = o.practice ? PRACTICE_PAY : finished ? pay(o.mins) : worked >= o.mins ? pay(o.mins) : Math.floor(pay(o.mins) * (worked / o.mins) / 5) * 5;
     const before = o.who ? s.hearts[o.who] : 0, after = finished && o.who ? before + 1 : before;
     // today's treats: iced coffee +50% coins on the first finished order, strawberry milk +10% XP, matcha +10 piggy minutes
     const tt = treatsToday(s.treats), bonus: string[] = []; let coins = reward, xp = reward, extraMins = 0; const used = [...tt.used];
@@ -122,11 +123,28 @@ export default function App() {
     play(finished ? 'order_finished' : 'stopping_here'); if (finished && reward) setTimeout(() => play('coins_many', 0.5), 350);
     if (after > before) setTimeout(() => play(Math.floor(after / HEART_POINTS) > Math.floor(before / HEART_POINTS) ? 'heart_level' : 'heart_pop', 0.5), 800);
     const past = { at: Date.now(), mins: o.mins, worked, who: o.who, job: o.jobTitle, focus: o.focus, type: o.type, finished, coins, xp, steps: o.steps.length, stepsDone: o.steps.filter((x) => x.done).length };
-    setTray(false); up({ phase: 'result', result, order: null, notes: o.who ? [...s.notes, ...thanks(o.who, before, after)] : s.notes, blind: finished ? addMinutes(s.blind, o.mins + extraMins) : s.blind, treats: { ...tt, used }, history: [...s.history, past].slice(-200), coins: s.coins + coins, xp: s.xp + xp, tray: newTray(s.company), picked: null,
+    // the practice order ends with a welcome letter from the host, so the guide can show the mail
+    const welcome: Note[] = o.practice ? [{ id: Date.now() + 1, kind: 'welcome', from: co.host, level: 0, coins: 0, week: weekKey() }] : [];
+    setTray(false); up({ phase: 'result', result, order: null, notes: [...(o.who ? [...s.notes, ...thanks(o.who, before, after)] : s.notes), ...welcome], blind: finished ? addMinutes(s.blind, o.mins + extraMins) : s.blind, treats: { ...tt, used }, history: [...s.history, past].slice(-200), coins: s.coins + coins, xp: s.xp + xp, tray: newTray(s.company), picked: null,
       hearts: o.who ? { ...s.hearts, [o.who]: after } : s.hearts, ordersDone: finished && o.who ? { ...s.ordersDone, [o.who]: s.ordersDone[o.who] + 1 } : s.ordersDone });
   };
 
   const [menuX, setMenuX] = useState(0);
+
+  // ---- the first-day guide (Guide.tsx): what has happened since the current step began, and moving on
+  const [gev, setGev] = useState<Set<string>>(() => new Set());
+  useEffect(() => { setGev(new Set()); }, [s.guide]);
+  useEffect(() => { const on = (e: Event) => setGev((o) => new Set(o).add((e as CustomEvent).detail)); window.addEventListener('guide', on); return () => window.removeEventListener('guide', on); }, []);
+  const gctx: GCtx = { s, co, name: s.name || t('Juniper', '小柏'), ev: gev, menu, chat, spot, shop, week, pcOpen, mail, peek: tray };
+  useEffect(() => {
+    if (s.guide < 0 || onboarding) return;
+    const st = STEPS[s.guide]; if (!st) { up({ guide: -1 }); return; }
+    if (st.done?.(gctx)) up({ guide: s.guide + 1 >= STEPS.length ? -1 : s.guide + 1 });
+  });
+  // the coworker menu closes once the guide moves on from it
+  useEffect(() => { if (STEPS[s.guide]?.id === 'stack') { setMenu(null); setChat(false); } }, [s.guide]);
+  // the fridge step needs something in the fridge
+  useEffect(() => { if (STEPS[s.guide]?.id === 'fridge' && (!s.fridge.item || s.fridge.day !== new Date().toDateString())) up({ fridge: { day: new Date().toDateString(), item: FRIDGE[0].key, fortune: Math.floor(Math.random() * FORTUNES.length) } }); }, [s.guide]);
   const onCoworker = useCallback((id: CoworkerId | null, x?: number) => { setMenu(id); setChat(false); if (id) { setMenuX(x ?? 0); play('ui_tap', 0.4); } }, []);
   const name = s.name || t('Juniper', '小柏');
   const inOffice = s.phase === 'free' || s.phase === 'tray' || (s.phase === 'focus' && !fromDesk) || s.phase === 'tour';
@@ -157,6 +175,7 @@ export default function App() {
         <div className="card settings">
           <label><input type="checkbox" checked={s.fast} disabled={s.phase === 'work'} onChange={(e) => up({ fast: e.target.checked })} /> {t('Fast demo time (1 minute = 1 second)', '快速演示时间（1 分钟 = 1 秒）')}</label>
           <label><input type="checkbox" checked={s.sound} onChange={(e) => up({ sound: e.target.checked })} /> {t('Sound', '声音')}</label>
+          {(s.phase === 'free' || s.phase === 'desk') && <button className="btn ghost" onClick={() => { tap(); setSettings(false); setMenu(null); up({ guide: 0 }); }}>{t('Replay the first-day guide', '重看新手引导')}</button>}
           {s.phase === 'free' && <button className="btn ghost" onClick={() => { tap(); setEditing(true); setSettings(false); setMenu(null); }}>{t('Edit walk labels', '编辑行走标记')}</button>}
           {s.phase === 'free' && (() => { const other: CompanyId = s.company === 'stitchlight' ? 'moonpuff' : 'stitchlight'; return (
             <button className="btn ghost" onClick={() => { tap(); setMenu(null); setSettings(false); up({ company: other, tray: newTray(other), picked: null }); }}>{t('Switch to ', '切换到')}{COMPANIES[other].name}</button>); })()}
@@ -204,7 +223,7 @@ export default function App() {
       {s.phase === 'free' && !editing && (
         <>
           <PullSummary s={s} ready={piggyToday(s.blind).ready} earned={piggyToday(s.blind).earned} dayMax={BOX_DAY_MAX} treats={treatsToday(s.treats).have.map((k) => treat(k).name)} onWeek={() => setWeek(true)} />
-          {!s.history.length && <div className="walk-hint">{t('Click to walk · walk up to a coworker to talk · walk to your desk for orders', '点击走路 · 走到同事身边聊天 · 走到工位接工作单')}</div>}
+          {!s.history.length && s.guide < 0 && <div className="walk-hint">{t('Click to walk · walk up to a coworker to talk · walk to your desk for orders', '点击走路 · 走到同事身边聊天 · 走到工位接工作单')}</div>}
           <button className="btn primary new-order" onClick={() => { tap(); setGoDesk((n) => n + 1); }}>{t('My desk', '我的工位')}</button>
           {menu && (
             <div className={menuX > 256 ? 'card menu left' : 'card menu'}>
@@ -220,7 +239,7 @@ export default function App() {
         </>
       )}
 
-      {pcOpen && s.phase === 'desk' && <Computer s={s} name={name} openShop={(t) => { setShop(t); }} close={() => setPcOpen(false)} take={(p) => { setPcOpen(false); setFromDesk(true); up({ phase: 'focus', picked: p }); }} />}
+      {pcOpen && s.phase === 'desk' && <Computer s={s} name={name} practice={s.guide >= 0 && s.guide <= STEPS.findIndex((x) => x.id === 'practice')} openShop={(t) => { setShop(t); }} close={() => setPcOpen(false)} take={(p) => { setPcOpen(false); setFromDesk(true); up({ phase: 'focus', picked: p }); }} />}
       {s.phase === 'tray' && <Tray s={s} name={name} pick={(p) => { tap(); up({ picked: p }); }} back={() => { tap(); up({ phase: 'free' }); }} next={() => { tap(); up({ phase: 'focus' }); }} />}
       {s.phase === 'focus' && s.picked && <Focus s={s} name={name} back={() => { tap(); if (fromDesk) { setPcOpen(true); up({ phase: 'desk' }); } else up({ phase: 'tray' }); }} start={start} />}
 
@@ -249,7 +268,7 @@ export default function App() {
           <div className="sub">{ZH ? `“${s.order.focus}”做得怎么样？` : `How did “${s.order.focus}” go?`}</div>
           {left <= 0 ? (
             <><button className="btn primary" onClick={() => end(true)}>{t('Finished!', '完成啦！')}</button>
-              <div className="reward"><Coin /> +{pay(s.order.mins)} {t('coins', '金币')} · +{pay(s.order.mins)} {t('XP', '经验')}{s.order.who ? t(' · +1/10 heart', ' · +1/10 颗心') : ''}</div></>
+              <div className="reward"><Coin /> +{s.order.practice ? PRACTICE_PAY : pay(s.order.mins)} {t('coins', '金币')} · +{s.order.practice ? PRACTICE_PAY : pay(s.order.mins)} {t('XP', '经验')}{s.order.who ? t(' · +1/10 heart', ' · +1/10 颗心') : ''}</div></>
           ) : <button className="btn primary" onClick={() => { tap(); up({ phase: 'work' }); }}>{t('Keep going', '继续')}</button>}
           <button className="btn ghost" onClick={() => end(false)}>{t('Stopping here', '就到这里')}</button>
           <div className="sub">{t('You keep the coins and XP for the time worked.', '已工作时间的金币和经验都归你。')}</div><div className="note">{t('No heart this time. Nothing else is lost.', '这次没有心，其他什么都不会损失。')}</div>
@@ -285,6 +304,7 @@ export default function App() {
         play(n.kind === 'payday' ? 'coins_many' : 'heart_pop', 0.5);
         const rest = s.notes.filter((x) => x.id !== n.id); up({ notes: rest, coins: s.coins + (n.kind === 'payday' ? n.coins : 0) });
         if (wk) { setMail(false); setWeek(true); } else if (!rest.length) setMail(false); }} />}
+      {s.guide >= 0 && !onboarding && !editing && <Coach c={gctx} step={s.guide} total={STEPS.length} stage={stage} next={() => up({ guide: s.guide + 1 >= STEPS.length ? -1 : s.guide + 1 })} skip={() => { tap(); up({ guide: -1 }); }} />}
       {vibes && <VibeGallery sheet={sheet} who={name} close={() => setVibes(false)} />}
       {week && <WeekRecap s={s} name={name} close={() => setWeek(false)} />}
     </div>
@@ -332,7 +352,7 @@ function Focus({ s, name, back, start }: { s: Save; name: string; back: () => vo
       <div className="cols">
         <div className="slip on fixed"><div className="mins"><span className="pix">{p.mins}</span> {t('min', '分钟')}</div>
           {c ? <><div className="for"><Head id={c.id} size={30} /><b>{t('For ', '帮')}{c.name}</b></div><div className="job">{c.jobs[p.job].title}</div></> : <div className="job">{t('Custom time', '自定时间')}</div>}
-          <div className="reward"><Coin /> +{pay(p.mins)} {t('coins', '金币')} · +{pay(p.mins)} {t('XP', '经验')}</div></div>
+          <div className="reward"><Coin /> +{p.practice ? PRACTICE_PAY : pay(p.mins)} {t('coins', '金币')} · +{p.practice ? PRACTICE_PAY : pay(p.mins)} {t('XP', '经验')}</div></div>
         <div className="form">
           <b>{t('What will you focus on in real life?', '现实中你要专注做什么？')}</b>
           <input className="field" autoFocus maxLength={60} placeholder={t('Read chapter 3', '读第三章')} value={focus} onChange={(e) => setFocus(e.target.value)} />

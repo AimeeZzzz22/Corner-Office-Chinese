@@ -2,7 +2,8 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { MagnifyDock, TeamAccordion } from './ui';
 import { piggyToday } from './BlindBox';
 import { hhmm, officeClock, people, statusOf } from './clock';
-import { COMPANIES, COWORKERS, CoworkerId, pay } from './data';
+import { COMPANIES, COWORKERS, CoworkerId, PRACTICE_PAY, pay } from './data';
+import { gEmit } from './Guide';
 import { Save } from './state';
 import { play } from './sfx';
 import { ZH, t as tx } from './lang';
@@ -22,8 +23,9 @@ type Pick = NonNullable<Save['picked']>;
 // Tasklet holds the new work orders and everything the character has done. Close the app to get back to the
 // desktop; leave the computer to get back to the desk.
 type Tab = 'new' | 'past' | 'team';
-export default function Computer({ s, name, close, take, openShop }: { s: Save; name: string; close: () => void; take: (p: Pick) => void; openShop: (t: 'shop' | 'blind') => void }) {
-  const [app, setApp] = useState<Tab | null>(null);
+export default function Computer({ s, name, close, take, openShop, practice }: { s: Save; name: string; close: () => void; take: (p: Pick) => void; openShop: (t: 'shop' | 'blind') => void; practice?: boolean }) {
+  const [app, setAppRaw] = useState<Tab | null>(null);
+  const setApp = (a: Tab | null) => { if (a === 'new') gEmit('tasklet'); setAppRaw(a); };
   const ready = piggyToday(s.blind).ready;
   const co = COMPANIES[s.company], os = s.company === 'stitchlight' ? tx('Stitch Desk', '织光桌面') : tx('PuffOS', '月芙系统');
   const clock = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
@@ -38,7 +40,7 @@ export default function Computer({ s, name, close, take, openShop }: { s: Save; 
                 <span className="pc-icon-img"><i /><i /><i /></span><span>{tx('Tasklet', '任务夹')}</span>{/* a number badge here is kept for later: messages from coworkers, not orders you haven't taken */}
               </button>
             </div>
-            {app && <Tasklet key={app} s={s} name={name} tab0={app} close={() => { tap(); setApp(null); }} take={take} />}
+            {app && <Tasklet key={app} s={s} name={name} tab0={app} practice={practice} close={() => { tap(); setApp(null); }} take={take} />}
             <MagnifyDock open={(k) => (k === 'shop' || k === 'blind' ? openShop(k) : setApp(k as Tab))} apps={[
               { key: 'new', label: tx('Tasklet', '任务夹'), icon: '📥', bg: '#f6d37a', badge: s.tray.length },
               { key: 'team', label: tx('Coworkers', '同事'), icon: '👥', bg: '#a7d8b8' },
@@ -55,7 +57,7 @@ export default function Computer({ s, name, close, take, openShop }: { s: Save; 
   );
 }
 
-function Tasklet({ s, name, close, take, tab0 }: { s: Save; name: string; close: () => void; take: (p: Pick) => void; tab0: Tab }) {
+function Tasklet({ s, name, close, take, tab0, practice }: { s: Save; name: string; close: () => void; take: (p: Pick) => void; tab0: Tab; practice?: boolean }) {
   const [tab, setTab] = useState<Tab>(tab0);
   const [own, setOwn] = useState(25);
   const [filter, setFilter] = useState<'all' | CoworkerId>('all');
@@ -82,6 +84,14 @@ function Tasklet({ s, name, close, take, tab0 }: { s: Save; name: string; close:
                     <div className="pc-h">{ZH ? `给${name}的新工作单` : `New orders for ${name}`}</div>
                     <div className="sub">{ZH ? `选一张，再设定你要专注做的事。你忙自己的事时，${name}会去完成这张工作单。` : `Pick one and set your focus. ${name} does the order while you work on your own thing.`}</div>
                     <div className="pc-list">
+                      {practice && (() => { const h = COWORKERS[co.host]; return (   // the first-day guide's practice order: one minute
+                        <div className="pc-row g-practice">
+                          <div className="pc-mins pix">1<small>{tx('min', '分钟')}</small></div>
+                          <Head id={h.id} size={34} />
+                          <div className="pc-what"><b>{tx('Practice order', '练习单')}</b><span>{ZH ? `${h.name}准备的 · 1 分钟就好` : `From ${h.name} · just one minute`}</span></div>
+                          <div className="pc-pay">+{PRACTICE_PAY} {tx('coins', '金币')}<br /><span>{tx('+1/10 heart', '+1/10 颗心')}</span></div>
+                          <button className="btn primary pc-take" onClick={() => { tap(); take({ mins: 1, who: h.id, job: 0, practice: true }); }}>{tx('Take', '接单')}</button>
+                        </div>); })()}
                       {s.tray.map((t) => { const c = COWORKERS[t.who]; return (
                         <div key={t.mins} className="pc-row">
                           <div className="pc-mins pix">{t.mins}<small>{tx('min', '分钟')}</small></div>

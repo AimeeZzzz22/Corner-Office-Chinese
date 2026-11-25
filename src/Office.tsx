@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { t } from './lang';
 import { COWORKERS, Company, CoworkerId } from './data';
 import { officeClock } from './clock';
+import { gEmit } from './Guide';
 
 const A = `${import.meta.env.BASE_URL}assets/`;
 const T = 16, S = 3;                        // tile size in map pixels, art scale
@@ -261,6 +262,7 @@ export default function Office({ onCoworker, frozen, menu, editing, labels, onLa
         } else if (r === 'arrived' && p.follow && trail.spot) {   // one footstep done on the tour; the follow step picks the next
           p.stuck = 0;
         } else if (r === 'arrived') {
+          if (p.target) gEmit('walked');
           p.target = null; p.stuck = 0; p.follow = false;
           if (trail.route.length && !trail.spot) { const h = list.find((n) => n.id === co.host); if (h) faceTo(p, h.x, h.y); }
           // walking up to your own desk sits you down at it (the close desk view)
@@ -541,7 +543,7 @@ export default function Office({ onCoworker, frozen, menu, editing, labels, onLa
     <div className="office"><div className="office-inner" ref={innerRef}>
       <canvas ref={ref} width={1536} height={1056} onClick={click} />
       {bubble && (
-        <div className={bubble.kind === 'game' || (bubble.kind === 'fridge' && !extras?.fridge) ? 'spot-bubble' : 'spot-bubble act'} style={{ left: `${(bubble.x / 512) * 100}%`, top: `${((bubble.y - (bubble.kind === 'surprise' ? 18 : 22)) / 352) * 100}%` }}>
+        <div data-kind={bubble.kind} className={bubble.kind === 'game' || (bubble.kind === 'fridge' && !extras?.fridge) ? 'spot-bubble' : 'spot-bubble act'} style={{ left: `${(bubble.x / 512) * 100}%`, top: `${((bubble.y - (bubble.kind === 'surprise' ? 18 : 22)) / 352) * 100}%` }}>
           <b>{bubble.name}</b>
           {bubble.kind === 'game' && <span>{t('Coming soon in the demo', '演示版即将推出')}</span>}
           {bubble.kind === 'food' && <button className="bubble-btn" onClick={() => onSpot?.('food')}>{t('See the menu', '看看菜单')}</button>}

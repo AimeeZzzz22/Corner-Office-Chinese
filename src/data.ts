@@ -64,6 +64,7 @@ export const COWORKER_IDS = Object.keys(COWORKERS) as CoworkerId[];
 // Order lengths and pay (set in the design doc). Custom times sit on the line between, rounded down to 5.
 export const SLIP_MINS = [15, 30, 60, 90] as const;
 const PAY: [number, number][] = [[0, 0], [15, 20], [30, 45], [60, 100], [90, 150], [120, 200]];
+export const PRACTICE_PAY = 10;   // the first-day guide's 1-minute practice order
 export function pay(mins: number): number {
   for (let i = 0; i < PAY.length - 1; i++) {
     const [a, pa] = PAY[i], [b, pb] = PAY[i + 1];

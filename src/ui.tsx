@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { COMPANIES, COWORKERS, CoworkerId, HEART_POINTS, TaskType, TYPE_LABEL } from './data';
 import { ZH, t as tr } from './lang';
+import { gEmit } from './Guide';
 import { Note, Past, Save } from './state';
 import { hhmm, officeClock, people, statusOf } from './clock';
 import { play, preloadTear, tear } from './sfx';
@@ -54,7 +55,7 @@ export function AvatarStack({ s }: { s: Save }) {
   const PAD = 16;  // names are wider than the heads: leave room for them on both sides when open
   const w = open ? n * openStep - (openStep - S) + PAD * 2 : (few - 1) * closedStep + S + (n > 4 ? closedStep : 0);
   return (
-    <button className={`card avatar-stack${open ? ' open' : ''}`} onClick={() => { tap(); setOpen(!open); }} aria-label={tr("Who's in the office", '谁在办公室')}>
+    <button className={`card avatar-stack${open ? ' open' : ''}`} onClick={() => { tap(); if (!open) gEmit('stack-open'); setOpen(!open); }} aria-label={tr("Who's in the office", '谁在办公室')}>
       <span className="as-label">{open ? tr('Your team', '你的团队') : tr('In the office', '在办公室')}</span>
       <span className="as-row" style={{ width: w, height: open ? S + 34 : S }}>
         {ids.map((id, i) => {
@@ -179,8 +180,8 @@ export function PullSummary({ s, ready, earned, dayMax, treats, onWeek }: { s: S
   const move = (e: React.PointerEvent) => { const d = drag.current; if (!d) return; const dy = (e.clientY - d.y) / d.k; if (Math.abs(dy) > 4) d.moved = true; setH(Math.max(CAP, Math.min(FULL, d.h0 + dy * 0.9))); };
   const up = () => {
     const d = drag.current; drag.current = null; setDragging(false); if (!d) return;
-    if (!d.moved) { tap(); setH(d.h0 > CAP + 20 ? CAP : FULL); return; }
-    setH(h > (d.h0 > CAP + 20 ? FULL - 60 : CAP + 60) ? FULL : CAP);
+    if (!d.moved) { tap(); if (d.h0 <= CAP + 20) gEmit('pull-open'); setH(d.h0 > CAP + 20 ? CAP : FULL); return; }
+    const opened = h > (d.h0 > CAP + 20 ? FULL - 60 : CAP + 60); if (opened && d.h0 <= CAP + 20) gEmit('pull-open'); setH(opened ? FULL : CAP);
   };
   const t = Math.max(0, Math.min(1, (h - CAP) / (FULL - CAP)));
   return <>
@@ -232,10 +233,10 @@ export function MailLetter({ note, name, s, keep }: { note: Note; name: string; 
         <div className="mail-letter">
           <div className="mail-paper">
             <div className="mail-fold top" />
-            {note.kind === 'thanks' && from ? <>
+            {(note.kind === 'thanks' || note.kind === 'welcome') && from ? <>
               <div className="mail-hand">{ZH ? `亲爱的${name}：` : `Dear ${name},`}</div>
-              <p className="mail-hand body">{THANKS[note.from!] ?? tr('Thank you for all your help. It means a lot.', '谢谢你的帮助，这对我意义重大。')}</p>
-              <div className="mail-hearts">{Array.from({ length: note.level }, (_, i) => <img key={i} src={`${A}heart.png`} alt="" />)}<span className="sub">{ZH ? `和${from.name}的 ${note.level} 颗心` : `${note.level} heart${note.level > 1 ? 's' : ''} with ${from.name}`}</span></div>
+              <p className="mail-hand body">{note.kind === 'welcome' ? tr('Your first order, done! That is all there is to it. Welcome to the team, properly this time.', '第一张工作单完成啦！就是这么简单。这次正式说一声：欢迎加入！') : THANKS[note.from!] ?? tr('Thank you for all your help. It means a lot.', '谢谢你的帮助，这对我意义重大。')}</p>
+              {note.kind === 'thanks' && <div className="mail-hearts">{Array.from({ length: note.level }, (_, i) => <img key={i} src={`${A}heart.png`} alt="" />)}<span className="sub">{ZH ? `和${from.name}的 ${note.level} 颗心` : `${note.level} heart${note.level > 1 ? 's' : ''} with ${from.name}`}</span></div>}
               <div className="mail-hand mail-sign">— {from.name}</div>
             </> : <>
               <div className="mail-co pix">{co.name}{tr(' · Payday', ' · 发薪日')}</div>

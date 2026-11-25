@@ -9,18 +9,20 @@ export interface Order {
   mins: number; who: CoworkerId | null; jobTitle: string; doing: string;
   focus: string; type: TaskType; steps: { text: string; done: boolean }[];
   startedAt: number; endsAt: number;          // timestamps, so the timer survives a reload or a closed tab
+  practice?: boolean;                         // the guide's 1-minute practice order
 }
 export interface Result { finished: boolean; coins: number; xp: number; bonus?: string[]; who: CoworkerId | null; heartBefore: number; heartAfter: number; minutes: number }
 // onboarding: offer letter -> first-day look -> welcome tour -> badge photo -> work vibe -> work style quiz -> first work order
 // one finished or stopped work order, kept for the desk computer's history
 // a letter in the mail: a coworker's thank-you when a new heart fills, or the end-of-week payday envelope
-export interface Note { id: number; kind: 'thanks' | 'payday'; from: CoworkerId | null; level: number; coins: number; week: string }
+export interface Note { id: number; kind: 'thanks' | 'payday' | 'welcome'; from: CoworkerId | null; level: number; coins: number; week: string }
 export interface Past { at: number; mins: number; worked: number; who: CoworkerId | null; job: string; focus: string; type: TaskType; finished: boolean; coins: number; xp: number; steps: number; stepsDone: number }
 export type Phase = 'offer' | 'tour' | 'booth' | 'badge' | 'vibe' | 'quiz' | 'gifts' | 'desk' | 'free' | 'tray' | 'focus' | 'work' | 'timesup' | 'result';
 export interface Save {
   v: 1; name: string; coins: number; xp: number; company: CompanyId;
   hearts: Record<CoworkerId, number>; ordersDone: Record<CoworkerId, number>;
-  tray: Slip[]; picked: { mins: number; who: CoworkerId | null; job: number } | null;
+  tray: Slip[]; picked: { mins: number; who: CoworkerId | null; job: number; practice?: boolean } | null;
+  guide: number;   // the first-day guide: the step it's on, or -1 when it's done or skipped (see Guide.tsx)
   order: Order | null; result: Result | null; phase: Phase;
   fast: boolean; sound: boolean;              // fast: demo speed, 1 minute = 1 second
   labelsBy: Partial<Record<CompanyId, string[]>>;   // walk labels edited in the demo, per office; missing = the map's own labels
@@ -52,7 +54,7 @@ export const fresh = (): Save => {
   const company: CompanyId = Math.random() < 0.5 ? 'stitchlight' : 'moonpuff';      // the offer letter comes from a random company
   return { v: 1, name: '', coins: 0, xp: 0, company, hearts: zero(), ordersDone: zero(), tray: newTray(company), picked: null, order: null, result: null, phase: 'offer', fast: false, sound: true, labelsBy: {},
     look: { ...DEFAULT_LOOK }, pet: 'orange_cat', birthday: null, badgeNo: `${String(Math.floor(Math.random() * 9000) + 1000)}`, vibe: null, vibeDraws: 0,
-    quiz: { focus: null, sound: null, reminders: null }, tourStop: 0, firstOrder: true, lookDone: false, history: [], desk: [], place: {}, blind: { mins: 0, ready: 0, day: '', earned: 0 }, pack: {}, treats: { day: '', have: [], used: [] }, fridge: { day: '', item: null, fortune: 0 }, surprise: 'none', notes: [], payWeek: '' };
+    quiz: { focus: null, sound: null, reminders: null }, tourStop: 0, firstOrder: true, lookDone: false, history: [], desk: [], place: {}, blind: { mins: 0, ready: 0, day: '', earned: 0 }, pack: {}, treats: { day: '', have: [], used: [] }, fridge: { day: '', item: null, fortune: 0 }, surprise: 'none', notes: [], payWeek: '', guide: -1 };
 };
 
 const KEY = ZH ? 'corner-office-demo-v1-zh' : 'corner-office-demo-v1';   // both sites share one origin on GitHub Pages
@@ -72,6 +74,7 @@ export function load(): Save {
       // unwrapped things with no spot yet go to their home spot
       out.place = { ...(s.place ?? {}) }; for (const d of out.desk) if (!(d in out.place)) out.place[d] = freeSlot(d, out.place);
       // saves from before the welcome gift: anyone already past onboarding has it waiting
+      if (typeof s.guide !== 'number') out.guide = -1;
       if (!s.surprise) out.surprise = s.lookDone && ['free', 'tray', 'focus', 'work', 'timesup', 'result', 'desk'].includes(s.phase) ? 'waiting' : 'none';
       out.look = fixLook(out.look); out.history = out.history ?? [];
       return out;

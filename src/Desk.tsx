@@ -11,10 +11,10 @@ const A = `${import.meta.env.BASE_URL}assets/`;
 const tap = () => play('ui_tap', 0.4);
 const W = 1280, H = 832;
 const TUT = [
-  t('All unwrapped! Your things are on your desk now. Try clicking one of them.', '全拆完啦！东西都摆在你桌上了。试着点一下其中一个。'),
-  t('From here you can Move it to another spot, or put it in your backpack. Give one a try.', '在这里可以把它移到别的位置，或者放进背包。试一个看看。'),
-  t("You can also just drag things: pick one up and drop it on a glowing spot. Each thing only fits certain spots, so a lamp stays on the desk.", '也可以直接拖动：拿起一个东西，放到发光的位置上。每样东西只能放在特定的位置，所以台灯只能待在桌上。'),
-  t('Anything you take off the desk waits in your backpack, down here. Drag it back onto the desk whenever you like.', '从桌上拿下来的东西都在下面的背包里等着。随时都可以拖回桌上。'),
+  t('Click one of your things', '点一下桌上的东西'),
+  t('Move it, or put it in the backpack', '移个位置，或者收进背包'),
+  t('Or just drag it to a glowing spot', '也可以直接拖到发光的位置'),
+  t('Your backpack: drag things back out', '背包：再把东西拖回桌上'),
 ];
 const CHAR_K = 6, CHAR_ROW0 = 9, CHAR_ROWS = 19, CHAR_TOP = 378;   // size; the rows of the 16x32 frame drawn (top of the hair to the shoulders); where the hair starts
 type Place = Record<string, string | null>;
@@ -203,7 +203,7 @@ export default function DeskView({ s, sheet, up, mode, openPc, leave }: {
               <div className="row"><button className="linkish" onClick={() => { tap(); setTut(TUT.length); }}>{t('Skip', '跳过')}</button>
                 <button className="btn ghost" onClick={() => { tap(); setTut(tut + 1); }}>{tut === TUT.length - 1 ? t('Got it', '知道啦') : t('Next', '下一步')}</button></div></div>
           </>}
-          {all && tut >= TUT.length && <div className="between foot"><span /><button className="btn primary" onClick={() => { tap(); up({ phase: 'free', surprise: s.surprise === 'opened' ? 'opened' : 'waiting' }); }}>{t('Head into the office →', '去办公室转转 →')}</button></div>}
+          {all && tut >= TUT.length && <div className="between foot"><span /><button className="btn primary" onClick={() => { tap(); up({ phase: 'free', surprise: s.surprise === 'opened' ? 'opened' : 'waiting', guide: 0 }); }}>{t('Head into the office →', '去办公室转转 →')}</button></div>}
         </div>)}
       {mode === 'desk' && !placing && (
         <div className="desk-bar">
