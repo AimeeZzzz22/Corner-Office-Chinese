@@ -95,10 +95,8 @@ function advance(w: Walker, dt: number, speed: number, taken: (t: Tile) => boole
 }
 // tiles a walker holds right now: where it stands and the tile it is stepping into
 // a seated coworker takes only the chair's seat tile; the tile behind the chair stays as labelled, so people can pass behind
-const seatTiles = (id: CoworkerId, g: Grid, into: Set<number>) => {
-  const [sx, sy, cut] = COWORKERS[id].seat; const row = Math.floor((cut >= 32 ? sy + 20 : sy + cut - 4) / T);
-  into.add(row * g.w + Math.floor(sx / T));
-};
+const seatTile = (id: CoworkerId): Tile => { const [sx, sy, cut] = COWORKERS[id].seat; return [Math.floor(sx / T), Math.floor((cut >= 32 ? sy + 20 : sy + cut - 4) / T)]; };
+const seatTiles = (id: CoworkerId, g: Grid, into: Set<number>) => { const [x, y] = seatTile(id); into.add(y * g.w + x); };
 const holds = (w: Walker, g: Grid, into: Set<number>) => { into.add(w.cur[1] * g.w + w.cur[0]); if (w.moving && w.path[0]) into.add(w.path[0][1] * g.w + w.path[0][0]); };
 
 interface Npc extends Walker {
@@ -169,10 +167,19 @@ export default function Office({ onCoworker, frozen, menu, editing, labels, onLa
       return c;
     };
     const p = me.current;
-    // coworkers start at their desks; "home" is the free tile next to the desk where they stand up and sit down
+    // coworkers start at their desks; "home" is the free tile right beside the chair, left or right of it on the same row,
+    // where they stand up and sit down (never across the desk). Of the two, the one nearer the way out.
     const open = routes(g, co.start);
-    if (!npcs.current) npcs.current = co.people.map((id, i) => {
-      const [sx, sy] = COWORKERS[id].seat; const home = open.nearest(sx, sy + 56);
+    const homeOf = (id: CoworkerId): Tile => {
+      const [cx, cy] = seatTile(id); let best: Tile | null = null, bestLen = Infinity;
+      for (const [x, e] of [[cx - 1, cx - 1], [cx + 1, cx]] as const) {   // e: the tile whose right edge lies between chair and side
+        if (x < 0 || x >= g.w || g.walk[cy][x] !== '1' || g.wallE.has(cy * g.w + e)) continue;
+        const pth = open.pathTo([x, cy]); if (pth && pth.length < bestLen) { best = [x, cy]; bestLen = pth.length; }
+      }
+      const [sx, sy] = COWORKERS[id].seat; return best ?? open.nearest(sx, sy + 56);
+    };
+    if (!npcs.current) npcs.current = co.people.map((id) => {
+      const home = homeOf(id);
       return { ...walker(home), id, state: 'sit' as const, timer: 0, alpha: 0, home, wait: 0, hold: false, sheet: img(`npc/${id}.png`), until: 0, lastTrip: '', glide: null };
     });
     const list = npcs.current;
@@ -460,7 +467,11 @@ export default function Office({ onCoworker, frozen, menu, editing, labels, onLa
         const [sx, sy, cut] = COWORKERS[n.id].seat; const seated = n.state === 'sit' && !n.glide ? 1 : 0;
         if (COWORKERS[n.id].pet) { order.push({ y: sy + 16, draw: () => ctx.drawImage(n.sheet, (Math.floor(t * 1.2) % 2) * 16, 0, 16, 20, (sx - 8) * S, sy * S, 48, 60) }); continue; }
         if (seated > 0.01) order.push({ y: sy + 20, draw: () => {
-          ctx.globalAlpha = seated; ctx.drawImage(n.sheet, (18 + (Math.floor(t * 4 + sx) % 6)) * 16, 0, 16, cut, (sx - 8) * S, sy * S, 48, cut * S); ctx.globalAlpha = 1;
+          ctx.globalAlpha = seated; const f = Math.floor(t * 4 + sx) % 6;
+          // the sitting row of the sheet (lap, shins and shoes), sat 2 px lower than standing; a table in front may hide the legs
+          if (n.sheet.naturalHeight >= 96) { const show = COWORKERS[n.id].seat[3] ?? 32; ctx.drawImage(n.sheet, f * 16, 64, 16, show, (sx - 8) * S, (sy + 2) * S, 48, show * S); }
+          else ctx.drawImage(n.sheet, (18 + f) * 16, 0, 16, cut, (sx - 8) * S, sy * S, 48, cut * S);
+          ctx.globalAlpha = 1;
           // a full-height sitter (reception) has the counter drawn back over the legs
           if (cut >= 32 && ready(over)) { const ry = Math.floor((sy + 32) / T) * T * S; ctx.drawImage(over, (sx - 16) * S, ry, 96, 96, (sx - 16) * S, ry, 96, 96); }
         } });

@@ -14,7 +14,7 @@ export interface Trip { m: number; to: string; stay: number; h?: number }
 export interface Coworker {
   id: CoworkerId; name: string; role: string; owns: TaskType[];
   spot: [number, number];        // where to click them while seated, in map pixels
-  seat: [number, number, number]; // seated sprite: centre x, top y, rows shown (the rest is hidden by the desk)
+  seat: [number, number, number, number?]; // seated: centre x, top y, rows that sets the chair's tile (see Office seatTiles), rows of the sitting sprite shown when a table hides the legs (default all)
   pet?: boolean;                 // Bean naps on her bed and never walks
   chat: string;                  // placeholder line for the demo
   schedule?: Trip[];             // when they get up from their desk and where they go
@@ -25,7 +25,7 @@ export const COWORKERS: Record<CoworkerId, Coworker> = {
   margaux: { id: 'margaux', name: t('Margaux', '玛戈'), role: t('Editor-in-Chief', '主编'), owns: ['Writing'], spot: [424, 60], seat: [424, 43, 27], schedule: [{ m: 10, to: 'pantry', stay: 5 }, { m: 40, to: 'editorial', stay: 6 }, { h: 12, m: 0, to: 'bakery', stay: 35 }],
     chat: t('Make it sharp. Then make it shorter.', '写得利落点。然后再短一点。'),
     jobs: [{ title: t('Cover story draft', '封面故事初稿'), doing: t('Drafting the cover story', '正在写封面故事') }, { title: t('Headline options', '标题备选'), doing: t('Writing headlines', '正在想标题') }, { title: t("Editor's letter notes", '主编寄语笔记'), doing: t("Noting ideas for the editor's letter", '正在记主编寄语的点子') }] },
-  priya: { id: 'priya', name: t('Priya', '普丽娅'), role: t("Margaux's assistant", '主编助理'), owns: ['Chores'], spot: [440, 172], seat: [440, 155, 27], schedule: [{ m: 5, to: 'reception', stay: 4 }, { m: 25, to: 'pantry', stay: 5 }, { m: 50, to: 'bakery', stay: 4 }],
+  priya: { id: 'priya', name: t('Priya', '普丽娅'), role: t("Margaux's assistant", '主编助理'), owns: ['Chores'], spot: [440, 172], seat: [440, 139, 27], schedule: [{ m: 5, to: 'reception', stay: 4 }, { m: 25, to: 'pantry', stay: 5 }, { m: 50, to: 'bakery', stay: 4 }],
     chat: t('If it is on the calendar, it is real.', '写进日历的事，才算真的有。'),
     jobs: [{ title: t('Tidy the calendar', '整理日程'), doing: t('Tidying the calendar', '正在整理日程') }, { title: t('Sort the mail', '分拣信件'), doing: t('Sorting the mail', '正在分拣信件') }, { title: t('Restock the supply shelf', '补货办公用品架'), doing: t('Restocking supplies', '正在补货') }] },
   theo: { id: 'theo', name: t('Theo', '西奥'), role: t('Fellow intern', '实习生同事'), owns: ['Studying', 'Coding'], spot: [200, 60], seat: [200, 43, 27], schedule: [{ m: 15, to: 'bakery', stay: 6 }, { m: 45, to: 'lounge', stay: 5 }, { h: 12, m: 30, to: 'pantry', stay: 30 }],
@@ -34,7 +34,7 @@ export const COWORKERS: Record<CoworkerId, Coworker> = {
   camille: { id: 'camille', name: t('Camille', '卡米尔'), role: t('Beauty editor', '美妆编辑'), owns: ['Reading'], spot: [280, 60], seat: [280, 43, 27], schedule: [{ m: 0, to: 'closet', stay: 5 }, { m: 30, to: 'pantry', stay: 4 }],
     chat: t('Read it out loud. You will hear the typo.', '大声读一遍，错字自己会跳出来。'),
     jobs: [{ title: t('Proof the feature', '校对专题'), doing: t('Proofreading the feature', '正在校对专题') }, { title: t('Read the reader mail', '看读者来信'), doing: t('Reading reader mail', '正在看读者来信') }, { title: t('Review the press notes', '看新闻通稿'), doing: t('Reading press notes', '正在看通稿') }] },
-  jonah: { id: 'jonah', name: t('Jonah', '乔纳'), role: t('Art director', '艺术总监'), owns: ['Creative'], spot: [248, 142], seat: [248, 124, 28], schedule: [{ m: 20, to: 'lounge', stay: 6 }, { m: 52, to: 'closet', stay: 4 }, { h: 13, m: 0, to: 'bakery', stay: 30 }],
+  jonah: { id: 'jonah', name: t('Jonah', '乔纳'), role: t('Art director', '艺术总监'), owns: ['Creative'], spot: [248, 142], seat: [248, 124, 20, 24], schedule: [{ m: 20, to: 'lounge', stay: 6 }, { m: 52, to: 'closet', stay: 4 }, { h: 13, m: 0, to: 'bakery', stay: 30 }],
     chat: t('More white space. Always more white space.', '留白再多一点。永远再多一点。'),
     jobs: [{ title: t('Mood board', '情绪板'), doing: t('Building a mood board', '正在拼情绪板') }, { title: t('Layout sketches', '版式草图'), doing: t('Sketching layouts', '正在画版式') }, { title: t('Pick shoot props', '挑拍摄道具'), doing: t('Picking shoot props', '正在挑道具') }] },
   odette: { id: 'odette', name: t('Odette', '奥黛特'), role: t('People & Culture', '人事与文化'), owns: ['Admin'], spot: [248, 286], seat: [248, 267, 32], schedule: [{ m: 35, to: 'lounge', stay: 4 }, { m: 56, to: 'pantry', stay: 3 }],
