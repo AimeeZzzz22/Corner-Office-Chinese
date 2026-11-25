@@ -410,6 +410,7 @@ export default function Office({ onCoworker, frozen, menu, editing, labels, onLa
 
       // ---- draw
       if (co.giftInMap && !giftGone && !extrasRef.current?.surprise && bgImg.complete && overImg.complete) { bg = paintOut(bgImg); over = paintOut(overImg); giftGone = true; }
+      else if (giftGone && extrasRef.current?.surprise) { bg = bgImg; over = overImg; giftGone = false; }   // a new gift (replayed onboarding)
       ctx.globalAlpha = 1; ctx.drawImage(bg, 0, 0);
       if (editRef.current && rowsRef.current) {     // label editor: colour every tile by its label
         const col: Record<string, string> = { '#': 'rgba(40,30,40,.55)', S: 'rgba(230,50,50,.45)', T: 'rgba(255,210,0,.6)', '.': 'rgba(60,200,90,.35)' };
@@ -422,15 +423,12 @@ export default function Office({ onCoworker, frozen, menu, editing, labels, onLa
         const [gx, gy] = co.pc.at, a = 0.25 + 0.2 * Math.sin(t * 2.4);
         ctx.fillStyle = `rgba(150,210,255,${a})`; ctx.beginPath(); ctx.ellipse(gx * S, gy * S - 8, 34, 26, 0, 0, 7); ctx.fill();
       }
-      if (extrasRef.current?.surprise && co.giftInMap) {   // the welcome gift on the table: two little twinkles beside it
+      if (extrasRef.current?.surprise) {   // the welcome gift on a table (in the map picture, or drawn here): two little twinkles beside it
         const [gx, gy] = co.surprise.at;
+        if (!co.giftInMap && giftImg.complete) ctx.drawImage(giftImg, Math.round(gx - giftImg.width / 2) * S, (gy - giftImg.height) * S, giftImg.width * S, giftImg.height * S);
         for (let i = 0; i < 2; i++) { const a = 0.5 + 0.5 * Math.sin(t * 4 + i * 2.5), sx = gx * S + (i ? 26 : -24), sy = gy * S - (i ? 46 : 30);
           ctx.save(); ctx.globalAlpha = a; ctx.fillStyle = '#fff6c8'; ctx.translate(sx, sy); ctx.rotate(t * (i ? -1 : 1));
           ctx.beginPath(); for (let k = 0; k < 8; k++) { const r = k % 2 ? 3 : 9, an = (k * Math.PI) / 4; ctx.lineTo(Math.cos(an) * r, Math.sin(an) * r); } ctx.fill(); ctx.restore(); }
-      } else if (extrasRef.current?.surprise && giftImg.complete) {   // the welcome gift, bobbing gently on the floor
-        const [gx, gy] = co.surprise.at, bob = Math.abs(Math.sin(t * 2.2)) * 6;
-        ctx.fillStyle = 'rgba(255,236,150,.45)'; ctx.beginPath(); ctx.ellipse(gx * S, gy * S - 4, 26, 9, 0, 0, 7); ctx.fill();
-        ctx.drawImage(giftImg, gx * S - giftImg.width * 1.5, gy * S - giftImg.height * S - bob, giftImg.width * S, giftImg.height * S);
       }
       if (extrasRef.current?.fridge) {           // something in the fridge: a little twinkle on the door
         const [fx, fy] = co.fridge.at, a = 0.5 + 0.5 * Math.sin(t * 4);

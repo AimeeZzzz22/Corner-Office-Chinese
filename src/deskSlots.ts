@@ -40,7 +40,7 @@ export const ITEMS: DeskItem[] = [
   { id: 'piggy', name: t('Glass piggy bank', '玻璃存钱罐'), line: t('It fills up with coins as you finish work orders.', '每完成一张工作单，它就会多装一些金币。'), box: [742, 412, 60, 48], fits: ['desk', 'shelf'], home: 'desk-r1' },
   { id: 'phone', name: t('Desk phone', '座机电话'), line: t('A classic desk phone. Very good for looking busy.', '一部经典座机。装忙的好帮手。'), box: [878, 496, 52, 32], fits: ['desk'], home: 'desk-r3' },
   // the welcome surprise found in the office after onboarding
-  { id: 'smile_mug', name: t('Smiley mug', '笑脸马克杯'), line: t('A coffee mug that is always happy to see you.', '一只每次见到你都很开心的咖啡杯。'), box: [432, 455, 44, 40], fits: ['desk', 'shelf'], home: 'desk-l2', starter: false },
+  { id: 'smile_mug', name: t('Smiley mug', '笑脸马克杯'), line: t('A coffee mug that is always happy to see you.', '一只每次见到你都很开心的咖啡杯。'), box: [432, 455, 44, 44], fits: ['desk', 'shelf'], home: 'desk-l2', starter: false },
 ];
 
 export const STARTER = ITEMS.filter((i) => i.starter !== false);

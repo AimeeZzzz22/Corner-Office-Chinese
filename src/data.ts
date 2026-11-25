@@ -99,5 +99,5 @@ export const COMPANIES: Record<CompanyId, Company> = {
   moonpuff: { id: 'moonpuff', name: t('Moonpuff Studio', '月芙工作室'), role: t('Game Dev Intern', '游戏开发实习生'), people: ['rio', 'sam', 'ada', 'kofi', 'mei', 'bean'], host: 'mei', start: [4, 7],
     games: [{ name: t('Bug Triage', '抓虫大作战'), at: [168, 80], stand: [9, 4] }], pc: { at: [48, 54], stand: [4, 5], desk: [16, 40, 64, 80] },
     places: { kitchen: [96, 304], colab: [256, 196], game_room: [440, 100], arcade: [440, 262], idea_wall: [100, 208], booth: [240, 300] },
-    food: { name: t('Kitchen counter', '厨房吧台'), at: [112, 274], stand: [6, 19] }, fridge: { name: t('The fridge', '冰箱'), at: [136, 268], stand: [8, 19] }, surprise: { name: t('A gift for you!', '给你的礼物！'), at: [200, 254], stand: [11, 15] } },
+    food: { name: t('Kitchen counter', '厨房吧台'), at: [112, 274], stand: [6, 19] }, fridge: { name: t('The fridge', '冰箱'), at: [136, 268], stand: [8, 19] }, surprise: { name: t('A gift for you!', '给你的礼物！'), at: [184, 214], stand: [11, 14] } },   // on the coffee table by the green chairs
 };
