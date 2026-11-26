@@ -4,11 +4,11 @@ import { COMPANIES, COWORKERS, CompanyId, CoworkerId, GRADES, GRADE_NAME, HEART_
 import { Order, Result, Save, fresh, load, newTray, store, wipe } from './state';
 import { play, setSound } from './sfx';
 import { Badge, Booth, Offer, Quiz, TourCard, Vibe } from './Onboarding';
-import DeskView, { WorkScene } from './Desk';
+import DeskView, { PLANT, WorkScene } from './Desk';
 import { DEFAULT_LOOK, Parts, compose, loadParts } from './look';
 import { TOUR } from './obdata';
 import Computer from './Tasklet';
-import Shop, { BOX_DAY_MAX, BOX_MINS, PITY, addMinutes, piggyToday } from './BlindBox';
+import Shop, { BOX_DAY_MAX, BOX_MINS, PITY, addMinutes, featured, piggyToday } from './BlindBox';
 import VibeGallery from './VibeGallery';
 import { ZH, t, t as tr } from './lang';
 import { AvatarStack, MailLetter, PullSummary, thisWeek, weekKey, weekStart } from './ui';
@@ -67,6 +67,10 @@ export default function App() {
     return { ...o, recapWeek: wk, notes: [...o.notes, { id: Date.now() + 2, kind: 'recap', from: null, level: 0, coins: 0, week: weekKey(last) }] };
   });
   useEffect(() => { if (s.phase === 'free' || s.phase === 'desk') recap(); }, [s.phase]);
+  // welcome back: after 6 hours or more away, a little card of what happened meanwhile (only good news, never a penalty)
+  const [away] = useState(() => (s.lookDone && s.guide < 0 && ['free', 'desk'].includes(s.phase) && Date.now() - s.lastSeen > 6 * 36e5 ? s.lastSeen : 0));
+  const [welcomeBack, setWelcomeBack] = useState(!!away);
+  useEffect(() => { const seen = () => setS((o) => ({ ...o, lastSeen: Date.now() })); seen(); const id = setInterval(seen, 60000); return () => clearInterval(id); }, []);
   const thanks = (who: CoworkerId, before: number, after: number): Note[] => Math.floor(after / HEART_POINTS) > Math.floor(before / HEART_POINTS)
     ? [{ id: Date.now(), kind: 'thanks', from: who, level: Math.floor(after / HEART_POINTS), coins: 0, week: weekKey() }] : [];
   const [tourReady, setTourReady] = useState(-1);   // the tour stop both have walked to; the dialog shows only then
@@ -141,7 +145,8 @@ export default function App() {
     // the practice order ends with a welcome letter from the host, so the guide can show the mail
     const welcome: Note[] = o.practice ? [{ id: Date.now() + 1, kind: 'welcome', from: co.host, level: 0, coins: 0, week: weekKey() }] : [];
     setTray(false); up({ phase: 'result', result, order: null, notes: [...(o.who ? [...s.notes, ...thanks(o.who, before, after)] : s.notes), ...welcome], blind: finished ? addMinutes(s.blind, o.mins + extraMins) : s.blind, treats: { ...tt, used }, history: [...s.history, past].slice(-200), coins: s.coins + coins, xp: s.xp + xp, tray: newTray(s.company), picked: null,
-      hearts: o.who ? { ...s.hearts, [o.who]: after } : s.hearts, ordersDone: finished && o.who ? { ...s.ordersDone, [o.who]: s.ordersDone[o.who] + 1 } : s.ordersDone });
+      hearts: o.who ? { ...s.hearts, [o.who]: after } : s.hearts, ordersDone: finished && o.who ? { ...s.ordersDone, [o.who]: s.ordersDone[o.who] + 1 } : s.ordersDone,
+      ...(finished && s.plantLast !== new Date().toDateString() ? { plantDays: s.plantDays + 1, plantLast: new Date().toDateString() } : {}) });
   };
 
   const [menuX, setMenuX] = useState(0);
@@ -211,6 +216,8 @@ export default function App() {
           {!ZH && <button className="btn ghost" onClick={() => { tap(); setSettings(false); setVibes(true); }}>{t('Work vibe gallery', '工作风格总览')}</button>}
           <button className="btn ghost" onClick={() => { tap(); setSettings(false); setWeek({ start: weekStart().getTime(), sample: true }); }}>{t('See a sample week (test)', '看一个示例周（测试）')}</button>
           <button className="btn ghost" onClick={() => { tap(); setSettings(false); up({ started: Math.min(s.started, Date.now() - WEEK_MS - 1000), recapWeek: '' }); setTimeout(() => recap(true), 50); }}>{t('Jump a week ahead (test)', '快进一周（测试）')}</button>
+          <button className="btn ghost" onClick={() => { tap(); setSettings(false); setWelcomeBack(true); }}>{t('Welcome-back card (test)', '欢迎回来卡片（测试）')}</button>
+          <button className="btn ghost" onClick={() => { tap(); setSettings(false); up({ plantDays: [2, 5, 10, 20, 0][[0, 2, 5, 10, 20].indexOf(PLANT.reduce((a, d) => (s.plantDays >= d ? d : a), 0))] }); }}>{t('Grow the plant (test)', '让绿植长大（测试）')}</button>
           <button className="btn ghost" onClick={() => { tap(); setSettings(false); payday(true); }}>{t('Payday envelope (test)', '发薪信封（测试）')}</button>
           <button className="btn ghost" onClick={() => { tap(); setSettings(false); const id = co.people[Math.floor(Math.random() * co.people.length)]; up({ notes: [...s.notes, { id: Date.now(), kind: 'thanks', from: id, level: Math.max(1, Math.floor(s.hearts[id] / HEART_POINTS)), coins: 0, week: weekKey() }] }); }}>{t('Thank-you note (test)', '感谢信（测试）')}</button>
           <button className="btn ghost" onClick={() => { tap(); setSettings(false); up({ fridge: { day: new Date().toDateString(), item: FRIDGE[Math.floor(Math.random() * FRIDGE.length)].key, fortune: Math.floor(Math.random() * FORTUNES.length) } }); }}>{t('Put a treat in the fridge (test)', '往冰箱放点心（测试）')}</button>
@@ -352,6 +359,22 @@ export default function App() {
       {tip && s.guide < 0 && (() => { const tp = TIPS.find((x) => x.id === tip.id)!; return <Coach key={tip.id} tip c={gctx} st={tp.steps[tip.i]} step={tip.i} total={tp.steps.length} stage={stage}
         next={() => (tip.i + 1 >= tp.steps.length ? endTip(true) : setTip({ id: tip.id, i: tip.i + 1 }))} skip={() => { tap(); endTip(true); }} />; })()}
       {vibes && <VibeGallery sheet={sheet} who={name} close={() => setVibes(false)} />}
+      {welcomeBack && (() => {
+        const b = piggyToday(s.blind), pal = co.people.filter((p) => s.hearts[p] >= HEART_POINTS).sort((a, b2) => s.hearts[b2] - s.hearts[a])[0];
+        const newMonth = new Date(away).getMonth() !== new Date().getMonth(), feat = featured();
+        const rows: [string, string][] = [];
+        if (s.notes.length) rows.push(['✉️', ZH ? `电脑信箱里有 ${s.notes.length} 封新信` : `${s.notes.length} new letter${s.notes.length > 1 ? 's' : ''} in your Mail`]);
+        if (b.ready) rows.push(['🎁', ZH ? `${b.ready} 个盲包等你拆` : `${b.ready} blind pack${b.ready > 1 ? 's' : ''} waiting`]);
+        if (s.fridge.day === new Date().toDateString() && s.fridge.item) rows.push(['🧁', t("There's something in the fridge today", '今天冰箱里有好吃的')]);
+        if (pal) rows.push(['📝', ZH ? `${COWORKERS[pal].name}在你工位上贴了张便利贴：“${COWORKERS[pal].chat}”` : `${COWORKERS[pal].name} left a sticky note on your desk: “${COWORKERS[pal].chat}”`]);
+        if (newMonth) rows.push([feat.icon, ZH ? `新的一个月：本月主推「${feat.name}」系列` : `New month: the ${feat.name} series is featured`]);
+        rows.push(['🌱', ZH ? `你的绿植在等你：已经陪你专注了 ${s.plantDays} 天` : `Your plant is waiting: ${s.plantDays} focus day${s.plantDays === 1 ? '' : 's'} together`]);
+        return <div className="wb-dim" onClick={() => setWelcomeBack(false)}><div className="card wb" onClick={(e) => e.stopPropagation()}>
+          <i className="wb-tape" /><div className="wb-hand">{ZH ? `欢迎回来，${name}！` : `Welcome back, ${name}!`}</div>
+          <div className="sub">{t('While you were away:', '你不在的时候：')}</div>
+          <div className="wb-list">{rows.map(([ic, tx], i) => <div key={i} style={{ ['--d' as string]: `${0.2 + i * 0.12}s` }}><i>{ic}</i><span>{tx}</span></div>)}</div>
+          <button className="btn primary" onClick={() => { tap(); setWelcomeBack(false); }}>{t("Let's go", '开始吧')}</button>
+        </div></div>; })()}
       {week && <WeekJournal s={s} name={name} start={week.start} sample={week.sample} close={() => setWeek(null)} />}
     </div>
   );

@@ -1583,3 +1583,42 @@ button.bb-cell { border: 0; cursor: default; padding: 0; } button.bb-cell.unfoun
 html:lang(zh-CN) .mail-paper.note .note-ps { font-size: 18px !important; }
 .acc-strip.on .acc-open { overflow-y: auto; scrollbar-width: thin; }
 .acc-story { max-width: 330px; }
+/* the journal: what you did, bookmark tabs, and the month */
+.wk-did { display: grid; gap: 2px; margin-top: 2px; }
+.wk-did .wk-hand { font-size: 21px; line-height: 1.15; color: #3d3546; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wk-did i { font-style: normal; color: #4fa77d; margin-right: 8px; font-family: Inter, sans-serif; font-size: 14px; font-weight: 800; }
+.wk-tabs { position: absolute; right: 40px; top: -30px; display: flex; gap: 6px; z-index: 0; }
+.wk-tabs button { border: 0; cursor: pointer; padding: 6px 16px 14px; border-radius: 10px 10px 0 0; font-weight: 800; font-size: 13px; background: #d9cfee; color: #6d6474; translate: 0 6px; transition: translate .15s; }
+.wk-tabs button.on { background: #fffcf4; color: #3d3546; translate: 0 0; }
+.wk-cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; text-align: center; }
+.wk-cal b { font-size: 20px; font-weight: 400; color: #8a8090; }
+.wk-cal span { position: relative; aspect-ratio: 1.15; border-radius: 10px; background: rgba(255, 255, 255, .6); border: 1.5px dashed #e6dccd; display: grid; place-items: center; }
+.wk-cal span:empty { border: 0; background: none; }
+.wk-cal small { position: absolute; left: 6px; top: 3px; font-size: 10px; font-weight: 700; color: #b0a6b6; }
+.wk-cal i { width: 26px; height: 26px; border-radius: 50%; opacity: .9; animation: wkPop .35s cubic-bezier(.3, 1.6, .5, 1) var(--d) both; box-shadow: inset 0 -3px 0 rgba(0, 0, 0, .06); }
+.wk-legend { margin-top: -4px; }
+.wk-mgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.wk-mcard { background: rgba(255, 255, 255, .75); border: 2px dashed #e0d6c8; border-radius: 14px; padding: 12px 14px; display: grid; gap: 4px; }
+.wk-mcard b { font-size: 26px; line-height: 1; color: #3d3546; } .wk-mcard span { font-size: 12px; color: #8a8090; font-weight: 600; }
+.wk-pola.small { width: 104px; } .wk-pola.small .head { width: 84px !important; height: 66px !important; } .wk-pola.small .head img { width: 48px; height: 48px; }
+.wk-page { gap: 12px; padding-top: 30px; } .wk-bars { height: 112px; } .wk-title { font-size: 42px; } .wk-box { padding: 12px 16px 10px; } .wk-big { margin: 4px 0 6px; }
+.wk-book { height: 560px; } .wk-book > .wk-page { overflow: hidden; }
+
+/* the desk plant, in the corner of the desk view */
+.desk-plant { position: absolute; width: 120px; height: 192px; translate: -50% -100%; z-index: 2; cursor: help; }
+.desk-plant i { position: absolute; inset: 0; background: url('../public/assets/ob/plant.png') 0 0 / 500% 100%; image-rendering: pixelated; transform-origin: 50% 100%; animation: plantSway 4s ease-in-out infinite; }
+@keyframes plantSway { 0%, 100% { rotate: -1deg; } 50% { rotate: 1.2deg; } }
+.desk-plant-tip { position: absolute; left: 50%; bottom: calc(100% - 20px); translate: -50% 0; width: 220px; padding: 8px 12px; border-radius: 12px; background: #fffdf6; box-shadow: 0 0 0 2px #e6dccd, 0 6px 14px rgba(0, 0, 0, .15); font-size: 13px; font-weight: 700; color: #4a4258; text-align: center; opacity: 0; pointer-events: none; transition: opacity .2s; }
+.desk-plant-tip small { font-weight: 500; color: #8a8090; }
+.desk-plant:hover .desk-plant-tip { opacity: 1; }
+/* welcome back */
+.wb-dim { position: absolute; inset: 0; z-index: 57; display: grid; place-items: center; background: rgba(26, 20, 30, .55); animation: fadeIn .3s; }
+.card.wb { position: relative; width: 470px; padding: 30px 30px 24px; display: grid; gap: 10px; background: #fffcf4; border-radius: 6px; animation: wkIn .5s cubic-bezier(.2, 1.2, .4, 1) both;
+  background-image: radial-gradient(circle, rgba(120, 100, 140, .22) 1.2px, transparent 1.6px); background-size: 22px 22px; }
+.wb-tape { position: absolute; left: 50%; top: -13px; width: 130px; height: 28px; margin-left: -65px; rotate: -2deg; background: repeating-linear-gradient(45deg, #bfe3ff 0 7px, #ddf0ff 7px 14px); clip-path: polygon(3% 0, 97% 5%, 100% 50%, 96% 100%, 2% 95%, 0 50%); }
+.wb-hand { font-family: 'Caveat', cursive; font-size: 40px; line-height: 1; color: #3d3546; }
+html:lang(zh-CN) .wb-hand { font-family: 'Caveat', 'Kaiti SC', 'STKaiti', 'KaiTi', cursive; font-size: 34px; }
+.wb-list { display: grid; gap: 8px; margin: 4px 0 8px; }
+.wb-list div { display: flex; gap: 10px; align-items: flex-start; padding: 8px 12px; border-radius: 10px; background: rgba(255, 255, 255, .8); box-shadow: 0 0 0 1.5px #ece3d2; font-size: 14px; color: #4a4258; animation: wkPop .4s cubic-bezier(.3, 1.6, .5, 1) var(--d) both; }
+.wb-list i { font-style: normal; font-size: 18px; line-height: 1.1; }
+.desk-plant-tip { left: calc(50% + 46px); bottom: 24px; translate: 0 0; text-align: left; }

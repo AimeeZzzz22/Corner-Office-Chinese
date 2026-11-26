@@ -10,6 +10,7 @@ import { ITEMS, SLOTS, STARTER, fits, freeSlot, item, slot } from './deskSlots';
 const A = `${import.meta.env.BASE_URL}assets/`;
 const tap = () => play('ui_tap', 0.4);
 const W = 1280, H = 832;
+export const PLANT = [0, 2, 5, 10, 20];   // focus days for each of the plant's five stages
 const TUT = [
   t('Click one of your things', '点一下桌上的东西'),
   t('Move it, or put it in the backpack', '移个位置，或者收进背包'),
@@ -155,6 +156,12 @@ export default function DeskView({ s, sheet, up, mode, openPc, leave }: {
     <div className={`gift-room${live ? '' : ' still'}`}>
       <div className="gift-stage" ref={stage} onPointerDown={down}>
         <canvas ref={ref} width={W} height={H} />
+        {/* the plant in the corner: grows on days you finish an order, never shrinks */}
+        {mode === 'desk' && (() => { const st = PLANT.reduce((a, d, i) => (s.plantDays >= d ? i : a), 0), next = PLANT[st + 1]; return (
+          <div className="desk-plant" style={{ ...pct(206, 760), ['--st' as string]: st }} onPointerDown={(e) => e.stopPropagation()}>
+            <i style={{ backgroundPosition: `${st * 25}% 0` }} />
+            <span className="desk-plant-tip">{ZH ? `你的绿植 · 一起专注了 ${s.plantDays} 天` : `Your plant · ${s.plantDays} focus day${s.plantDays === 1 ? '' : 's'} together`}<br /><small>{next ? (ZH ? `再专注 ${next - s.plantDays} 天，它会再长大一点` : `${next - s.plantDays} more day${next - s.plantDays > 1 ? 's' : ''} and it grows again`) : t('In full bloom. Thank you for looking after it.', '开花啦。谢谢你一直照顾它。')}</small></span>
+          </div>); })()}
         {/* your computer: click it to use it */}
         {mode === 'desk' && <button className="pc-hot" style={{ ...pct(585, 288), width: `${(110 / W) * 100}%`, height: `${(98 / H) * 100}%` }}
           onPointerDown={(e) => e.stopPropagation()} onClick={() => { tap(); openPc?.(); }} aria-label={t('Use the computer', '用电脑')}><span>{t('Tasklet', '任务夹')}</span>{s.notes.length > 0 && <i className="pc-mailflag"><b>✉</b>{s.notes.length}</i>}</button>}
