@@ -1663,3 +1663,4 @@ html:lang(zh-CN) .bc-title { font-family: 'Caveat', 'Kaiti SC', 'STKaiti', 'KaiT
 .bc-sig b { font-weight: 400; color: #8a6a4a; }
 .bc-gift { justify-self: center; display: flex; align-items: center; gap: 8px; background: #fff; padding: 6px 16px; border-radius: 99px; box-shadow: 0 0 0 2px #f6cfa0; }
 .bc-gift img { width: 24px; image-rendering: pixelated; } .bc-gift .pix { font-size: 22px; } .bc-gift small { color: #a0845a; font-weight: 600; font-size: 12px; }
+.mb-list { grid-auto-rows: max-content; } .mb-row { min-height: 70px; }
