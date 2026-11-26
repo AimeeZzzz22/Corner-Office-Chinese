@@ -297,7 +297,7 @@ export default function App() {
           <div className="pix h1">{s.result.finished ? t('Nice work!', '干得漂亮！') : t('Good stopping point', '停在这里刚刚好')}</div>
           <div className="sub">{s.result.finished ? (ZH ? `${name}完成了这张工作单。` : `${name} finished the order.`) : ZH ? `${name}做了 ${s.result.minutes} 分钟后收工了。` : `${name} wrapped up after ${s.result.minutes} min.`}</div>
           {s.result.promoted && <div className="promo"><b className="pix">🎉 {ZH ? `升职啦！实习生${GRADE_NAME(s.result.promoted)}` : `Promoted! Intern ${GRADE_NAME(s.result.promoted)}`}</b><span>{ZH ? `加薪：以后每张工作单金币 +${s.result.promoted * RAISE * 100}%` : `A raise: +${s.result.promoted * RAISE * 100}% coins on every order from now on`}{s.result.promoted >= 2 ? t(', and +20% XP', '，经验也 +20%') : ''}</span></div>}
-          <div className="gain"><Coin /><span className="pix">+{s.result.coins}</span><span className="pix xpgain">+{s.result.xp} {t('XP', '经验')}</span></div>
+          <div className="gain"><div className="gain-chip coins"><Coin /><div><span className="pix">+{s.result.coins}</span><small>{t('coins', '金币')}</small></div></div><div className="gain-chip xpc"><i>⭐</i><div><span className="pix">+{s.result.xp}</span><small>{t('XP', '经验')}</small></div></div></div>
           {!!s.result.bonus?.length && <div className="bonus-list">{s.result.bonus.map((b) => <span key={b}>✦ {b}</span>)}</div>}
           {s.result.who && s.result.heartAfter > s.result.heartBefore && (
             <div className="pill"><Head id={s.result.who} size={40} /><div><b>{COWORKERS[s.result.who].name}</b> <em>+1</em>

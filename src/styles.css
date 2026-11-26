@@ -1,9 +1,9 @@
 @font-face { font-family: 'Pixelify Sans'; font-weight: 400; src: url('../public/assets/fonts/pixelify-sans-latin-400-normal.woff2') format('woff2'); }
 @font-face { font-family: 'Pixelify Sans'; font-weight: 700; src: url('../public/assets/fonts/pixelify-sans-latin-700-normal.woff2') format('woff2'); }
 /* digits come from Silkscreen: Pixelify's own 5 looks like an S (and its 2 like a Z), so every number in the pixel
-   font uses Silkscreen's clearer, blockier digits instead. Letters stay Pixelify. */
-@font-face { font-family: 'Pixelify Sans'; font-weight: 400; src: url('../public/assets/fonts/silkscreen-latin-700-normal.woff2') format('woff2'); unicode-range: U+0030-0039; size-adjust: 88%; }
-@font-face { font-family: 'Pixelify Sans'; font-weight: 700; src: url('../public/assets/fonts/silkscreen-latin-700-normal.woff2') format('woff2'); unicode-range: U+0030-0039; size-adjust: 88%; }
+   font uses Silkscreen's digits instead. The regular weight: the bold one's 4 fills in to a blob. Letters stay Pixelify. */
+@font-face { font-family: 'Pixelify Sans'; font-weight: 400; src: url('../public/assets/fonts/silkscreen-latin-400-normal.woff2') format('woff2'); unicode-range: U+0030-0039; size-adjust: 88%; }
+@font-face { font-family: 'Pixelify Sans'; font-weight: 700; src: url('../public/assets/fonts/silkscreen-latin-400-normal.woff2') format('woff2'); unicode-range: U+0030-0039; size-adjust: 88%; }
 /* Chinese: Fusion Pixel 12px (OFL), subset by tools/zh_font.py. Only CJK ranges, so the English build never loads it. */
 @font-face { font-family: 'Pixelify Sans'; font-weight: 400; src: url('../public/assets/fonts/fusion-pixel-sc.woff2') format('woff2'); unicode-range: U+3000-303F, U+4E00-9FFF, U+FF00-FFEF; }
 @font-face { font-family: 'Pixelify Sans'; font-weight: 700; src: url('../public/assets/fonts/fusion-pixel-sc.woff2') format('woff2'); unicode-range: U+3000-303F, U+4E00-9FFF, U+FF00-FFEF; }
@@ -477,7 +477,7 @@ select.need { border-color: #e48a9a !important; }
 .tour-title { padding: 10px 20px; }
 .settings { padding: 16px; }
 .pc-hot span { padding: 4px 12px; }
-.pc-mins, .mins .pix, .gain .pix { letter-spacing: -0.06em; }
+.pc-mins, .mins .pix { letter-spacing: -0.06em; }
 
 /* ---------------- blind boxes (test page) ---------------- */
 .bb-dim { position: absolute; inset: 0; z-index: 40; background: rgba(40,30,30,.45); display: grid; place-items: center; animation: fadeIn .2s ease; }
@@ -1118,3 +1118,12 @@ html:lang(zh-CN) .mail-hand { font-size: 25px; } html:lang(zh-CN) .mail-hand.bod
 .promo { display: grid; gap: 4px; margin: 4px 0 10px; padding: 12px 14px; border-radius: 14px; text-align: center; background: linear-gradient(135deg, #fff1c2, #ffd9e4); border: 2px solid #f2c14e; animation: promoIn .6s cubic-bezier(.3, 1.6, .5, 1); }
 .promo b { font-size: 20px; } .promo span { font-size: 14px; color: #7a5a2a; }
 @keyframes promoIn { from { opacity: 0; transform: scale(.6) rotate(-3deg); } }
+/* rewards on the result card: two chips, coins and XP, each with a big clear number and its label */
+.result-wrap .gain { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+.gain-chip { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 10px 12px; border-radius: 16px; background: #fff6d8; border: 2px solid #f2d27a; }
+.gain-chip.xpc { background: #eaf2ff; border-color: #a9c6ef; }
+.gain-chip .coin, .gain-chip i { align-self: center; width: 30px; font-style: normal; font-size: 26px; line-height: 1; }
+.gain-chip .pix { font-size: 36px; line-height: 1; letter-spacing: -0.05em; white-space: nowrap; }
+.gain-chip.xpc .pix { color: #3f6fb0; }
+.gain-chip > div { display: grid; justify-items: start; gap: 4px; }
+.gain-chip small { font-size: 13px; font-weight: 700; color: var(--muted); white-space: nowrap; }
