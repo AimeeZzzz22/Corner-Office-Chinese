@@ -189,7 +189,9 @@ function Catalogue({ s, up }: { s: Save; up: (p: Partial<Save>) => void }) {
 // confetti burst out, one card rises, the pack drops away, the card back wiggles (harder for rarer finds) and flips. ----
 type Stage = 'in' | 'tear' | 'rise' | 'tease' | 'flip' | 'reveal';
 const PACKS = ['lilac', 'pink', 'mint', 'butter'];
-const TEASE: Record<Tier, number> = { normal: 450, cute: 1100, secret: 2000 };
+// how long the face-down card builds up before it flips: a normal one barely waits, a cute one slowly glows pink,
+// a secret one gathers gold and rainbow light for a good while
+const TEASE: Record<Tier, number> = { normal: 600, cute: 1800, secret: 3000 };
 const STRIP_W = 180;
 const RIBBON = ['#ec6f6f', '#f2a65a', '#f2c14e', '#8fd18a', '#7ec4e8', '#9b8ce0', '#f4a6bf'];
 function Opening({ it, count, again, next, done }: { it: Item; count: number; again: boolean; next: () => void; done: () => void }) {
@@ -218,12 +220,24 @@ function Opening({ it, count, again, next, done }: { it: Item; count: number; ag
     hero.current.style.setProperty('--mx', `${mx * 100}%`); hero.current.style.setProperty('--my', `${my * 100}%`);
     hero.current.style.setProperty('--ry', `${(mx - 0.5) * 22}deg`); hero.current.style.setProperty('--rx', `${(0.5 - my) * 16}deg`);
   };
+  // the light show's little bits: motes for a normal find, rising hearts for cute, sparkles for secret
+  const [parts] = useState(() => Array.from({ length: tier === 'secret' ? 28 : tier === 'cute' ? 18 : 10 }, () => ({
+    x: (Math.random() < 0.5 ? -1 : 1) * (110 + Math.random() * 170), y: (Math.random() - 0.5) * 320, d: Math.random() * 2.4, s: 0.6 + Math.random() * 0.9, h: Math.floor(Math.random() * 360) })));
+  const [dust] = useState(() => Array.from({ length: 26 }, () => ({ x: Math.random() * 100, y: Math.random() * 100, d: Math.random() * 6, s: 2 + Math.random() * 3 })));
+  const lit = stage === 'tease' || stage === 'flip' || stage === 'reveal';
   const fav = it.fav ? COWORKERS[it.fav as CoworkerId] : null;
   const strip = `${A}pack_${color}_strip.png`;
   return (
-    <div className={`bb-open-dim pk ${tier} s-${stage}`} onPointerMove={tilt}>
+    <div className={`bb-open-dim pk ${tier} s-${stage}`} onPointerMove={tilt} style={{ ['--tease' as string]: `${TEASE[tier]}ms` }}>
+      {/* a dark velvet stage with drifting dust, so the pack and the card are the only things to look at */}
+      <div className="rv-dust">{dust.map((d, i) => <i key={i} style={{ left: `${d.x}%`, top: `${d.y}%`, width: d.s, height: d.s, animationDelay: `${d.d}s` }} />)}</div>
       {stage === 'reveal' && <div className={`bb-rays ${tier}`} />}
       <div className="pk-hero" ref={hero}>
+        {/* the build-up behind the card: a glow in the tier's colour, a turning rainbow ring for a secret, and little bits */}
+        {lit && <div className="rv-aura" />}
+        {lit && tier === 'secret' && <div className="rv-halo" />}
+        {lit && <div className="rv-parts">{parts.map((q, i) => <i key={i} style={{ ['--x' as string]: `${q.x}px`, ['--y' as string]: `${q.y}px`, ['--s' as string]: q.s, ['--h' as string]: q.h, animationDelay: `${q.d}s` }}>{tier === 'cute' ? '♥' : tier === 'secret' ? '✦' : ''}</i>)}</div>}
+        {tier === 'secret' && stage === 'flip' && <div className="rv-flash" />}
         {/* ribbons and confetti, out of the top of the pack */}
         {stage !== 'in' && <div className="pk-burst">
           {RIBBON.map((c, i) => <svg key={i} className="pk-ribbon" style={{ ['--a' as string]: `${-54 + i * 18}deg`, animationDelay: `${i * 25}ms` }} viewBox="0 0 24 160" width="24" height="160" shapeRendering="crispEdges">
@@ -249,7 +263,7 @@ function Opening({ it, count, again, next, done }: { it: Item; count: number; ag
           {stage === 'in' && <span className="pk-grab" style={{ opacity: p > 0.05 ? 0 : 1 }}>{t('drag ➜', '拖动 ➜')}</span>}
         </div>
       </div>
-      <div className="pk-hint">{stage === 'in' ? t('Drag along the top to tear it open, or just click the pack.', '沿着顶部拖动把它撕开，或者直接点一下盲包。') : stage === 'tease' ? (tier === 'secret' ? t('Ooh… something rare?', '哇……难道是稀有的？') : tier === 'cute' ? t('Ooh…', '哇……') : ' ') : ' '}</div>
+      <div className="pk-hint">{stage === 'in' ? t('Drag along the top to tear it open, or just click the pack.', '沿着顶部拖动把它撕开，或者直接点一下盲包。') : stage === 'tease' ? (tier === 'secret' ? t('Golden light… a secret one?!', '金光闪闪……难道是隐藏款？！') : tier === 'cute' ? t("It's glowing pink…", '泛起粉粉的光……') : ' ') : ' '}</div>
       {stage === 'reveal' && <div className="card bb-reveal">
         <span className="bb-tag" style={{ background: TIER[tier].col }}>{TIER[tier].label}{tier === 'secret' ? ' ✦' : ''}</span>
         <div className="pix h1">{it.name}</div>
