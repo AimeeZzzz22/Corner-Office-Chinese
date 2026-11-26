@@ -94,7 +94,7 @@ export function BlindBoxTab({ s, up, close }: { s: Save; up: (p: Partial<Save>) 
           {/* boxes waiting */}
           <div className="bb-panel mid">
             <div className="pix bb-h">{b.ready ? (ZH ? `${b.ready} 个盲包待拆` : `${b.ready} pack${b.ready > 1 ? 's' : ''} ready`) : t('No packs yet', '还没有盲包')}</div>
-            <div className="bb-boxes">{b.ready ? Array.from({ length: Math.min(3, b.ready) }, (_, i) => <img key={i} src={`${A}pack_${PACKS[i]}.png`} alt="" style={{ transform: `translate(${(i - (Math.min(3, b.ready) - 1) / 2) * 70}px, ${i % 2 ? 14 : 0}px) rotate(${(i - 1) * 6}deg)`, zIndex: 3 - i }} />)
+            <div className="bb-boxes">{b.ready ? Array.from({ length: Math.min(3, b.ready) }, (_, i) => <img key={i} src={`${A}pack_${PACKS[i]}.png`} alt="" style={{ transform: `translate(${(i - (Math.min(3, b.ready) - 1) / 2) * 56}px, ${i % 2 ? 14 : 0}px) rotate(${(i - 1) * 6}deg)`, zIndex: 3 - i }} />)
               : <div className="sub center">{t('Finish an hour of work orders to earn one.', '完成一小时的工作单就能得到一个。')}</div>}</div>
             {b.ready > 0 && <div className="bb-q">{t('What will it be?', '会是什么呢？')}</div>}
             <button className="btn primary bb-open" disabled={!canOpen} onClick={() => { tap(); open(); }}>{t('Open a pack', '拆一个盲包')} · {BOX_COST} {t('coins', '金币')}</button>

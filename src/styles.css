@@ -502,7 +502,7 @@ select.need { border-color: #e48a9a !important; }
 .bb-today { display: flex; align-items: center; gap: 10px; margin-top: 6px; font-size: 13px; } .bb-today span:nth-child(2) { display: flex; gap: 6px; }
 .bb-today i { width: 15px; height: 15px; border-radius: 50%; border: 2px solid var(--edge); background: var(--card); } .bb-today i.on { background: #b7a3e0; border-color: #8c78c4; }
 .bb-boxes { height: 210px; display: grid; place-items: center; position: relative; }
-.bb-boxes img { position: absolute; width: 160px; image-rendering: pixelated; animation: boxBob 2.4s ease-in-out infinite; }
+.bb-boxes img { position: absolute; width: 126px; image-rendering: pixelated; animation: boxBob 2.4s ease-in-out infinite; }
 .bb-boxes img:nth-child(2) { animation-delay: .4s; } .bb-boxes img:nth-child(3) { animation-delay: .8s; }
 @keyframes boxBob { 50% { margin-top: -8px; } }
 .bb-q { text-align: center; font-weight: 700; }
@@ -732,7 +732,7 @@ select.need { border-color: #e48a9a !important; }
   background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,.9) 46%, transparent 60%); background-size: 260% 260%; background-position: var(--mx) var(--my); }
 .cute .pk-holo { mix-blend-mode: overlay; opacity: .6; background: linear-gradient(115deg, transparent 25%, #fff 42%, #ffc2da 50%, #fff6c8 56%, transparent 70%); background-size: 260% 260%; background-position: var(--mx) var(--my); }
 .secret .pk-holo { mix-blend-mode: color-dodge; opacity: .5;
-  background: linear-gradient(115deg, #ff9ab8, #ffd36e, #a6f0a0, #8fd8ff, #c3a2ff, #ff9ab8); background-size: 300% 300%; background-position: var(--mx) var(--my); }
+  background: linear-gradient(115deg, transparent 20%, #fff3c0 38%, #ffd04a 48%, #fff8dc 56%, transparent 74%); background-size: 300% 300%; background-position: var(--mx) var(--my); }
 /* the tease: the card back wiggles before it turns; rarer finds glow and wiggle longer */
 .pk.s-tease.cute .pk-flip { animation: pkWiggle .5s ease-in-out .5s 2; } .pk.s-tease.cute .pk-card { filter: drop-shadow(0 0 14px #ffb6cf); }
 .pk.s-tease.secret .pk-flip { animation: pkWiggle .45s ease-in-out .5s 4; } .pk.s-tease.secret .pk-card, .pk.s-flip.secret .pk-card, .pk.s-reveal.secret .pk-card { filter: drop-shadow(0 0 20px #c7b2ff); }
@@ -1168,9 +1168,10 @@ html:lang(zh-CN) .mail-hand { font-size: 25px; } html:lang(zh-CN) .mail-hand.bod
 .pk.s-tease.secret .pk-flip { animation: rvShake .22s ease-in-out calc(var(--tease) * .35) 9; }
 @keyframes rvShake { 0%, 100% { transform: rotate(0) translateX(0); } 25% { transform: rotate(-2.5deg) translateX(-3px); } 75% { transform: rotate(2.5deg) translateX(3px); } }
 
-/* secret: a rainbow ring of light turning behind the card, arriving in the second half of the build-up */
+/* secret: a ring of golden light turning behind the card, arriving in the second half of the build-up
+   (gold only: no rainbow) */
 .rv-halo { position: absolute; left: 50%; top: 46%; width: 600px; height: 600px; margin: -300px; border-radius: 50%; pointer-events: none; z-index: 1; opacity: 0;
-  background: repeating-conic-gradient(from 0deg, rgba(255, 120, 120, .55) 0 8deg, transparent 8deg 15deg, rgba(255, 210, 90, .6) 15deg 23deg, transparent 23deg 30deg, rgba(120, 220, 150, .5) 30deg 38deg, transparent 38deg 45deg, rgba(110, 170, 255, .55) 45deg 53deg, transparent 53deg 60deg, rgba(200, 140, 255, .55) 60deg 68deg, transparent 68deg 75deg);
+  background: repeating-conic-gradient(from 0deg, rgba(255, 214, 102, .75) 0 7deg, transparent 7deg 14deg, rgba(255, 244, 196, .65) 14deg 19deg, transparent 19deg 30deg);
   -webkit-mask: radial-gradient(circle, transparent 18%, #000 30%, #000 52%, transparent 70%); mask: radial-gradient(circle, transparent 18%, #000 30%, #000 52%, transparent 70%);
   animation: rvHaloIn calc(var(--tease) * .6) ease-in calc(var(--tease) * .4) forwards, orbit 9s linear infinite; }
 @keyframes rvHaloIn { from { opacity: 0; transform: scale(.4); } to { opacity: 1; transform: scale(1); } }
@@ -1183,8 +1184,8 @@ html:lang(zh-CN) .mail-hand { font-size: 25px; } html:lang(zh-CN) .mail-hand.bod
 @keyframes rvMote { 0%, 100% { opacity: 0; transform: translateY(10px); } 50% { opacity: .8; transform: translateY(-14px); } }
 .pk.cute .rv-parts i { font-size: calc(18px * var(--s)); color: #ff8fbd; text-shadow: 0 0 8px #ffc0da; animation: rvHeart 2.8s ease-out infinite; }
 @keyframes rvHeart { 0% { opacity: 0; transform: translateY(40px) scale(.4); } 25% { opacity: 1; } 100% { opacity: 0; transform: translateY(-90px) scale(1) rotate(12deg); } }
-.pk.secret .rv-parts i { font-size: calc(22px * var(--s)); color: hsl(var(--h) 95% 70%); text-shadow: 0 0 10px hsl(var(--h) 100% 75%), 0 0 4px #fff; animation: rvTwinkle 1.6s ease-in-out infinite; }
-.pk.secret .rv-parts i:nth-child(3n) { color: #ffd24a; text-shadow: 0 0 12px #ffcf4a, 0 0 4px #fff; }
+.pk.secret .rv-parts i { font-size: calc(22px * var(--s)); color: #ffe17a; text-shadow: 0 0 10px #ffc94a, 0 0 4px #fff; animation: rvTwinkle 1.6s ease-in-out infinite; }
+.pk.secret .rv-parts i:nth-child(3n) { color: #fff6d0; text-shadow: 0 0 12px #ffcf4a, 0 0 4px #fff; }
 @keyframes rvTwinkle { 0%, 100% { opacity: 0; transform: scale(.2) rotate(0); } 50% { opacity: 1; transform: scale(1.15) rotate(45deg); } }
 /* secret: a white flash as the card turns */
 .rv-flash { position: fixed; inset: -50vh -50vw; z-index: 20; background: radial-gradient(circle, #fff 0%, rgba(255, 248, 220, .9) 30%, transparent 70%); pointer-events: none; animation: rvFlash .7s ease-out forwards; }

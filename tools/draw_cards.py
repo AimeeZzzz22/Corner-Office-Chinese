@@ -1,6 +1,6 @@
 # Blind pack cards, redrawn to be finer: 34x46 art pixels shown at 6x (204x276), the same window and name plate
 # positions as before (window 6..27 x 6..32, plate 7..26 x 36..40), a full outline on every side, and a frame of its
-# own for each tier: cream with little studs (normal), pink with a bow, dots and hearts (cute), gold with gem corners
+# own for each tier: cream with little studs (normal), pink with a bow, dots and hearts (cute), gold with diamond corners
 # and a star (secret). The back: deep blue-violet with a lattice of tiny stars and a golden star medallion.
 from PIL import Image
 CW, CH, K = 34, 46, 6
@@ -66,9 +66,8 @@ for y in range(4, CH - 4):
         if (x in (4, CW - 5) or y in (4, CH - 5)) and (x + y) % 2 == 0: p[x, y] = rgb(GHI)
 window(p, (150, 96, 24, 255)); plate(p, (255, 246, 210), GDK)
 gem = [".G.", "GLG", ".G."]
-for (x, y), col in zip(((2, 2), (CW - 5, 2), (2, CH - 5), (CW - 5, CH - 5)), ((236, 86, 120), (80, 170, 240), (90, 200, 130), (170, 110, 240))):
-    light = tuple(min(255, c + 90) for c in col)
-    put(p, x, y, gem, {'G': col, 'L': light})
+for (x, y), col in zip(((2, 2), (CW - 5, 2), (2, CH - 5), (CW - 5, CH - 5)), ((255, 250, 228),) * 4):   # pearl-white diamonds: the secret card is all gold
+    put(p, x, y, gem, {'G': (226, 170, 60), 'L': col})
 star = ["...O...", "..OYO..", "OOOYOOO", ".OYYYO.", "..OYO..", ".OY.YO.", ".O...O."]
 put(p, CW // 2 - 3, 0, star, {'O': O[:3], 'Y': (255, 236, 140)})
 save(im, 'secret')
