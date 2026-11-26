@@ -188,20 +188,23 @@ function Catalogue({ s, up }: { s: Save; up: (p: Partial<Save>) => void }) {
   );
 }
 
-// ---------------- opening packs: a glossy foil pack with a little mascot on it. Tear the strip off the top (drag it, or
+// ---------------- opening packs: a glossy foil pack with a game thing on it (a sticker). Tear the strip off the top (drag it, or
 // just click), rainbow ribbons and confetti burst out, the cards fly up out of the pack, scatter, and settle in a row
 // (up to five at once). Then they turn over one by one: a normal one right away, a cute one after glowing pink, a secret
 // one after gathering gold light. All the light sits BEHIND the cards, so it never tints them. Each card tilts toward the
 // pointer with a soft glare, and a face-down card can be clicked to turn it over sooner. ----
 export const MAX_AT_ONCE = 5;
-type Look = { key: string; name: string; c: string; d: string; l: string; ink: string; mascot: string };
+type Look = { key: string; name: string; c: string; d: string; l: string; ink: string; icon: string };
+// eight packs, each with a game thing on the front as a glossy sticker
 export const LOOKS: Look[] = [
-  { key: 'berry', name: t('Berry', '莓果蓝'), c: '#3f52e4', d: '#2a37b4', l: '#7484f4', ink: '#ffffff', mascot: 'mochi' },
-  { key: 'grape', name: t('Grape', '葡萄紫'), c: '#7d4ee6', d: '#5a30bc', l: '#a787f4', ink: '#ffffff', mascot: 'cloud' },
-  { key: 'peach', name: t('Peach', '蜜桃'), c: '#ff7f6e', d: '#e0594a', l: '#ffab9e', ink: '#ffffff', mascot: 'heart' },
-  { key: 'lemon', name: t('Lemon', '柠檬'), c: '#f7c843', d: '#dca424', l: '#ffe189', ink: '#4a3a10', mascot: 'star' },
-  { key: 'mint', name: t('Mint', '薄荷'), c: '#2fbf9c', d: '#1d9a7c', l: '#72dcbf', ink: '#ffffff', mascot: 'drop' },
-  { key: 'sakura', name: t('Sakura', '樱花'), c: '#f58fb8', d: '#d86894', l: '#fbb9d3', ink: '#ffffff', mascot: 'bunny' },
+  { key: 'cow', name: t('Moo', '牛牛'), c: '#ff7f6e', d: '#e0594a', l: '#ffab9e', ink: '#ffffff', icon: 'cow' },
+  { key: 'horse', name: t('Neigh', '马马'), c: '#2fbf9c', d: '#1d9a7c', l: '#72dcbf', ink: '#ffffff', icon: 'horse' },
+  { key: 'coffee', name: t('Latte', '拿铁'), c: '#b07d5b', d: '#8c5d40', l: '#d0a283', ink: '#ffffff', icon: 'coffee' },
+  { key: 'star', name: t('Star', '星星'), c: '#7d4ee6', d: '#5a30bc', l: '#a787f4', ink: '#ffffff', icon: 'star' },
+  { key: 'moon', name: t('Moon', '月亮'), c: '#2f3780', d: '#1f245c', l: '#5660b0', ink: '#ffffff', icon: 'moon' },
+  { key: 'clock', name: t('Alarm', '闹钟'), c: '#f7c843', d: '#dca424', l: '#ffe189', ink: '#4a3a10', icon: 'clock' },
+  { key: 'gift', name: t('Gift', '礼物'), c: '#f58fb8', d: '#d86894', l: '#fbb9d3', ink: '#ffffff', icon: 'gift' },
+  { key: 'piggy', name: t('Piggy', '存钱罐'), c: '#3f8fe0', d: '#2a6cb8', l: '#7db6f0', ink: '#ffffff', icon: 'piggy' },
 ];
 const TEASE: Record<Tier, number> = { normal: 450, cute: 1700, secret: 2800 };
 const STRIP_W = 230;
@@ -212,7 +215,7 @@ const zig = (w: number, h: number, edge: 'top' | 'bottom', step = 10, depth = 7)
   else { pts.push('0px 0px', `${w}px 0px`); for (let x = w; x >= 0; x -= step / 2) pts.push(`${x}px ${h - ((x / (step / 2)) % 2 ? 0 : depth)}px`); }
   return `polygon(${pts.join(',')})`;
 };
-// the pack itself, drawn in CSS (glossy foil, crimped ends, a "tear here" strip) around a pixel mascot
+// the pack itself, drawn in CSS (glossy foil, crimped ends, a "tear here" strip) around a pixel sticker
 export function PackArt({ look, n, face = 0, tearP = 0, snap = false, torn = false, handlers }: { look: Look; n: number; face?: number; tearP?: number; snap?: boolean; torn?: boolean; handlers?: Record<string, unknown> }) {
   const strip = <><div className="ho-crimp" /><span className="ho-tearhere">{t('TEAR HERE ⟶', '从这里撕开 ⟶')}</span></>;
   return (
@@ -221,7 +224,7 @@ export function PackArt({ look, n, face = 0, tearP = 0, snap = false, torn = fal
         <div className="ho-crimp bot" />
         <span className="ho-brand pix">{t('Little Things', '小物杂货铺')}</span>
         <span className="ho-series">{look.name.toUpperCase()}</span>
-        <div className="ho-mascot" style={{ backgroundImage: `url(${A}mascot_${look.mascot}.png)`, backgroundPosition: `${face * 50}% 0` }} />
+        <div className={`ho-mascot${face === 1 ? ' tug' : face === 2 ? ' pop' : ''}`} style={{ backgroundImage: `url(${A}icon_${look.icon}.png)`, ["--icon" as string]: `url("${new URL(`${A}icon_${look.icon}.png`, document.baseURI).href}")` }} />
         <span className="ho-foot l">{t('Blind pack', '盲包')}</span>
         <span className="ho-foot r">{ZH ? `${n} 件小东西` : `${n} thing${n > 1 ? 's' : ''}`}</span>
         <div className="ho-gloss" />
@@ -258,7 +261,7 @@ function Opening({ got, again, againN, next, done }: { got: Got[]; again: boolea
     return { x: off * gap, y: Math.abs(off) * 10 - 30, r: off * 3, s: k, o: 1 };
   };
   const tf = (q: ReturnType<typeof place>) => `translate(${q.x}px, ${q.y}px) rotate(${q.r}deg) scale(${q.s})`;
-  // tearing: the mascot squints while you pull; the burst, the scatter and the row follow
+  // tearing: the sticker wobbles while you pull, and hops once it's open; the burst, the scatter and the row follow
   const finish = () => {
     setFace(2); setStage('burst'); play('blindbox_open', 0.5);
     T(750, () => setStage('scatter'));
