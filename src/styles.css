@@ -1168,14 +1168,24 @@ html:lang(zh-CN) .mail-hand { font-size: 25px; } html:lang(zh-CN) .mail-hand.bod
 .pk.s-tease.secret .pk-flip { animation: rvShake .22s ease-in-out calc(var(--tease) * .35) 9; }
 @keyframes rvShake { 0%, 100% { transform: rotate(0) translateX(0); } 25% { transform: rotate(-2.5deg) translateX(-3px); } 75% { transform: rotate(2.5deg) translateX(3px); } }
 
-/* secret: a ring of golden light turning behind the card, arriving in the second half of the build-up
-   (gold only: no rainbow) */
-.rv-halo { position: absolute; left: 50%; top: 46%; width: 600px; height: 600px; margin: -300px; border-radius: 50%; pointer-events: none; z-index: 1; opacity: 0;
-  background: repeating-conic-gradient(from 0deg, rgba(255, 214, 102, .75) 0 7deg, transparent 7deg 14deg, rgba(255, 244, 196, .65) 14deg 19deg, transparent 19deg 30deg);
-  -webkit-mask: radial-gradient(circle, transparent 18%, #000 30%, #000 52%, transparent 70%); mask: radial-gradient(circle, transparent 18%, #000 30%, #000 52%, transparent 70%);
-  animation: rvHaloIn calc(var(--tease) * .6) ease-in calc(var(--tease) * .4) forwards, orbit 9s linear infinite; }
-@keyframes rvHaloIn { from { opacity: 0; transform: scale(.4); } to { opacity: 1; transform: scale(1); } }
-.pk.s-reveal .rv-halo, .pk.s-flip .rv-halo { opacity: 1; animation: orbit 9s linear infinite; }
+/* secret: ONE turning gold light (the rays) and, around the card, soft halos that do not turn:
+   a warm bloom, rings of light swelling outward, and a gentle star-shaped flare */
+.rv-halo { position: absolute; left: 50%; top: 46%; width: 640px; height: 640px; margin: -320px; border-radius: 50%; pointer-events: none; z-index: 1; opacity: 0;
+  background: radial-gradient(circle, transparent 26%, rgba(255, 232, 160, .42) 36%, rgba(255, 206, 96, .22) 46%, rgba(255, 190, 70, .08) 56%, transparent 66%);
+  animation: rvHaloIn calc(var(--tease) * .6) ease-in calc(var(--tease) * .4) forwards; }
+@keyframes rvHaloIn { from { opacity: 0; scale: .5; } to { opacity: 1; scale: 1; } }
+.pk.s-reveal .rv-halo, .pk.s-flip .rv-halo { opacity: 1; animation: rvHaloBreathe 3.2s ease-in-out infinite; }
+@keyframes rvHaloBreathe { 0%, 100% { scale: .96; opacity: .8; } 50% { scale: 1.05; opacity: 1; } }
+.rv-halo b { position: absolute; left: 50%; top: 50%; width: 300px; height: 300px; margin: -150px; border-radius: 50%; opacity: 0;
+  box-shadow: 0 0 26px 8px rgba(255, 214, 110, .55), inset 0 0 26px 6px rgba(255, 236, 170, .5); animation: rvRing 3s ease-out infinite; }
+.rv-halo b:nth-child(2) { animation-delay: 1s; } .rv-halo b:nth-child(3) { animation-delay: 2s; }
+@keyframes rvRing { 0% { opacity: 0; scale: .55; } 20% { opacity: .9; } 100% { opacity: 0; scale: 1.9; } }
+.rv-flare { position: absolute; left: 50%; top: 46%; width: 0; height: 0; z-index: 2; pointer-events: none; opacity: 0; animation: rvHaloIn calc(var(--tease) * .5) ease-in calc(var(--tease) * .5) forwards; }
+.rv-flare::before, .rv-flare::after { content: ''; position: absolute; left: -330px; top: -5px; width: 660px; height: 10px; border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(255, 250, 220, .95) 0%, rgba(255, 214, 110, .5) 25%, transparent 70%); filter: blur(2px); animation: rvFlare 3.2s ease-in-out infinite; }
+.rv-flare::after { rotate: 90deg; scale: .7; animation-delay: -1.6s; }
+.pk.s-reveal .rv-flare, .pk.s-flip .rv-flare { opacity: 1; animation: none; }
+@keyframes rvFlare { 0%, 100% { opacity: .55; transform: scaleX(.8); } 50% { opacity: 1; transform: scaleX(1.1); } }
 
 /* the little bits: motes (normal), rising hearts (cute), twinkling sparkles in gold and every colour (secret) */
 .rv-parts { position: absolute; left: 50%; top: 46%; width: 0; height: 0; z-index: 6; pointer-events: none; }
@@ -1195,10 +1205,12 @@ html:lang(zh-CN) .mail-hand { font-size: 25px; } html:lang(zh-CN) .mail-hand.bod
 @keyframes rvPop { 0% { scale: .9; } 60% { scale: 1.08; } 100% { scale: 1; } }
 
 /* rays on the reveal, by tier: faint white, soft pink, gold */
-.bb-rays { opacity: .35; background: repeating-conic-gradient(rgba(255, 255, 255, .35) 0 9deg, transparent 9deg 22deg); width: 1100px; height: 1100px; margin: -550px; top: 46%;
+.bb-rays { opacity: .35; background: repeating-conic-gradient(rgba(255, 255, 255, .35) 0 9deg, transparent 9deg 22deg); width: 900px; height: 900px; margin: -450px; top: 46%; z-index: 0;
   -webkit-mask: radial-gradient(circle, #000 20%, transparent 62%); mask: radial-gradient(circle, #000 20%, transparent 62%); }
 .bb-rays.cute { opacity: .7; background: repeating-conic-gradient(rgba(255, 170, 205, .55) 0 9deg, transparent 9deg 22deg); }
-.bb-rays.secret { opacity: .55; background: repeating-conic-gradient(rgba(255, 214, 102, .7) 0 7deg, transparent 7deg 16deg); animation-duration: 14s; }
+.bb-rays.secret { opacity: .6; background: repeating-conic-gradient(rgba(255, 214, 102, .7) 0 7deg, transparent 7deg 16deg);
+  animation: rvRaysIn calc(var(--tease) * .6) ease-in calc(var(--tease) * .4) both, orbit 14s linear infinite; }
+@keyframes rvRaysIn { from { opacity: 0; scale: .5; } to { opacity: .6; scale: 1; } }
 
 /* the find: name and buttons beside the card instead of under it */
 .pk.s-reveal { grid-template-areas: 'hero panel'; grid-template-columns: auto 360px; grid-template-rows: auto; column-gap: 10px; }
@@ -1206,4 +1218,4 @@ html:lang(zh-CN) .mail-hand { font-size: 25px; } html:lang(zh-CN) .mail-hand.bod
 .pk.cute .bb-reveal { box-shadow: 0 0 0 3px #ffb6d2, 0 14px 40px rgba(255, 120, 170, .35); }
 .pk.secret .bb-reveal { box-shadow: 0 0 0 3px #ffd24a, 0 14px 44px rgba(255, 190, 60, .45); }
 @keyframes rvPanel { from { opacity: 0; transform: translateX(40px); } }
-@media (prefers-reduced-motion: reduce) { .rv-dust, .rv-parts, .rv-halo, .rv-flash { display: none; } .rv-aura { animation: none; opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .rv-dust, .rv-parts, .rv-halo, .rv-flare, .rv-flash { display: none; } .bb-rays { animation: none !important; } .rv-aura { animation: none; opacity: 1; transform: none; } }

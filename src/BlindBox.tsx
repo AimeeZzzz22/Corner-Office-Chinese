@@ -188,7 +188,7 @@ function Catalogue({ s, up }: { s: Save; up: (p: Partial<Save>) => void }) {
 // ---------------- opening a box: a foil blind pack. Tear the strip off the top (drag it, or just click), ribbons and
 // confetti burst out, one card rises, the pack drops away, the card back wiggles (harder for rarer finds) and flips. ----
 type Stage = 'in' | 'tear' | 'rise' | 'tease' | 'flip' | 'reveal';
-const PACKS = ['lilac', 'pink', 'mint', 'butter'];
+const PACKS = ['lilac', 'pink', 'mint', 'butter', 'sky', 'peach', 'latte', 'night'];
 // how long the face-down card builds up before it flips: a normal one barely waits, a cute one slowly glows pink,
 // a secret one gathers gold and rainbow light for a good while
 const TEASE: Record<Tier, number> = { normal: 600, cute: 1800, secret: 3000 };
@@ -231,11 +231,12 @@ function Opening({ it, count, again, next, done }: { it: Item; count: number; ag
     <div className={`bb-open-dim pk ${tier} s-${stage}`} onPointerMove={tilt} style={{ ['--tease' as string]: `${TEASE[tier]}ms` }}>
       {/* a dark velvet stage with drifting dust, so the pack and the card are the only things to look at */}
       <div className="rv-dust">{dust.map((d, i) => <i key={i} style={{ left: `${d.x}%`, top: `${d.y}%`, width: d.s, height: d.s, animationDelay: `${d.d}s` }} />)}</div>
-      {stage === 'reveal' && <div className={`bb-rays ${tier}`} />}
       <div className="pk-hero" ref={hero}>
-        {/* the build-up behind the card: a glow in the tier's colour, a turning rainbow ring for a secret, and little bits */}
+        {/* the build-up behind the card: a glow in the tier's colour, for a secret one turning gold light with soft halos, and little bits */}
+        {(stage === 'reveal' || (tier === 'secret' && lit)) && <div className={`bb-rays ${tier}`} />}
         {lit && <div className="rv-aura" />}
-        {lit && tier === 'secret' && <div className="rv-halo" />}
+        {lit && tier === 'secret' && <div className="rv-halo"><b /><b /><b /></div>}
+        {lit && tier === 'secret' && <div className="rv-flare" />}
         {lit && <div className="rv-parts">{parts.map((q, i) => <i key={i} style={{ ['--x' as string]: `${q.x}px`, ['--y' as string]: `${q.y}px`, ['--s' as string]: q.s, ['--h' as string]: q.h, animationDelay: `${q.d}s` }}>{tier === 'cute' ? '♥' : tier === 'secret' ? '✦' : ''}</i>)}</div>}
         {tier === 'secret' && stage === 'flip' && <div className="rv-flash" />}
         {/* ribbons and confetti, out of the top of the pack */}
