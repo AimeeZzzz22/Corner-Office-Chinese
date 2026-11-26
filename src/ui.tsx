@@ -229,32 +229,61 @@ const THANKS: Partial<Record<CoworkerId, string>> = {
   mei: tr('Welcome to the team, properly this time. We are lucky to have you.', '这次正式地说一声：欢迎加入团队。有你是我们的幸运。'),
 };
 type MailStage = 'in' | 'out' | 'read';
+// each coworker's stationery: paper tint, ink accent
+const NOTE_TINT: [string, string][] = [['#fff1f4', '#e8708a'], ['#eefaf3', '#4fa77d'], ['#f3efff', '#8a70d6'], ['#fff8e2', '#d09a2c'], ['#eef6ff', '#4f8fd6'], ['#fff2ea', '#e0805a']];
+const letterDate = (t: number) => { const d = new Date(t); return ZH ? `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日` : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }); };
 export function MailLetter({ note, name, s, keep, opened }: { note: Note; name: string; s: Save; keep: (n: Note, week?: boolean) => void; opened?: boolean }) {
   const [stage, setStage] = useState<MailStage>(opened ? 'read' : 'in');
   const W = 360;
   const { p, snap, handlers } = useTear(W, () => { play('blindbox_open', 0.4); setStage('out'); setTimeout(() => setStage('read'), 1100); });
   const from = note.from ? COWORKERS[note.from] : null, co = COMPANIES[s.company];
-  const week = thisWeek(s.history), wMins = week.reduce((a, h) => a + h.worked, 0), wDone = week.filter((h) => h.finished).length;
+  const week = thisWeek(s.history);
   return (
     <div className={`mail-dim m-${stage}`}>
       <div className="mail-scene">
         <div className="mail-letter">
-          <div className="mail-paper">
-            <div className="mail-fold top" />
-            {(note.kind === 'thanks' || note.kind === 'welcome') && from ? <>
+          {note.kind === 'payday' ? (() => {
+            // payday: the company's letterhead, a short typed letter, the week in numbers, and a cheque to tear off
+            const w0 = new Date(note.week).getTime(), wk = isNaN(w0) ? week : s.history.filter((h) => h.at >= w0 && h.at < w0 + 7 * 864e5);
+            const orders = wk.filter((h) => h.finished).length, mins = wk.reduce((a, h) => a + h.worked, 0), earned = wk.reduce((a, h) => a + h.coins, 0);
+            const host = COWORKERS[co.host];
+            return (
+            <div className="mail-paper payslip">
+              <img className="slip-mark" src={`${A}ob/logo_${s.company}.png`} alt="" />
+              <div className="slip-head"><img src={`${A}ob/logo_${s.company}.png`} alt="" /><div><b className="pix">{co.name}</b><small>{tr('People & Payroll', '人事与薪资')}</small></div><span className="slip-date">{letterDate(note.id)}</span></div>
+              <div className="slip-title">{tr('Weekly bonus', '本周奖金单')}</div>
+              <p className="slip-p">{ZH ? `${name}，你好：这周辛苦了！按惯例，我们把你本周所得的 10% 作为额外奖励发给你。周末愉快。` : `Dear ${name}, thank you for a good week. As always, here is a little extra: 10% of what you earned. Have a lovely weekend.`}</p>
+              <div className="slip-rows">
+                <div><span>{tr('Orders finished', '完成的工作单')}</span><i /><b>{orders}</b></div>
+                <div><span>{tr('Time in focus', '专注时长')}</span><i /><b>{fmtMins(mins)}</b></div>
+                <div><span>{tr('Coins earned this week', '本周赚到的金币')}</span><i /><b>{earned}</b></div>
+              </div>
+              <div className="slip-cheque">
+                <span className="slip-cut">✂</span>
+                <div className="cq-to"><small>{tr('PAY TO', '收款人')}</small><b className="mail-hand">{name}</b></div>
+                <div className="cq-amt"><img src={`${A}coin.png`} alt="" /><span className="pix">+{note.coins}</span></div>
+                <div className="cq-sign"><span className="mail-hand">{host.name}</span><small>{ZH ? `代表${co.name}` : `for ${co.name}`}</small></div>
+                <span className="slip-stamp">{tr('PAID', '已发放')}</span>
+              </div>
+            </div>); })() : (() => {
+            // a thank-you (or the welcome) note: the sender's own stationery, taped at the top, written by hand
+            const tint = NOTE_TINT[Math.max(0, Object.keys(COWORKERS).indexOf(note.from ?? '')) % NOTE_TINT.length];
+            return (
+            <div className="mail-paper note" style={{ ['--tint' as string]: tint[0], ['--ink2' as string]: tint[1] }}>
+              <i className="tape l" /><i className="tape r" />
+              <div className="note-top">
+                {from && <span className="note-photo"><img src={`${A}heads/${from.id}.png`} alt="" /></span>}
+                <span className="mail-hand note-date">{letterDate(note.id)}</span>
+              </div>
+              {note.kind === 'welcome' && <div className="note-title mail-hand">{tr('Welcome aboard!', '欢迎加入！')}</div>}
               <div className="mail-hand">{ZH ? `亲爱的${name}：` : `Dear ${name},`}</div>
               <p className="mail-hand body">{note.kind === 'welcome' ? tr('Your first order, done! That is all there is to it. Welcome to the team, properly this time.', '第一张工作单完成啦！就是这么简单。这次正式说一声：欢迎加入！') : THANKS[note.from!] ?? tr('Thank you for all your help. It means a lot.', '谢谢你的帮助，这对我意义重大。')}</p>
-              {note.kind === 'thanks' && <div className="mail-hearts">{Array.from({ length: note.level }, (_, i) => <img key={i} src={`${A}heart.png`} alt="" />)}<span className="sub">{ZH ? `和${from.name}的 ${note.level} 颗心` : `${note.level} heart${note.level > 1 ? 's' : ''} with ${from.name}`}</span></div>}
-              <div className="mail-hand mail-sign">— {from.name}</div>
-            </> : <>
-              <div className="mail-co pix">{co.name}{tr(' · Payday', ' · 发薪日')}</div>
-              <p className="mail-hand body">{ZH ? `亲爱的${name}，这是这周的一点额外奖励：${wDone} 张工作单，专注了 ${fmtMins(wMins)}。周末愉快！` : `Dear ${name}, here is a little extra for this week: ${wDone} orders and ${fmtMins(wMins)} of focus. Have a lovely weekend.`}</p>
-              <div className="mail-pay"><img src={`${A}coin.png`} alt="" /><span className="pix">+{note.coins}</span></div>
-              <div className="mail-hand mail-sign">— {ZH ? `${COWORKERS[co.host].name}，代表${co.name}全体` : `${COWORKERS[co.host].name}, for everyone at ${co.name}`}</div>
-            </>}
-          </div>
+              {note.kind === 'thanks' && from && <div className="note-hearts">{Array.from({ length: note.level }, (_, i) => <img key={i} src={`${A}heart.png`} alt="" style={{ rotate: `${(i % 3 - 1) * 8}deg` }} />)}<span className="mail-hand">{ZH ? `我们之间的 ${note.level} 颗心` : `${note.level} heart${note.level > 1 ? 's' : ''} between us`}</span></div>}
+              <div className="mail-hand mail-sign">— {from?.name}<svg className="note-doodle" viewBox="0 0 24 22" width="22" height="20"><path d="M12 20 C4 14 1 10 3 6 C5 2 10 3 12 7 C14 3 19 2 21 6 C23 10 20 14 12 20Z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /></svg></div>
+              {note.kind === 'welcome' && <span className="note-confetti" aria-hidden>{Array.from({ length: 12 }, (_, i) => <i key={i} />)}</span>}
+            </div>); })()}
         </div>
-        <div className="mail-env" {...handlers}>
+        <div className={`mail-env ${note.kind}`} {...handlers}>
           <div className="mail-front"><span className="mail-to">{tr('To: ', '收件人：')}{name}</span><span className="mail-from">{tr('From ', '寄件人：')}{from ? from.name : co.name}</span><span className="mail-stamp">{note.kind === 'payday' ? '¢' : '♥'}</span></div>
           <div className={`mail-strip${snap ? ' snap' : ''}`} style={{ ['--p' as string]: p }}><span className="mail-attached" /><span className="mail-torn" /></div>
           {stage === 'in' && <span className="mail-grab" style={{ opacity: p > 0.05 ? 0 : 1 }}>{tr('pull ➜', '拉 ➜')}</span>}

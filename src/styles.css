@@ -1388,3 +1388,71 @@ html:lang(zh-CN) .mail-hand { font-size: 25px; } html:lang(zh-CN) .mail-hand.bod
 /* the computer on the desk: an envelope on the monitor when letters are waiting */
 .pc-mailflag { position: absolute; right: -10px; top: -14px; display: flex; align-items: center; gap: 3px; font-style: normal; font-size: 12px; font-weight: 800; color: #fff; background: #e8708a; border-radius: 99px; padding: 2px 8px 2px 6px; box-shadow: 0 2px 0 rgba(0, 0, 0, .2); animation: mailBob 2.2s ease-in-out infinite; pointer-events: none; }
 .pc-mailflag b { font-size: 13px; }
+
+/* ======== letters, redesigned: a handwritten note card, and the company's payday letter with a cheque ======== */
+@keyframes mailGrow { from { transform: translateY(-190px); } to { transform: translate(-80px, -228px); width: 480px; height: 440px; } }
+.mail-dim.m-read .mail-letter { animation: mailGrow .7s cubic-bezier(.3, 1.2, .4, 1) forwards; }
+.mail-paper.note, .mail-paper.payslip { overflow: visible; border-radius: 3px; }
+.mail-dim.m-read .mail-paper > * { opacity: 1; }
+/* --- the note: the sender's tinted paper, ruled like a notebook, two strips of tape on top --- */
+.mail-paper.note { padding: 30px 34px 26px; gap: 6px; color: #3d3546;
+  background: repeating-linear-gradient(transparent 0 31px, color-mix(in srgb, var(--ink2) 22%, transparent) 31px 32px) 0 74px / 100% calc(100% - 96px) no-repeat,
+    linear-gradient(90deg, transparent 52px, color-mix(in srgb, var(--ink2) 30%, transparent) 52px 53px, transparent 53px) 0 0 / 100% 100% no-repeat, var(--tint);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, .06), 0 16px 30px rgba(0, 0, 0, .35); }
+.mail-paper.note::after { content: ''; position: absolute; left: 0; right: 0; bottom: -7px; height: 8px; background: radial-gradient(circle at 6px -2px, var(--tint) 6px, transparent 6.5px) 0 0 / 12px 8px repeat-x; filter: drop-shadow(0 3px 2px rgba(0, 0, 0, .12)); }
+.mail-paper.note .tape { position: absolute; top: -12px; width: 92px; height: 26px; opacity: .85;
+  background: repeating-linear-gradient(45deg, color-mix(in srgb, var(--ink2) 55%, white) 0 6px, color-mix(in srgb, var(--ink2) 35%, white) 6px 12px);
+  clip-path: polygon(3% 0, 97% 4%, 100% 50%, 96% 100%, 2% 96%, 0 52%); }
+.mail-paper.note .tape.l { left: 22px; rotate: -6deg; } .mail-paper.note .tape.r { right: 22px; rotate: 5deg; }
+.note-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; }
+.note-photo { width: 54px; height: 60px; background: #fff; padding: 5px 5px 11px; box-shadow: 0 2px 6px rgba(0, 0, 0, .18); rotate: -5deg; display: block; }
+.note-photo img { width: 44px; height: 44px; image-rendering: pixelated; background: color-mix(in srgb, var(--ink2) 18%, white); display: block; }
+.note-date { font-size: 21px !important; color: var(--ink2); margin-top: 6px; }
+.note-title { font-size: 38px !important; color: var(--ink2); line-height: 1; margin: 2px 0 4px; }
+.mail-paper.note .mail-hand.body { font-size: 25px; line-height: 32px; }
+.note-hearts { display: flex; align-items: center; gap: 4px; margin-top: 2px; }
+.note-hearts img { width: 22px; image-rendering: pixelated; }
+.note-hearts span { font-size: 21px !important; color: var(--ink2); margin-left: 8px; }
+.mail-paper.note .mail-sign { display: flex; align-items: center; gap: 6px; color: #3d3546; }
+.note-doodle { color: var(--ink2); rotate: 12deg; }
+.note-confetti { position: absolute; inset: 0; pointer-events: none; }
+.note-confetti i { position: absolute; width: 7px; height: 7px; border-radius: 2px; background: var(--ink2); opacity: .5; }
+.note-confetti i:nth-child(odd) { border-radius: 50%; background: #f2c14e; }
+.note-confetti i:nth-child(1) { right: 40px; top: 96px; rotate: 20deg; } .note-confetti i:nth-child(2) { right: 70px; top: 120px; }
+.note-confetti i:nth-child(3) { right: 28px; top: 150px; rotate: 40deg; } .note-confetti i:nth-child(4) { right: 96px; top: 88px; }
+.note-confetti i:nth-child(5) { left: 210px; top: 110px; rotate: 15deg; } .note-confetti i:nth-child(6) { right: 50px; bottom: 60px; }
+.note-confetti i:nth-child(7) { left: 30px; bottom: 40px; rotate: 30deg; } .note-confetti i:nth-child(8) { left: 70px; bottom: 26px; }
+.note-confetti i:nth-child(9) { right: 120px; bottom: 30px; rotate: 60deg; } .note-confetti i:nth-child(10) { right: 150px; top: 100px; }
+.note-confetti i:nth-child(11) { left: 260px; top: 86px; } .note-confetti i:nth-child(12) { right: 24px; bottom: 100px; rotate: 10deg; }
+/* --- the payday letter: crisp letterhead, typed text, dotted lines, a cheque with a perforated edge --- */
+.mail-paper.payslip { padding: 24px 30px 0; gap: 8px; display: flex; flex-direction: column; background: #fffefb; color: #34303e; font-family: 'Courier Prime', 'Courier New', ui-monospace, monospace; box-shadow: 0 16px 30px rgba(0, 0, 0, .35); }
+.slip-mark { position: absolute; right: 16px; top: 116px; width: 150px; image-rendering: pixelated; pointer-events: none; }
+.mail-dim .mail-paper > .slip-mark { opacity: .07; }
+.slip-head { display: flex; align-items: center; gap: 10px; padding-bottom: 10px; border-bottom: 3px double #c9bfae; }
+.slip-head img { width: 36px; height: 36px; image-rendering: pixelated; }
+.slip-head div { display: grid; } .slip-head b { font-size: 19px; color: #34303e; } .slip-head small { font-family: Inter, system-ui, sans-serif; font-size: 11px; letter-spacing: .08em; color: #8a8090; text-transform: uppercase; }
+.slip-date { margin-left: auto; font-size: 13px; color: #6d6474; }
+.slip-title { font-family: Inter, system-ui, sans-serif; font-size: 12px; font-weight: 800; letter-spacing: .2em; text-transform: uppercase; color: #b08a3c; margin-top: 4px; }
+.slip-p { margin: 0; font-size: 14px; line-height: 1.55; }
+.slip-rows { display: grid; gap: 5px; font-size: 14px; margin: 2px 0 4px; }
+.slip-rows div { display: flex; align-items: baseline; gap: 6px; }
+.slip-rows i { flex: 1; border-bottom: 2px dotted #cfc6b6; translate: 0 -4px; }
+.slip-rows b { font-weight: 700; }
+.slip-cheque { position: relative; margin: auto -30px 0; padding: 16px 30px 18px; display: grid; grid-template-columns: 1fr auto; grid-template-areas: 'to amt' 'sign amt'; gap: 6px 16px; align-items: center; border-top: 2px dashed #b9ae9b;
+  background: repeating-radial-gradient(circle at 0 100%, transparent 0 9px, rgba(95, 179, 138, .08) 9px 10px), linear-gradient(#eef8f1, #e3f3e9); border-radius: 0 0 3px 3px; }
+.slip-cut { position: absolute; left: 12px; top: -12px; font-size: 16px; color: #8a8090; background: #fffefb; padding: 0 4px; font-family: Inter, sans-serif; }
+.cq-to { grid-area: to; display: flex; align-items: baseline; gap: 10px; border-bottom: 1.5px solid #9fc8b0; padding-bottom: 2px; }
+.cq-to small, .cq-sign small { font-family: Inter, system-ui, sans-serif; font-size: 10px; font-weight: 800; letter-spacing: .14em; color: #5f9a7a; }
+.cq-to .mail-hand { font-size: 28px; color: #2f4a3c; }
+.cq-amt { grid-area: amt; display: flex; align-items: center; gap: 8px; background: #fff; border: 2px solid #9fc8b0; border-radius: 10px; padding: 8px 14px; box-shadow: 0 3px 0 #cfe6d8; }
+.cq-amt img { width: 28px; image-rendering: pixelated; } .cq-amt .pix { font-size: 30px; color: #34303e; }
+.cq-sign { grid-area: sign; display: flex; align-items: baseline; gap: 10px; }
+.cq-sign .mail-hand { font-size: 30px; color: #2a3a7a; rotate: -4deg; }
+.slip-stamp { position: absolute; right: 130px; top: 6px; font-family: Inter, system-ui, sans-serif; font-weight: 900; font-size: 15px; letter-spacing: .18em; color: rgba(214, 72, 72, .75); border: 3px solid rgba(214, 72, 72, .7); border-radius: 8px; padding: 2px 10px; rotate: -14deg; mix-blend-mode: multiply; }
+.mail-dim.m-read .slip-stamp { animation: stampIn .35s cubic-bezier(.3, 1.6, .5, 1) 1s both; }
+@keyframes stampIn { from { opacity: 0; transform: scale(2.2); } to { opacity: 1; transform: scale(1); } }
+/* the envelopes differ too: a kraft business envelope for payday, a pastel one for notes */
+.mail-env.payday .mail-front { background-color: #e6cf9f; } .mail-env.payday .mail-stamp { color: #c08a2c; border-color: #e0bf7a; }
+.mail-env.thanks .mail-front, .mail-env.welcome .mail-front { background-color: #fbe6ea; }
+html:lang(zh-CN) .mail-paper.payslip { font-family: 'Courier Prime', 'Courier New', 'Songti SC', 'STSong', serif; }
+html:lang(zh-CN) .mail-paper.note .mail-hand.body { font-size: 21px; line-height: 32px; }
