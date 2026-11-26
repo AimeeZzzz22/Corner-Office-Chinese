@@ -15,7 +15,7 @@ export interface Result { finished: boolean; coins: number; xp: number; promoted
 // onboarding: offer letter -> first-day look -> welcome tour -> badge photo -> work vibe -> work style quiz -> first work order
 // one finished or stopped work order, kept for the desk computer's history
 // a letter in the mail: a coworker's thank-you when a new heart fills, or the end-of-week payday envelope
-export interface Note { id: number; kind: 'thanks' | 'payday' | 'welcome'; from: CoworkerId | null; level: number; coins: number; week: string }
+export interface Note { id: number; kind: 'thanks' | 'payday' | 'welcome' | 'recap'; from: CoworkerId | null; level: number; coins: number; week: string }
 export interface Past { at: number; mins: number; worked: number; who: CoworkerId | null; job: string; focus: string; type: TaskType; finished: boolean; coins: number; xp: number; steps: number; stepsDone: number }
 export type Phase = 'offer' | 'tour' | 'booth' | 'badge' | 'vibe' | 'quiz' | 'gifts' | 'desk' | 'free' | 'tray' | 'focus' | 'work' | 'timesup' | 'result';
 export interface Save {
@@ -41,7 +41,9 @@ export interface Save {
   pack: Record<string, number>;
   treats: { day: string; have: string[]; used: string[] };   // today's food and drink; used = bonuses already spent today
   fridge: { day: string; item: string | null; fortune: number };   // what (if anything) is in the fridge today
-  notes: Note[]; mailbox: Note[]; payWeek: string;   // letters waiting in the mail (thank-you notes, payday), and the last week that was paid
+  notes: Note[]; mailbox: Note[]; payWeek: string;
+  started: number; recapWeek: string;        // when this save first started; the last week a "your week" letter was sent (the recap unlocks after 7 days)
+  finds: { id: string; at: number }[];       // blind pack finds with their time, for the weekly journal (the newest 80)   // letters waiting in the mail (thank-you notes, payday), and the last week that was paid
   surprise: 'none' | 'waiting' | 'opened';   // the welcome gift in the office, after onboarding   // things won from blind boxes, with how many of each   // where each unwrapped item is: a slot id (see deskSlots.ts), or null when it's in storage
 }
 
@@ -55,7 +57,7 @@ export const fresh = (): Save => {
   const company: CompanyId = Math.random() < 0.5 ? 'stitchlight' : 'moonpuff';      // the offer letter comes from a random company
   return { v: 1, name: '', coins: 0, xp: 0, company, hearts: zero(), ordersDone: zero(), tray: newTray(company), picked: null, order: null, result: null, phase: 'offer', fast: false, sound: true, labelsBy: {},
     look: { ...DEFAULT_LOOK }, pet: 'orange_cat', birthday: null, badgeNo: `${String(Math.floor(Math.random() * 9000) + 1000)}`, vibe: null, vibeDraws: 0,
-    quiz: { focus: null, sound: null, reminders: null }, tourStop: 0, firstOrder: true, lookDone: false, history: [], desk: [], place: {}, blind: { mins: 0, ready: 0, day: '', earned: 0 }, pack: {}, treats: { day: '', have: [], used: [] }, fridge: { day: '', item: null, fortune: 0 }, surprise: 'none', notes: [], mailbox: [], payWeek: '', guide: -1, tipsSeen: [] };
+    quiz: { focus: null, sound: null, reminders: null }, tourStop: 0, firstOrder: true, lookDone: false, history: [], desk: [], place: {}, blind: { mins: 0, ready: 0, day: '', earned: 0 }, pack: {}, treats: { day: '', have: [], used: [] }, fridge: { day: '', item: null, fortune: 0 }, surprise: 'none', notes: [], mailbox: [], payWeek: '', started: Date.now(), recapWeek: '', finds: [], guide: -1, tipsSeen: [] };
 };
 
 const KEY = ZH ? 'corner-office-demo-v1-zh' : 'corner-office-demo-v1';   // both sites share one origin on GitHub Pages
@@ -77,7 +79,10 @@ export function load(): Save {
       // saves from before the welcome gift: anyone already past onboarding has it waiting
       if (typeof s.guide !== 'number') out.guide = -1;
       if (!Array.isArray(s.tipsSeen)) out.tipsSeen = [];
-      if (!Array.isArray(s.mailbox)) out.mailbox = [];   // letters already read, kept in the computer's Mail app
+      if (!Array.isArray(s.mailbox)) out.mailbox = [];
+      if (typeof s.started !== 'number') out.started = Math.min(Date.now(), ...(s.history ?? []).map((h: { at: number }) => h.at));
+      if (typeof s.recapWeek !== 'string') out.recapWeek = '';
+      if (!Array.isArray(s.finds)) out.finds = [];   // letters already read, kept in the computer's Mail app
       if (!s.surprise) out.surprise = s.lookDone && ['free', 'tray', 'focus', 'work', 'timesup', 'result', 'desk'].includes(s.phase) ? 'waiting' : 'none';
       out.look = fixLook(out.look); out.history = out.history ?? [];
       return out;

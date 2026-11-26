@@ -69,7 +69,7 @@ export function BlindBoxTab({ s, up, close }: { s: Save; up: (p: Partial<Save>) 
     if (!data || !canOpen) return;
     const np = { ...pack }, got: Got[] = [];
     for (let i = 0; i < howMany; i++) { const it = draw(data.items, data.odds); got.push({ it, isNew: !np[it.id] }); np[it.id] = (np[it.id] ?? 0) + 1; }
-    up({ coins: s.coins - BOX_COST * howMany, blind: { ...b, ready: b.ready - howMany }, pack: np });
+    up({ coins: s.coins - BOX_COST * howMany, blind: { ...b, ready: b.ready - howMany }, pack: np, finds: [...s.finds, ...got.map((g) => ({ id: g.it.id, at: Date.now() }))].slice(-80) });
     setOpening(got);
   };
   // test: open lots of boxes at once (free, not added to your pack) to see the odds come out

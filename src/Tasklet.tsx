@@ -191,12 +191,12 @@ function SideBlob({ tab }: { tab: Tab }) {
 // ---------------- Mail: the letters coworkers and the company send, as envelopes in a little inbox ----------------
 // New letters are sealed (a wax seal in the sender's colour, a stamp, "new"); clicking one opens it with the tear-open
 // envelope. Letters you've read stay here, flap open, to read again.
-const SEAL: Record<Note['kind'], { c: string; mark: string }> = { thanks: { c: '#e8708a', mark: '♥' }, payday: { c: '#e0a93a', mark: '¢' }, welcome: { c: '#5fb38a', mark: '★' } };
+const SEAL: Record<Note['kind'], { c: string; mark: string }> = { thanks: { c: '#e8708a', mark: '♥' }, payday: { c: '#e0a93a', mark: '¢' }, welcome: { c: '#5fb38a', mark: '★' }, recap: { c: '#6f8fe0', mark: '✎' } };
 function MailApp({ s, name, open, close }: { s: Save; name: string; open: (n: Note, opened: boolean) => void; close: () => void }) {
   const co = COMPANIES[s.company];
   const fresh = [...s.notes].sort((a, b) => b.id - a.id), kept = s.mailbox;
   const subject = (n: Note) => n.kind === 'payday' ? (ZH ? `发薪日的额外奖励 · ${n.coins} 金币` : `Payday bonus · ${n.coins} coins`)
-    : n.kind === 'welcome' ? tx('Welcome to the team, properly', '正式欢迎你加入') : (ZH ? `谢谢你！· ${n.level} 颗心` : `Thank you! · ${n.level} heart${n.level > 1 ? 's' : ''}`);
+    : n.kind === 'welcome' ? tx('Welcome to the team, properly', '正式欢迎你加入') : n.kind === 'recap' ? tx('Your week, in a little journal', '你的一周，做成了一本小手账') : (ZH ? `谢谢你！· ${n.level} 颗心` : `Thank you! · ${n.level} heart${n.level > 1 ? 's' : ''}`);
   const row = (n: Note, isNew: boolean) => { const from = n.from ? COWORKERS[n.from] : null, seal = SEAL[n.kind]; return (
     <button key={n.id} className={`mb-row${isNew ? ' new' : ''}`} onClick={() => { tap(); open(n, !isNew); }}>
       <span className="mb-flap" />

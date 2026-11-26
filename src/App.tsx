@@ -11,7 +11,8 @@ import Computer from './Tasklet';
 import Shop, { BOX_DAY_MAX, addMinutes, piggyToday } from './BlindBox';
 import VibeGallery from './VibeGallery';
 import { ZH, t, t as tr } from './lang';
-import { AvatarStack, MailLetter, PullSummary, WeekRecap, thisWeek, weekKey } from './ui';
+import { AvatarStack, MailLetter, PullSummary, thisWeek, weekKey, weekStart } from './ui';
+import { WEEK_MS, WeekJournal } from './Week';
 import type { Note } from './state';
 import { Bakery, Fridge } from './Bakery';
 import { FORTUNES, FRIDGE, fridgeToday, treat, treatsToday } from './treats';
@@ -46,7 +47,9 @@ export default function App() {
   useEffect(() => { if (s.fridge.day !== new Date().toDateString()) up({ fridge: fridgeToday(s.fridge) }); }, [s.phase]);
   const [vibes, setVibes] = useState(() => typeof location !== 'undefined' && location.hash === '#vibes');   // the work vibe gallery
   const [mail, setMail] = useState<{ note: Note; opened: boolean } | null>(null);   // a letter being read (opened from the computer's Mail app)
-  const [week, setWeek] = useState(false);       // the weekly recap
+  const [week, setWeek] = useState<{ start: number; sample?: boolean } | null>(null);   // the weekly journal (which week, or a sample)
+  const weekOpen = s.started <= Date.now() - WEEK_MS;   // "my week" unlocks after the first 7 days of play
+  const weekLeft = Math.max(1, Math.ceil((s.started + WEEK_MS - Date.now()) / 864e5));
   const [tray, setTray] = useState(false);       // the result screen's peek tray
   // payday: from Friday on, an envelope with a little extra (10% of the week's coins) arrives once a week
   const payday = (force = false) => setS((o) => {
@@ -56,6 +59,14 @@ export default function App() {
     return { ...o, payWeek: wk, notes: [...o.notes, { id: Date.now(), kind: 'payday', from: null, level: 0, coins: Math.max(10, Math.round(earned * 0.1 / 5) * 5), week: wk }] };
   });
   useEffect(() => { if (s.phase === 'free') payday(); }, [s.phase]);
+  // from the second week on: at the start of each new week, a "your week" letter with last week's journal
+  const recap = (force = false) => setS((o) => {
+    const wk = weekKey(); if (!force && (o.started > Date.now() - WEEK_MS || o.recapWeek === wk)) return o;
+    const last = weekStart(new Date(Date.now() - WEEK_MS)), had = o.history.some((h) => h.at >= last.getTime() && h.at < last.getTime() + WEEK_MS);
+    if (!force && !had) return { ...o, recapWeek: wk };
+    return { ...o, recapWeek: wk, notes: [...o.notes, { id: Date.now() + 2, kind: 'recap', from: null, level: 0, coins: 0, week: weekKey(last) }] };
+  });
+  useEffect(() => { if (s.phase === 'free' || s.phase === 'desk') recap(); }, [s.phase]);
   const thanks = (who: CoworkerId, before: number, after: number): Note[] => Math.floor(after / HEART_POINTS) > Math.floor(before / HEART_POINTS)
     ? [{ id: Date.now(), kind: 'thanks', from: who, level: Math.floor(after / HEART_POINTS), coins: 0, week: weekKey() }] : [];
   const [tourReady, setTourReady] = useState(-1);   // the tour stop both have walked to; the dialog shows only then
@@ -143,7 +154,7 @@ export default function App() {
   useEffect(() => { if (s.guide >= 0 || tip || onboarding) return; const id = setInterval(() => look((x) => x + 1), 700); return () => clearInterval(id); }, [s.guide, tip, onboarding]);
   useEffect(() => { setGev(new Set()); }, [s.guide, tip?.id, tip?.i]);
   useEffect(() => { const on = (e: Event) => setGev((o) => new Set(o).add((e as CustomEvent).detail)); window.addEventListener('guide', on); return () => window.removeEventListener('guide', on); }, []);
-  const gctx: GCtx = { s, co, name: s.name || t('Juniper', '小柏'), ev: gev, menu, chat, spot, shop, week, pcOpen, mail: !!mail, peek: tray };
+  const gctx: GCtx = { s, co, name: s.name || t('Juniper', '小柏'), ev: gev, menu, chat, spot, shop, week: !!week, pcOpen, mail: !!mail, peek: tray };
   useEffect(() => {
     if (s.guide < 0 || onboarding) return;
     const st = STEPS[s.guide]; if (!st) { up({ guide: -1 }); return; }
@@ -197,6 +208,8 @@ export default function App() {
             <button className="btn ghost" onClick={() => { tap(); setMenu(null); setSettings(false); up({ company: other, tray: newTray(other), picked: null }); }}>{t('Switch to ', '切换到')}{COMPANIES[other].name}</button>); })()}
           <button className="btn ghost" onClick={() => { tap(); setSettings(false); setMenu(null); setShop('blind'); }}>{t('Blind pack test page', '盲包测试页')}</button>
           {!ZH && <button className="btn ghost" onClick={() => { tap(); setSettings(false); setVibes(true); }}>{t('Work vibe gallery', '工作风格总览')}</button>}
+          <button className="btn ghost" onClick={() => { tap(); setSettings(false); setWeek({ start: weekStart().getTime(), sample: true }); }}>{t('See a sample week (test)', '看一个示例周（测试）')}</button>
+          <button className="btn ghost" onClick={() => { tap(); setSettings(false); up({ started: Math.min(s.started, Date.now() - WEEK_MS - 1000), recapWeek: '' }); setTimeout(() => recap(true), 50); }}>{t('Jump a week ahead (test)', '快进一周（测试）')}</button>
           <button className="btn ghost" onClick={() => { tap(); setSettings(false); payday(true); }}>{t('Payday envelope (test)', '发薪信封（测试）')}</button>
           <button className="btn ghost" onClick={() => { tap(); setSettings(false); const id = co.people[Math.floor(Math.random() * co.people.length)]; up({ notes: [...s.notes, { id: Date.now(), kind: 'thanks', from: id, level: Math.max(1, Math.floor(s.hearts[id] / HEART_POINTS)), coins: 0, week: weekKey() }] }); }}>{t('Thank-you note (test)', '感谢信（测试）')}</button>
           <button className="btn ghost" onClick={() => { tap(); setSettings(false); up({ fridge: { day: new Date().toDateString(), item: FRIDGE[Math.floor(Math.random() * FRIDGE.length)].key, fortune: Math.floor(Math.random() * FORTUNES.length) } }); }}>{t('Put a treat in the fridge (test)', '往冰箱放点心（测试）')}</button>
@@ -238,7 +251,7 @@ export default function App() {
       )}
       {s.phase === 'free' && !editing && (
         <>
-          <PullSummary s={s} ready={piggyToday(s.blind).ready} earned={piggyToday(s.blind).earned} dayMax={BOX_DAY_MAX} treats={treatsToday(s.treats).have.map((k) => treat(k).name)} onWeek={() => setWeek(true)} />
+          <PullSummary s={s} ready={piggyToday(s.blind).ready} earned={piggyToday(s.blind).earned} dayMax={BOX_DAY_MAX} treats={treatsToday(s.treats).have.map((k) => treat(k).name)} weekOpen={weekOpen} weekLeft={weekLeft} onWeek={() => setWeek({ start: weekStart().getTime() })} />
           {!s.history.length && s.guide < 0 && <div className="walk-hint">{t('Click to walk · walk up to a coworker to talk · walk to your desk for orders', '点击走路 · 走到同事身边聊天 · 走到工位接工作单')}</div>}
           <button className="btn primary new-order" onClick={() => { tap(); setGoDesk((n) => n + 1); }}>{t('My desk', '我的工位')}</button>
           {menu && (
@@ -255,7 +268,7 @@ export default function App() {
         </>
       )}
 
-      {pcOpen && s.phase === 'desk' && <Computer s={s} name={name} practice={s.guide >= 0 && s.guide <= STEPS.findIndex((x) => x.id === 'practice')} openShop={(t) => { setShop(t); }} openMail={(note, opened) => setMail({ note, opened })} close={() => setPcOpen(false)} take={(p) => { setPcOpen(false); setFromDesk(true); up({ phase: 'focus', picked: p }); }} />}
+      {pcOpen && s.phase === 'desk' && <Computer s={s} name={name} practice={s.guide >= 0 && s.guide <= STEPS.findIndex((x) => x.id === 'practice')} openShop={(t) => { setShop(t); }} openMail={(note, opened) => { if (note.kind === 'recap') { if (!opened) up({ notes: s.notes.filter((x) => x.id !== note.id), mailbox: [note, ...s.mailbox].slice(0, 40) }); setWeek({ start: new Date(note.week).getTime() }); } else setMail({ note, opened }); }} close={() => setPcOpen(false)} take={(p) => { setPcOpen(false); setFromDesk(true); up({ phase: 'focus', picked: p }); }} />}
       {s.phase === 'tray' && <Tray s={s} name={name} pick={(p) => { tap(); up({ picked: p }); }} back={() => { tap(); up({ phase: 'free' }); }} next={() => { tap(); up({ phase: 'focus' }); }} />}
       {s.phase === 'focus' && s.picked && <Focus s={s} name={name} back={() => { tap(); if (fromDesk) { setPcOpen(true); up({ phase: 'desk' }); } else up({ phase: 'tray' }); }} start={start} />}
 
@@ -317,17 +330,17 @@ export default function App() {
           </div>); })()}
         </div>
       )}
-      {mail && <MailLetter key={mail.note.id} note={mail.note} opened={mail.opened} name={name} s={s} keep={(n, wk) => {
+      {mail && <MailLetter key={mail.note.id} note={mail.note} opened={mail.opened} weekOpen={weekOpen} name={name} s={s} keep={(n, wk) => {
         setMail(null); if (mail.opened) return;
         // a new letter goes into the kept letters once it's read (the newest 40); payday's coins are added
         play(n.kind === 'payday' ? 'coins_many' : 'heart_pop', 0.5);
         up({ notes: s.notes.filter((x) => x.id !== n.id), mailbox: [n, ...s.mailbox.filter((x) => x.id !== n.id)].slice(0, 40), coins: s.coins + (n.kind === 'payday' ? n.coins : 0) });
-        if (wk) setWeek(true); }} />}
+        if (wk) setWeek({ start: new Date(n.week).getTime() }); }} />}
       {s.guide >= 0 && !onboarding && !editing && <Coach c={gctx} st={STEPS[s.guide]} step={s.guide} total={STEPS.length} stage={stage} next={() => up({ guide: s.guide + 1 >= STEPS.length ? -1 : s.guide + 1 })} skip={() => { tap(); up({ guide: -1 }); }} />}
       {tip && s.guide < 0 && (() => { const tp = TIPS.find((x) => x.id === tip.id)!; return <Coach key={tip.id} tip c={gctx} st={tp.steps[tip.i]} step={tip.i} total={tp.steps.length} stage={stage}
         next={() => (tip.i + 1 >= tp.steps.length ? endTip(true) : setTip({ id: tip.id, i: tip.i + 1 }))} skip={() => { tap(); endTip(true); }} />; })()}
       {vibes && <VibeGallery sheet={sheet} who={name} close={() => setVibes(false)} />}
-      {week && <WeekRecap s={s} name={name} close={() => setWeek(false)} />}
+      {week && <WeekJournal s={s} name={name} start={week.start} sample={week.sample} close={() => setWeek(null)} />}
     </div>
   );
 }

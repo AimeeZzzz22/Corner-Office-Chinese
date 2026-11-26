@@ -176,7 +176,7 @@ export function weekStart(d = new Date()) { const x = new Date(d); x.setHours(0,
 export const weekKey = (d = new Date()) => weekStart(d).toDateString();
 export const thisWeek = (h: Past[]) => { const w0 = weekStart().getTime(); return h.filter((p) => p.at >= w0); };
 export const fmtMins = (m: number) => (ZH ? (m >= 60 ? `${Math.floor(m / 60)} 小时${m % 60 ? ` ${m % 60} 分钟` : ''}` : `${m} 分钟`) : m >= 60 ? `${Math.floor(m / 60)} hr${m % 60 ? ` ${m % 60} min` : ''}` : `${m} min`);
-export function PullSummary({ s, ready, earned, dayMax, treats, onWeek }: { s: Save; ready: number; earned: number; dayMax: number; treats: string[]; onWeek: () => void }) {
+export function PullSummary({ s, ready, earned, dayMax, treats, onWeek, weekOpen, weekLeft }: { s: Save; ready: number; earned: number; dayMax: number; treats: string[]; onWeek: () => void; weekOpen: boolean; weekLeft: number }) {
   const today = s.history.filter((h) => sameDay(h.at));
   const done = today.filter((h) => h.finished).length, mins = today.reduce((a, h) => a + h.worked, 0), coins = today.reduce((a, h) => a + h.coins, 0);
   const clock = useClock(s.fast ? 60 : 1, 5000);
@@ -207,7 +207,8 @@ export function PullSummary({ s, ready, earned, dayMax, treats, onWeek }: { s: S
         <div className="pull-line"><b>{tr('Packs today', '今日卡包')}</b><span className="pull-dots">{Array.from({ length: dayMax }, (_, i) => <i key={i} className={i < earned ? 'on' : ''} />)}</span><span className="sub">{earned} / {dayMax}</span></div>
         <div className="pull-line"><b>{tr('Treats', '甜点')}</b><span className="sub">{treats.length ? treats.join(tr(', ', '、')) : tr('None today. The bakery is open.', '今天还没有。面包房开着呢。')}</span></div>
         <div className="pull-line"><b>{tr('Office time', '办公室时间')}</b><span className="sub">{hhmm(clock)}</span></div>
-        <div className="row pull-foot"><button className="btn ghost" onClick={() => { tap(); setH(CAP); onWeek(); }}>{tr('See my week', '看看我这周')}</button><span className="sub">{tr('Push up to close', '向上推关闭')}</span></div>
+        <div className="row pull-foot">{weekOpen ? <button className="btn ghost" onClick={() => { tap(); setH(CAP); onWeek(); }}>{tr('See my week', '看看我这周')}</button>
+          : <span className="pull-lock">🔒 {ZH ? `「我的一周」${weekLeft} 天后解锁` : `"My week" unlocks in ${weekLeft} day${weekLeft > 1 ? 's' : ''}`}</span>}<span className="sub">{tr('Push up to close', '向上推关闭')}</span></div>
       </div>
       <span className="pull-handle" />
     </div>
@@ -232,7 +233,7 @@ type MailStage = 'in' | 'out' | 'read';
 // each coworker's stationery: paper tint, ink accent
 const NOTE_TINT: [string, string][] = [['#fff1f4', '#e8708a'], ['#eefaf3', '#4fa77d'], ['#f3efff', '#8a70d6'], ['#fff8e2', '#d09a2c'], ['#eef6ff', '#4f8fd6'], ['#fff2ea', '#e0805a']];
 const letterDate = (t: number) => { const d = new Date(t); return ZH ? `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日` : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }); };
-export function MailLetter({ note, name, s, keep, opened }: { note: Note; name: string; s: Save; keep: (n: Note, week?: boolean) => void; opened?: boolean }) {
+export function MailLetter({ note, name, s, keep, opened, weekOpen }: { note: Note; name: string; s: Save; keep: (n: Note, week?: boolean) => void; opened?: boolean; weekOpen?: boolean }) {
   const [stage, setStage] = useState<MailStage>(opened ? 'read' : 'in');
   const W = 360;
   const { p, snap, handlers } = useTear(W, () => { play('blindbox_open', 0.4); setStage('out'); setTimeout(() => setStage('read'), 1100); });
@@ -292,52 +293,9 @@ export function MailLetter({ note, name, s, keep, opened }: { note: Note; name: 
       <div className="mail-hint">{stage === 'in' ? tr('Drag the strip to open it, or just click the envelope.', '拖动封条打开，或者直接点信封。') : ' '}</div>
       {stage === 'read' && <div className="row mail-btns">
         <button className="btn primary" onClick={() => { tap(); keep(note); }}>{opened ? tr('Put it back', '放回信箱') : note.kind === 'payday' ? (ZH ? `收下 ${note.coins} 金币` : `Add ${note.coins} coins`) : tr('Keep the note', '收好这封信')}</button>
-        {note.kind === 'payday' && !opened && <button className="btn ghost" onClick={() => { tap(); keep(note, true); }}>{tr('Add and see my week', '收下并看看我这周')}</button>}
+        {note.kind === 'payday' && !opened && weekOpen && <button className="btn ghost" onClick={() => { tap(); keep(note, true); }}>{tr('Add and see my week', '收下并看看我这周')}</button>}
       </div>}
     </div>
   );
 }
 
-// ---------------- the weekly recap: a 3D runway you scroll down ----------------
-const DAYS = ZH ? ['一', '二', '三', '四', '五', '六', '日'] : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-export function WeekRecap({ s, name, close }: { s: Save; name: string; close: () => void }) {
-  const box = useRef<HTMLDivElement>(null);
-  const [y, setY] = useState(0);
-  const week = thisWeek(s.history), co = COMPANIES[s.company];
-  const mins = week.reduce((a, h) => a + h.worked, 0), done = week.filter((h) => h.finished), coins = week.reduce((a, h) => a + h.coins, 0);
-  const byDay = DAYS.map((_, i) => week.filter((h) => (new Date(h.at).getDay() + 6) % 7 === i).reduce((a, h) => a + h.worked, 0)), top = Math.max(30, ...byDay);
-  const who: Record<string, number> = {}; done.forEach((h) => { if (h.who) who[h.who] = (who[h.who] ?? 0) + 1; });
-  const friends = Object.entries(who).sort((a, b) => b[1] - a[1]) as [CoworkerId, number][];
-  const types: Record<string, number> = {}; week.forEach((h) => { types[h.type] = (types[h.type] ?? 0) + h.worked; });
-  const topType = Object.entries(types).sort((a, b) => b[1] - a[1])[0];
-  const SLABS = [
-    { col: '#5b6cff', title: tr('Focus', '专注'), body: <><div className="wr-big pix">{fmtMins(mins)}</div><div className="wr-bars">{byDay.map((m, i) => <span key={i}><i style={{ height: `${(m / top) * 100}%` }} /><small>{DAYS[i]}</small></span>)}</div></> },
-    { col: '#9b5cf0', title: tr('Orders', '工作单'), body: <><div className="wr-big pix">{done.length}</div><div className="wr-sub">{ZH ? `张完成${week.length - done.length ? `，还有 ${week.length - done.length} 次恰好的暂停` : ''}` : `finished${week.length - done.length ? `, and ${week.length - done.length} good stopping points` : ''}`}</div>{topType && <div className="wr-sub">{ZH ? `主要是${TYPE_LABEL[topType[0] as TaskType]}` : `Mostly ${topType[0].toLowerCase()}`}</div>}</> },
-    { col: '#f07a3c', title: tr('Friends', '朋友'), body: friends.length ? <div className="wr-friends">{friends.slice(0, 3).map(([id, n]) => <span key={id}><Head id={id} size={54} /><b>{COWORKERS[id].name}</b><small>{ZH ? `${n} 张工作单` : `${n} order${n > 1 ? 's' : ''}`}</small></span>)}</div> : <div className="wr-sub">{tr('Take an order for a coworker to start a friendship.', '帮同事接一张工作单，开始一段友谊吧。')}</div> },
-    { col: '#e94b8a', title: tr('Coins', '金币'), body: <><div className="wr-big pix">+{coins}</div><div className="wr-sub">{ZH ? `现在共有 ${s.coins.toLocaleString()} 金币` : `You have ${s.coins.toLocaleString()} now`}</div></> },
-  ];
-  const STEP = 520, total = (SLABS.length - 1) * STEP;
-  return (
-    <div className="wr" ref={box} onScroll={(e) => setY((e.currentTarget as HTMLDivElement).scrollTop)}>
-      <div className="wr-sticky">
-        <div className="wr-head"><div className="pix">{ZH ? `${name}在${co.name}的一周` : `${name}'s week at ${co.name}`}</div><button className="bb-x" onClick={() => { tap(); close(); }} aria-label={tr("Close", "关闭")}>✕</button></div>
-        <div className="wr-view">
-          <div className="wr-track" style={{ transform: `rotateX(58deg) translateY(${-Math.min(y, total)}px)` }}>
-            {SLABS.map((sl, i) => { const d = Math.abs(y - i * STEP) / STEP; return (
-              <div key={sl.title} className="wr-slab" style={{ top: i * STEP, background: sl.col, opacity: Math.max(0.3, 1 - d * 0.5) }}>
-                <svg className="wr-lines" viewBox="0 0 600 420" preserveAspectRatio="none">{Array.from({ length: 9 }, (_, k) => <line key={k} x1={k * 75} y1="0" x2={k * 75} y2="420" />)}{Array.from({ length: 6 }, (_, k) => <line key={k} x1="0" y1={k * 84} x2="600" y2={k * 84} />)}</svg>
-                <div className="wr-paint pix">{sl.title}</div>
-              </div>); })}
-          </div>
-        </div>
-        {/* the section you're on, as a card floating above the runway */}
-        {(() => { const i = Math.max(0, Math.min(SLABS.length - 1, Math.round(y / STEP))); const sl = SLABS[i]; return (
-          <div key={i} className="wr-board" style={{ ['--c' as string]: sl.col }}>
-            <div className="wr-title"><i />{sl.title}<span>{i + 1} / {SLABS.length}</span></div>{sl.body}
-          </div>); })()}
-        <div className="wr-foot">{y < total - 10 ? tr('Scroll to walk down your week ↓', '向下滚动，回顾你的一周 ↓') : tr('That was your week. See you Monday.', '这就是你的一周。周一见！')}</div>
-      </div>
-      <div style={{ height: total }} />
-    </div>
-  );
-}

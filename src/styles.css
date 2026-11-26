@@ -1487,3 +1487,65 @@ html:lang(zh-CN) .mail-paper.note .mail-hand.body { font-size: 21px; line-height
 .mail-dim .mail-letter { top: 150px; }
 @keyframes mailGrow2 { from { transform: translateY(-140px); } to { transform: translate(-80px, -138px); width: 480px; height: 440px; } }
 .mail-dim .mail-hint { margin-top: -70px; }
+
+/* ======== "My week": a bullet-journal spread on the dark stage ======== */
+.wk { position: absolute; inset: 0; z-index: 56; display: grid; place-items: center; animation: fadeIn .25s;
+  background: radial-gradient(ellipse 70% 60% at 50% 48%, #463566 0%, #2a2040 50%, #15101f 100%); }
+.wk-x { position: absolute; right: 24px; top: 20px; z-index: 3; }
+.wk-book { position: relative; width: 1080px; height: 600px; display: grid; grid-template-columns: 1fr 26px 1fr; perspective: 1800px; animation: wkIn .6s cubic-bezier(.2, 1.2, .4, 1) both; filter: drop-shadow(0 26px 30px rgba(0, 0, 0, .45)); }
+@keyframes wkIn { from { transform: translateY(60px) scale(.92); opacity: 0; } }
+/* dotted bullet-journal paper */
+.wk-page { position: relative; padding: 34px 38px 30px; display: grid; align-content: start; gap: 16px; color: #3d3546;
+  background: radial-gradient(circle, rgba(120, 100, 140, .28) 1.2px, transparent 1.6px) 0 0 / 22px 22px, #fffcf4; }
+.wk-page.left { border-radius: 14px 4px 4px 14px; box-shadow: inset -22px 0 26px -18px rgba(80, 60, 40, .25); }
+.wk-page.right { border-radius: 4px 14px 14px 4px; box-shadow: inset 22px 0 26px -18px rgba(80, 60, 40, .25); transform-origin: 0 50%; animation: wkOpen .8s cubic-bezier(.3, .9, .3, 1) .15s both; }
+@keyframes wkOpen { from { transform: rotateY(-120deg); } }
+.wk-spine { background: repeating-linear-gradient(transparent 0 14px, #6b5f78 14px 22px, transparent 22px 30px), linear-gradient(90deg, #e9e1d2, #fffcf4 50%, #e9e1d2); position: relative; }
+.wk-spine::before { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(transparent 0 15px, rgba(255, 255, 255, .7) 15px 16px, transparent 16px 30px); }
+.wk-tape { position: absolute; left: 30px; top: -12px; width: 120px; height: 28px; rotate: -4deg; opacity: .9; background: repeating-linear-gradient(45deg, #ffc9d6 0 7px, #ffe0e8 7px 14px); clip-path: polygon(3% 0, 97% 5%, 100% 50%, 96% 100%, 2% 95%, 0 50%); }
+.wk-tape.small { left: 50%; width: 60px; height: 18px; margin-left: -30px; top: -9px; rotate: 3deg; background: repeating-linear-gradient(45deg, #bfe3ff 0 6px, #ddf0ff 6px 12px); }
+.wk-hand { font-family: 'Caveat', cursive; }
+html:lang(zh-CN) .wk-hand { font-family: 'Caveat', 'Kaiti SC', 'STKaiti', 'KaiTi', cursive; }
+.wk-title { font-size: 46px; line-height: 1; color: #3d3546; }
+.wk-small { font-size: 13px; color: #8a8090; margin-top: 4px; letter-spacing: .02em; }
+.wk-label { font-size: 11px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: #a08cb8; }
+.wk-big { font-size: 34px; line-height: 1; margin: 6px 0 8px; }
+.wk-box { position: relative; background: rgba(255, 255, 255, .7); border: 2px dashed #e0d6c8; border-radius: 14px; padding: 14px 18px 12px; }
+.wk-bars { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; height: 150px; align-items: end; }
+.wk-bars span { position: relative; height: 100%; display: grid; grid-template-rows: 1fr auto; justify-items: center; }
+.wk-bars i { align-self: end; width: 70%; border-radius: 4px 6px 3px 5px; transform-origin: 50% 100%; opacity: .9; animation: wkBar .6s cubic-bezier(.3, 1.4, .5, 1) var(--d) both;
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, .06); background-image: linear-gradient(100deg, rgba(255, 255, 255, .35), transparent 40%) !important; }
+@keyframes wkBar { from { transform: scaleY(0); } }
+.wk-bars b { font-size: 20px; font-weight: 400; color: #6d6474; }
+.wk-bars span.best b { color: #e8708a; font-weight: 700; }
+.wk-circle { position: absolute; bottom: -8px; left: 50%; width: 54px; height: 36px; margin-left: -27px; pointer-events: none; stroke-dasharray: 200; stroke-dashoffset: 200; animation: wkDraw .7s ease-out 2s forwards; }
+@keyframes wkDraw { to { stroke-dashoffset: 0; } }
+.wk-bestnote { position: absolute; top: 12px; translate: -50% 0; font-size: 20px; color: #e8708a; rotate: -6deg; opacity: 0; animation: fadeIn .4s 2.4s forwards; white-space: nowrap; }
+.wk-row { display: flex; gap: 16px; align-items: stretch; }
+.wk-stamp { display: grid; place-items: center; align-content: center; gap: 2px; padding: 10px 18px; border: 3px solid #8a70d6; border-radius: 12px; color: #8a70d6; rotate: -3deg; background: rgba(240, 234, 255, .6); }
+.wk-stamp b { font-size: 34px; line-height: 1; } .wk-stamp span { font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.wk-tag { display: grid; align-content: center; gap: 2px; padding: 8px 18px; background: #fff3c4; border-radius: 4px; box-shadow: 0 3px 6px rgba(0, 0, 0, .08); rotate: 2deg; }
+.wk-tag b { font-size: 30px; font-weight: 400; line-height: 1; }
+.wk-polas { display: flex; gap: 18px; min-height: 150px; align-items: start; }
+.wk-pola { position: relative; width: 118px; background: #fff; padding: 10px 10px 8px; display: grid; justify-items: center; gap: 2px; box-shadow: 0 4px 10px rgba(0, 0, 0, .14); rotate: var(--r); }
+.wk-pola .head { background: #f1ecf8; border-radius: 2px !important; width: 96px !important; height: 84px !important; display: grid; place-items: center; }
+.wk-pola .head img { width: 64px; height: 64px; image-rendering: pixelated; }
+.wk-pola b { font-size: 24px; font-weight: 400; line-height: 1.1; } .wk-pola small { font-size: 12px; color: #8a8090; }
+.wk-coin { display: grid; grid-template-columns: auto auto; grid-template-rows: auto auto; column-gap: 8px; align-items: center; padding: 12px 18px; border-radius: 999px; background: #fff6d6; border: 2px solid #f2d27a; rotate: -2deg; align-self: center; }
+.wk-coin img { width: 34px; image-rendering: pixelated; grid-row: span 2; } .wk-coin b { font-size: 28px; line-height: 1; } .wk-coin span { font-size: 11px; color: #a0843a; font-weight: 700; }
+.wk-finds { display: grid; gap: 6px; flex: 1; }
+.wk-stickers { display: flex; flex-wrap: wrap; gap: 8px; }
+.wk-sticker { width: 58px; height: 58px; display: grid; place-items: center; border-radius: 14px; background: #fff; box-shadow: 0 0 0 3px #fff, 0 3px 8px rgba(0, 0, 0, .14); rotate: var(--r); }
+.wk-sticker.cute { background: #fff0f5; } .wk-sticker.secret { background: #fff6d6; box-shadow: 0 0 0 3px #ffd24a, 0 3px 10px rgba(255, 190, 60, .4); }
+.wk-sign { font-size: 26px; line-height: 1.15; color: #4f6bbf; justify-self: end; text-align: right; rotate: -2deg; margin-top: 4px; }
+.wk-sign span { font-size: 24px; color: #3d3546; }
+.wk-empty { font-size: 20px; color: #a09aa6; }
+.wk-sample { position: absolute; right: 28px; top: 22px; font-weight: 900; font-size: 14px; letter-spacing: .2em; color: rgba(214, 72, 72, .7); border: 3px solid rgba(214, 72, 72, .6); border-radius: 8px; padding: 2px 10px; rotate: 10deg; }
+/* each piece lands like a sticker being pressed on */
+.wk-pop { animation: wkPop .45s cubic-bezier(.3, 1.6, .5, 1) var(--d) both; }
+@keyframes wkPop { from { opacity: 0; transform: scale(1.35) rotate(6deg); } }
+.pull-lock { font-size: 13px; font-weight: 700; color: #8a8090; padding: 6px 4px; }
+@media (prefers-reduced-motion: reduce) { .wk-pop, .wk-bars i, .wk-page.right, .wk-book { animation: none; } .wk-circle { stroke-dashoffset: 0; animation: none; } .wk-bestnote { opacity: 1; animation: none; } }
+.wk-bestnote { animation: wkShow .4s 2.4s forwards; } @keyframes wkShow { to { opacity: 1; } }
+.wk-book { height: 548px; }
+.wk-bars .wk-bestnote { position: absolute; top: auto; left: 50%; font-style: normal; z-index: 2; }
