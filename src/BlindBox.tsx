@@ -194,17 +194,17 @@ function Catalogue({ s, up }: { s: Save; up: (p: Partial<Save>) => void }) {
 // one after gathering gold light. All the light sits BEHIND the cards, so it never tints them. Each card tilts toward the
 // pointer with a soft glare, and a face-down card can be clicked to turn it over sooner. ----
 export const MAX_AT_ONCE = 5;
-type Look = { key: string; name: string; c: string; d: string; l: string; ink: string; icon: string };
+type Look = { key: string; name: string; c: string; d: string; l: string; ink: string; icon: string; sp: string };
 // eight packs, each with a game thing on the front as a glossy sticker
 export const LOOKS: Look[] = [
-  { key: 'cow', name: t('Office cow', '牛马日常'), c: '#ff7f6e', d: '#e0594a', l: '#ffab9e', ink: '#ffffff', icon: 'cow' },
-  { key: 'horse', name: t('Workhorse', '马不停蹄'), c: '#2fbf9c', d: '#1d9a7c', l: '#72dcbf', ink: '#ffffff', icon: 'horse' },
-  { key: 'coffee', name: t('Coffee break', '续命咖啡'), c: '#b07d5b', d: '#8c5d40', l: '#d0a283', ink: '#ffffff', icon: 'coffee' },
-  { key: 'star', name: t('Star of the month', '本月之星'), c: '#7d4ee6', d: '#5a30bc', l: '#a787f4', ink: '#ffffff', icon: 'star' },
-  { key: 'moon', name: t('Overtime', '加班到月亮'), c: '#2f3780', d: '#1f245c', l: '#5660b0', ink: '#ffffff', icon: 'moon' },
-  { key: 'clock', name: t('Clock out on time', '准时下班'), c: '#f7c843', d: '#dca424', l: '#ffe189', ink: '#4a3a10', icon: 'clock' },
-  { key: 'gift', name: t('Payday treat', '发薪日'), c: '#f58fb8', d: '#d86894', l: '#fbb9d3', ink: '#ffffff', icon: 'gift' },
-  { key: 'piggy', name: t('Rainy day fund', '小金库'), c: '#3f8fe0', d: '#2a6cb8', l: '#7db6f0', ink: '#ffffff', icon: 'piggy' },
+  { key: 'cow', name: t('Office cow', '牛马日常'), c: '#ff7f6e', d: '#e0594a', l: '#ffab9e', ink: '#ffffff', icon: 'cow', sp: '#ffe27a' },
+  { key: 'horse', name: t('Workhorse', '马不停蹄'), c: '#2fbf9c', d: '#1d9a7c', l: '#72dcbf', ink: '#ffffff', icon: 'horse', sp: '#fff3a0' },
+  { key: 'coffee', name: t('Coffee break', '续命咖啡'), c: '#b07d5b', d: '#8c5d40', l: '#d0a283', ink: '#ffffff', icon: 'coffee', sp: '#ffc2d4' },
+  { key: 'star', name: t('Star of the month', '本月之星'), c: '#7d4ee6', d: '#5a30bc', l: '#a787f4', ink: '#ffffff', icon: 'star', sp: '#ffe27a' },
+  { key: 'moon', name: t('Overtime', '加班到月亮'), c: '#2f3780', d: '#1f245c', l: '#5660b0', ink: '#ffffff', icon: 'moon', sp: '#fff1a8' },
+  { key: 'clock', name: t('Clock out on time', '准时下班'), c: '#f7c843', d: '#dca424', l: '#ffe189', ink: '#4a3a10', icon: 'clock', sp: '#ff6f7f' },
+  { key: 'gift', name: t('Payday treat', '发薪日'), c: '#f58fb8', d: '#d86894', l: '#fbb9d3', ink: '#ffffff', icon: 'gift', sp: '#fff3a0' },
+  { key: 'piggy', name: t('Rainy day fund', '小金库'), c: '#3f8fe0', d: '#2a6cb8', l: '#7db6f0', ink: '#ffffff', icon: 'piggy', sp: '#ffd0dc' },
 ];
 const TEASE: Record<Tier, number> = { normal: 450, cute: 1700, secret: 2800 };
 const STRIP_W = 230;
@@ -215,6 +215,10 @@ const zig = (w: number, h: number, edge: 'top' | 'bottom', step = 10, depth = 7)
   else { pts.push('0px 0px', `${w}px 0px`); for (let x = w; x >= 0; x -= step / 2) pts.push(`${x}px ${h - ((x / (step / 2)) % 2 ? 0 : depth)}px`); }
   return `polygon(${pts.join(',')})`;
 };
+// where the twinkles sit around the sticker: x, y, size, delay, and whether it's just a dot
+const SPARKS: [number, number, number, number, boolean][] = [
+  [30, 96, 2, 0, false], [196, 86, 1.4, .7, false], [204, 176, 1.8, 1.3, false], [26, 190, 1.2, 1.9, false], [200, 212, 1, .4, false],
+  [54, 76, 1, 1.1, true], [190, 132, 1, 2.2, true], [44, 150, 1, .2, true], [70, 228, 1, 1.6, true]];
 // the pack itself, drawn in CSS (glossy foil, crimped ends, a "tear here" strip) around a pixel sticker
 export function PackArt({ look, n, face = 0, tearP = 0, snap = false, torn = false, handlers }: { look: Look; n: number; face?: number; tearP?: number; snap?: boolean; torn?: boolean; handlers?: Record<string, unknown> }) {
   const strip = <><div className="ho-crimp" /><span className="ho-tearhere">{t('TEAR TO CLOCK OUT ⟶', '撕开就下班 ⟶')}</span></>;
@@ -224,6 +228,8 @@ export function PackArt({ look, n, face = 0, tearP = 0, snap = false, torn = fal
         <div className="ho-crimp bot" />
         <span className="ho-brand pix">{t('Corner Office', '角落办公室')}</span>
         <span className="ho-series">{look.name.toUpperCase()}</span>
+        {/* twinkles and little dots around the sticker, in the pack's own colour */}
+        <div className="ho-sparks" style={{ ['--sp' as string]: look.sp }}>{SPARKS.map(([x, y, k, d, dot], i) => <i key={i} className={dot ? 'dot' : ''} style={{ left: x, top: y, ['--k' as string]: k, animationDelay: `${d}s` }} />)}</div>
         <div className={`ho-mascot${face === 1 ? ' tug' : face === 2 ? ' pop' : ''}`} style={{ backgroundImage: `url(${A}icon_${look.icon}.png)`, ["--icon" as string]: `url("${new URL(`${A}icon_${look.icon}.png`, document.baseURI).href}")` }} />
         <span className="ho-foot l">{t('Office blind pack', '打工人盲包')}</span>
         <span className="ho-foot r">{ZH ? `${n} 件工位好物` : `${n} desk find${n > 1 ? 's' : ''}`}</span>

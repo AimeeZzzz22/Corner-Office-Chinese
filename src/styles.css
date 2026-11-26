@@ -1337,3 +1337,12 @@ html:lang(zh-CN) .mail-hand { font-size: 25px; } html:lang(zh-CN) .mail-hand.bod
 .bb-howmany .chip { min-width: 30px; } .bb-howmany .chip:disabled { opacity: .35; cursor: default; }
 @media (prefers-reduced-motion: reduce) { .ho-ribbon, .ho-bit, .ho-rays, .ho-halo, .ho-parts { display: none; } .ho-mascot, .s-in .ho-packwrap { animation: none; } }
 :lang(zh) .ho-series, :lang(zh) .ho-tearhere { font-size: 11px; letter-spacing: .1em; } :lang(zh) .ho-series { top: 48px; }
+/* twinkles around the pack's sticker: little pixel crosses (a white middle, arms in the pack's colour) and dots */
+.ho-sparks { position: absolute; inset: 0; pointer-events: none; }
+.ho-sparks i { position: absolute; width: 3px; height: 3px; background: #fff; scale: var(--k); opacity: 0;
+  box-shadow: 3px 0 0 var(--sp), -3px 0 0 var(--sp), 0 3px 0 var(--sp), 0 -3px 0 var(--sp), 6px 0 0 color-mix(in srgb, var(--sp) 55%, transparent), -6px 0 0 color-mix(in srgb, var(--sp) 55%, transparent), 0 6px 0 color-mix(in srgb, var(--sp) 55%, transparent), 0 -6px 0 color-mix(in srgb, var(--sp) 55%, transparent);
+  animation: hoSpark 2.4s ease-in-out infinite; }
+.ho-sparks i.dot { width: 4px; height: 4px; background: var(--sp); box-shadow: none; animation-duration: 3s; }
+@keyframes hoSpark { 0%, 100% { opacity: 0; transform: scale(.4) rotate(0); } 45%, 55% { opacity: 1; transform: scale(1) rotate(0); } }
+.s-burst .ho-sparks i, .ho-mascot.pop ~ .ho-sparks i { animation-duration: .6s; }
+@media (prefers-reduced-motion: reduce) { .ho-sparks i { animation: none; opacity: .8; } }
