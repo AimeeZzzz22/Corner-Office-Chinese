@@ -11,7 +11,7 @@ export interface Order {
   startedAt: number; endsAt: number;          // timestamps, so the timer survives a reload or a closed tab
   practice?: boolean;                         // the guide's 1-minute practice order
 }
-export interface Result { finished: boolean; coins: number; xp: number; bonus?: string[]; who: CoworkerId | null; heartBefore: number; heartAfter: number; minutes: number }
+export interface Result { finished: boolean; coins: number; xp: number; promoted?: number; bonus?: string[]; who: CoworkerId | null; heartBefore: number; heartAfter: number; minutes: number }
 // onboarding: offer letter -> first-day look -> welcome tour -> badge photo -> work vibe -> work style quiz -> first work order
 // one finished or stopped work order, kept for the desk computer's history
 // a letter in the mail: a coworker's thank-you when a new heart fills, or the end-of-week payday envelope

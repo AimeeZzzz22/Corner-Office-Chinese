@@ -77,6 +77,14 @@ export function pay(mins: number): number {
 }
 export const HEART_POINTS = 10;      // a heart is 10 points; a finished order adds 1 point
 export const XP_TO_NEXT = 500;       // Intern I -> Intern II (starting value)
+// Promotion. Intern grades I, II, III at 0, 500 and 1,500 XP (design doc 4.4). Every promotion is a raise:
+// each grade above I pays +10% coins per order. Intern III also gives +20% XP per order.
+export const GRADES = [0, 500, 1500];
+export const RAISE = 0.10;
+export const gradeOf = (xp: number) => GRADES.filter((g) => xp >= g).length - 1;          // 0, 1, 2
+export const GRADE_NAME = (g: number) => (t(['I', 'II', 'III'][g], ['一级', '二级', '三级'][g]));
+export const coinsAt = (base: number, xp: number) => Math.round(base * (1 + RAISE * gradeOf(xp)) / 5) * 5;
+export const xpAt = (base: number, xp: number) => (gradeOf(xp) >= 2 ? Math.round(base * 1.2) : base);
 
 export interface GameSpot { name: string; at: [number, number]; stand: [number, number] }
 export interface Company {

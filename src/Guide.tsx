@@ -37,9 +37,9 @@ const hostLine = (c: GCtx) => (ZH ? `去和${COWORKERS[c.co.host].name}打个招
 const deskPath = (c: GCtx): Target => (c.s.phase === 'free' ? { sel: '.new-order' } : !c.pcOpen ? { sel: '.pc-hot', pop: false } : has('.g-practice') ? { sel: '.g-practice .pc-take' } : { sel: '.pc-icon' });
 
 // why you're here: orders give XP and coins; XP gets you promoted; coins buy blind packs and desk things
-const GOAL: [string, string][] = [['📋', t('Orders', '工作单')], ['⭐', t('XP', '经验')], ['⬆️', t('Promotion', '升职')], ['🪙', t('Coins', '金币')], ['🎁', t('Packs & things', '盲包和小东西')]];
+const GOAL: [string, string][] = [['📋', t('Orders', '工作单')], ['⭐', t('XP', '经验')], ['⬆️', t('Promotion & raise', '升职加薪')], ['🪙', t('Coins', '金币')], ['🎁', t('Packs & things', '盲包和小东西')]];
 export const STEPS: GStep[] = [
-  { id: 'goal', at: 'any', text: () => t('Finish orders for XP and coins. XP gets you promoted; coins buy blind packs and desk things.', '做工作单赚经验和金币。经验攒满就升职，金币可以买盲包和小东西。'), target: () => null, ok: true, chain: GOAL },
+  { id: 'goal', at: 'any', text: () => t('Finish orders for XP and coins. Enough XP gets you promoted, and every promotion is a raise. Coins buy blind packs and desk things.', '做工作单赚经验和金币。经验攒满就升职，升职会加薪。金币可以买盲包和小东西。'), target: () => null, ok: true, chain: GOAL },
   // ---- the office
   { id: 'walk', at: 'office', text: () => t('Click the floor to walk', '点地面，走过去'),
     target: (c) => { const [x, y] = c.co.start; return { map: [(x + 2) * 16, (y + 1) * 16, 16, 16] }; }, done: (c) => c.ev.has('walked') },
@@ -51,7 +51,7 @@ export const STEPS: GStep[] = [
   { id: 'hearts', at: 'office', text: () => t('Do their orders to fill these hearts', '帮TA做工作单，心会慢慢攒满'), target: (c) => (c.menu ? { sel: '.menu .hearts' } : { npc: c.co.host }), ok: true },
   { id: 'stack', at: 'office', text: () => t("Who's in today? Click to see", '今天谁在？点开看看'), target: () => ({ sel: '.avatar-stack' }), done: (c) => c.ev.has('stack-open') },
   { id: 'coins', at: 'any', text: () => t('Coins: you earn them with orders', '金币：做工作单赚的'), target: () => ({ sel: '.hud-right' }), ok: true },
-  { id: 'xp', at: 'any', text: () => t('XP: fill it to get promoted', '经验：攒满就升职'), target: () => ({ sel: '.hud-left .xp' }), ok: true },
+  { id: 'xp', at: 'any', text: () => t('XP: fill it for a promotion and a raise', '经验：攒满就升职加薪'), target: () => ({ sel: '.hud-left .xp' }), ok: true },
   { id: 'pull', at: 'office', text: () => t('Pull this down', '把这个往下拉'), target: () => ({ sel: '.pull-cap', pop: false }), done: (c) => c.ev.has('pull-open') },
   { id: 'week', at: 'office', text: () => t('Your whole week, in one scroll', '一整周的回顾'), target: () => ({ sel: '.pull-body .btn', pop: false }), done: (c) => c.week },
   { id: 'food', at: 'office', text: (c) => (ZH ? `去${c.co.food.name}看看` : `Visit the ${c.co.food.name.toLowerCase()}`), target: (c) => spotOr(c.co.food.at, 'food'), done: (c) => c.spot === 'food', hide: (c) => c.week },

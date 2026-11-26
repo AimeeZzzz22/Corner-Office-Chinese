@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { MagnifyDock, TeamAccordion } from './ui';
 import { piggyToday } from './BlindBox';
 import { hhmm, officeClock, people, statusOf } from './clock';
-import { COMPANIES, COWORKERS, CoworkerId, PRACTICE_PAY, pay } from './data';
+import { COMPANIES, COWORKERS, CoworkerId, PRACTICE_PAY, coinsAt, pay } from './data';
 import { gEmit } from './Guide';
 import { Save } from './state';
 import { play } from './sfx';
@@ -98,7 +98,7 @@ function Tasklet({ s, name, close, take, tab0, practice }: { s: Save; name: stri
                           <Head id={t.who} size={34} />
                           <div className="pc-what"><b>{c.jobs[t.job].title}</b><span>{ZH ? `帮${c.name} · ${c.role}` : `For ${c.name} · ${c.role}`}</span></div>
                           {s.quiz.focus === t.mins && <span className="suits static">{tx('Suits you', '适合你')}</span>}
-                          <div className="pc-pay">+{pay(t.mins)} {tx('coins', '金币')}<br /><span>{tx('+1/10 heart', '+1/10 颗心')}</span></div>
+                          <div className="pc-pay">+{coinsAt(pay(t.mins), s.xp)} {tx('coins', '金币')}<br /><span>{tx('+1/10 heart', '+1/10 颗心')}</span></div>
                           <button className="btn primary pc-take" onClick={() => { tap(); take({ mins: t.mins, who: t.who, job: t.job }); }}>{tx('Take', '接单')}</button>
                         </div>); })}
                       <div className="pc-row own">
@@ -106,7 +106,7 @@ function Tasklet({ s, name, close, take, tab0, practice }: { s: Save; name: stri
                         <span className="head blank" style={{ width: 34, height: 34 }}>⏱</span>
                         <div className="pc-what"><b>{tx('Set your own time', '自己定时间')}</b><span>{tx('5 to 120 minutes · no coworker, so no heart', '5 到 120 分钟 · 不帮同事，所以没有心')}</span>
                           <span className="pc-steps"><button onClick={() => { tap(); setOwn(Math.max(5, own - 5)); }}>−</button><button onClick={() => { tap(); setOwn(Math.min(120, own + 5)); }}>+</button></span></div>
-                        <div className="pc-pay">+{pay(own)} {tx('coins', '金币')}<br /><span>{tx('no heart', '没有心')}</span></div>
+                        <div className="pc-pay">+{coinsAt(pay(own), s.xp)} {tx('coins', '金币')}<br /><span>{tx('no heart', '没有心')}</span></div>
                         <button className="btn primary pc-take" onClick={() => { tap(); take({ mins: own, who: null, job: 0 }); }}>{tx('Take', '接单')}</button>
                       </div>
                     </div>

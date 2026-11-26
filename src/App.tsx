@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Office from './Office';
-import { COMPANIES, COWORKERS, CompanyId, CoworkerId, HEART_POINTS, PRACTICE_PAY, TASK_TYPES, TYPE_LABEL, TaskType, XP_TO_NEXT, pay } from './data';
+import { COMPANIES, COWORKERS, CompanyId, CoworkerId, GRADES, GRADE_NAME, HEART_POINTS, PRACTICE_PAY, RAISE, TASK_TYPES, TYPE_LABEL, TaskType, coinsAt, gradeOf, pay, xpAt } from './data';
 import { Order, Result, Save, fresh, load, newTray, store, wipe } from './state';
 import { play, setSound } from './sfx';
 import { Badge, Booth, Offer, Quiz, TourCard, Vibe } from './Onboarding';
@@ -115,11 +115,15 @@ export default function App() {
     const reward = o.practice ? PRACTICE_PAY : finished ? pay(o.mins) : worked >= o.mins ? pay(o.mins) : Math.floor(pay(o.mins) * (worked / o.mins) / 5) * 5;
     const before = o.who ? s.hearts[o.who] : 0, after = finished && o.who ? before + 1 : before;
     // today's treats: iced coffee +50% coins on the first finished order, strawberry milk +10% XP, matcha +10 piggy minutes
-    const tt = treatsToday(s.treats), bonus: string[] = []; let coins = reward, xp = reward, extraMins = 0; const used = [...tt.used];
-    if (finished && tt.have.includes('iced_coffee') && !used.includes('iced_coffee')) { coins = Math.round(reward * 1.5); used.push('iced_coffee'); bonus.push(ZH ? `冰咖啡：+${coins - reward} 金币` : `Iced coffee: +${coins - reward} coins`); }
-    if (finished && tt.have.includes('strawberry_milk')) { xp = Math.round(reward * 1.1); bonus.push(ZH ? `草莓牛奶：+${xp - reward} 经验` : `Strawberry milk: +${xp - reward} XP`); }
+    // the raise from promotions (and Intern III's extra XP) comes before the treats
+    const tt = treatsToday(s.treats), bonus: string[] = []; let coins = o.practice ? reward : coinsAt(reward, s.xp), xp = o.practice ? reward : xpAt(reward, s.xp), extraMins = 0;
+    const base = coins; const used = [...tt.used];
+    if (finished && tt.have.includes('iced_coffee') && !used.includes('iced_coffee')) { coins = Math.round(base * 1.5); used.push('iced_coffee'); bonus.push(ZH ? `冰咖啡：+${coins - base} 金币` : `Iced coffee: +${coins - base} coins`); }
+    if (finished && tt.have.includes('strawberry_milk')) { const x0 = xp; xp = Math.round(x0 * 1.1); bonus.push(ZH ? `草莓牛奶：+${xp - x0} 经验` : `Strawberry milk: +${xp - x0} XP`); }
     if (finished && tt.have.includes('matcha_latte')) { extraMins = 10; bonus.push(t('Matcha latte: +10 piggy bank minutes', '抹茶拿铁：存钱罐 +10 分钟')); }
-    const result: Result = { finished, coins, xp, who: o.who, heartBefore: before, heartAfter: after, minutes: worked, bonus };
+    const g0 = gradeOf(s.xp), g1 = gradeOf(s.xp + xp);
+    if (g1 > g0) setTimeout(() => play('heart_level', 0.6), 1200);
+    const result: Result = { finished, coins, xp, promoted: g1 > g0 ? g1 : undefined, who: o.who, heartBefore: before, heartAfter: after, minutes: worked, bonus };
     play(finished ? 'order_finished' : 'stopping_here'); if (finished && reward) setTimeout(() => play('coins_many', 0.5), 350);
     if (after > before) setTimeout(() => play(Math.floor(after / HEART_POINTS) > Math.floor(before / HEART_POINTS) ? 'heart_level' : 'heart_pop', 0.5), 800);
     const past = { at: Date.now(), mins: o.mins, worked, who: o.who, job: o.jobTitle, focus: o.focus, type: o.type, finished, coins, xp, steps: o.steps.length, stepsDone: o.steps.filter((x) => x.done).length };
@@ -171,8 +175,9 @@ export default function App() {
 
       {!onboarding && !editing && (
         <div className="hud">
-          <div className="hud-l"><div className="card hud-left"><div className="pix title">{co.name}</div><div className="sub">{co.role}{ZH ? ' 一级' : ' I'}</div>
-            <div className="xp"><span style={{ width: `${Math.min(100, (s.xp / XP_TO_NEXT) * 100)}%` }} /></div><div className="sub">{Math.min(s.xp, XP_TO_NEXT)} / {XP_TO_NEXT} {t('XP to Intern II', '经验升到实习生二级')}</div></div>
+          <div className="hud-l"><div className="card hud-left"><div className="pix title">{co.name}</div><div className="sub">{co.role}{ZH ? ' ' : ' '}{GRADE_NAME(gradeOf(s.xp))}</div>
+            {(() => { const g = gradeOf(s.xp), lo = GRADES[g], hi = GRADES[g + 1]; return hi ? <><div className="xp"><span style={{ width: `${((s.xp - lo) / (hi - lo)) * 100}%` }} /></div><div className="sub">{s.xp} / {hi} {ZH ? `经验升到实习生${GRADE_NAME(g + 1)}` : `XP to Intern ${GRADE_NAME(g + 1)}`}{g > 0 ? (ZH ? ` · 加薪 +${g * RAISE * 100}%` : ` · raise +${g * RAISE * 100}%`) : ''}</div></>
+            : <><div className="xp"><span style={{ width: '100%' }} /></div><div className="sub">{t(`Top intern grade · raise +${g * RAISE * 100}%`, `实习生最高级 · 加薪 +${g * RAISE * 100}%`)}</div></>; })()}</div>
             <AvatarStack s={s} /></div>
           <div className="hud-r">
             {s.notes.length > 0 && <button className="card hud-mail" onClick={() => { tap(); setMenu(null); setMail(true); }} title={t('You have mail', '你有新信件')}><span className="hud-env" />{s.notes.length > 1 && <em>{s.notes.length}</em>}</button>}
@@ -280,7 +285,7 @@ export default function App() {
           <div className="sub">{ZH ? `“${s.order.focus}”做得怎么样？` : `How did “${s.order.focus}” go?`}</div>
           {left <= 0 ? (
             <><button className="btn primary" onClick={() => end(true)}>{t('Finished!', '完成啦！')}</button>
-              <div className="reward"><Coin /> +{s.order.practice ? PRACTICE_PAY : pay(s.order.mins)} {t('coins', '金币')} · +{s.order.practice ? PRACTICE_PAY : pay(s.order.mins)} {t('XP', '经验')}{s.order.who ? t(' · +1/10 heart', ' · +1/10 颗心') : ''}</div></>
+              <div className="reward"><Coin /> +{s.order.practice ? PRACTICE_PAY : coinsAt(pay(s.order.mins), s.xp)} {t('coins', '金币')} · +{s.order.practice ? PRACTICE_PAY : xpAt(pay(s.order.mins), s.xp)} {t('XP', '经验')}{s.order.who ? t(' · +1/10 heart', ' · +1/10 颗心') : ''}</div></>
           ) : <button className="btn primary" onClick={() => { tap(); up({ phase: 'work' }); }}>{t('Keep going', '继续')}</button>}
           <button className="btn ghost" onClick={() => end(false)}>{t('Stopping here', '就到这里')}</button>
           <div className="sub">{t('You keep the coins and XP for the time worked.', '已工作时间的金币和经验都归你。')}</div><div className="note">{t('No heart this time. Nothing else is lost.', '这次没有心，其他什么都不会损失。')}</div>
@@ -291,6 +296,7 @@ export default function App() {
         <div className="result-wrap"><div className="card side">
           <div className="pix h1">{s.result.finished ? t('Nice work!', '干得漂亮！') : t('Good stopping point', '停在这里刚刚好')}</div>
           <div className="sub">{s.result.finished ? (ZH ? `${name}完成了这张工作单。` : `${name} finished the order.`) : ZH ? `${name}做了 ${s.result.minutes} 分钟后收工了。` : `${name} wrapped up after ${s.result.minutes} min.`}</div>
+          {s.result.promoted && <div className="promo"><b className="pix">🎉 {ZH ? `升职啦！实习生${GRADE_NAME(s.result.promoted)}` : `Promoted! Intern ${GRADE_NAME(s.result.promoted)}`}</b><span>{ZH ? `加薪：以后每张工作单金币 +${s.result.promoted * RAISE * 100}%` : `A raise: +${s.result.promoted * RAISE * 100}% coins on every order from now on`}{s.result.promoted >= 2 ? t(', and +20% XP', '，经验也 +20%') : ''}</span></div>}
           <div className="gain"><Coin /><span className="pix">+{s.result.coins}</span><span className="pix xpgain">+{s.result.xp} {t('XP', '经验')}</span></div>
           {!!s.result.bonus?.length && <div className="bonus-list">{s.result.bonus.map((b) => <span key={b}>✦ {b}</span>)}</div>}
           {s.result.who && s.result.heartAfter > s.result.heartBefore && (
@@ -341,14 +347,14 @@ function Tray({ s, name, pick, back, next }: { s: Save; name: string; pick: (p: 
             <div className="mins"><span className="pix">{t.mins}</span> {tr('min', '分钟')}</div>
             <div className="for"><Head id={t.who} size={30} /><b>{tr('For ', '帮')}{c.name}</b></div>
             <div className="job">{c.jobs[t.job].title}</div>
-            <div className="reward"><Coin /> +{pay(t.mins)} {tr('coins', '金币')} · +{pay(t.mins)} {tr('XP', '经验')}</div>
+            <div className="reward"><Coin /> +{coinsAt(pay(t.mins), s.xp)} {tr('coins', '金币')} · +{xpAt(pay(t.mins), s.xp)} {tr('XP', '经验')}</div>
           </button>); })}
       </div>
       <div className={custom ? 'custom on' : 'custom'}>
         <div><b>{t('Or set your own time', '或者自己定时间')}</b><div className="sub">{t('5 to 120 minutes · no coworker, so no heart', '5 到 120 分钟 · 不帮同事，所以没有心')}</div></div>
         <button className="sq" onClick={() => setCustom(mins - 5)}>−</button><div className="val">{mins} {t('min', '分钟')}</div><button className="sq" onClick={() => setCustom(mins + 5)}>+</button>
         {[10, 20, 45].map((q) => <button key={q} className={custom && mins === q ? 'chip on' : 'chip'} onClick={() => setCustom(q)}>{q} {t('min', '分钟')}</button>)}
-        {custom && <div className="reward"><Coin /> +{pay(mins)} {t('coins', '金币')} · +{pay(mins)} {t('XP', '经验')}</div>}
+        {custom && <div className="reward"><Coin /> +{coinsAt(pay(mins), s.xp)} {t('coins', '金币')} · +{xpAt(pay(mins), s.xp)} {t('XP', '经验')}</div>}
       </div>
       <div className="between foot"><div><div className="note">{t('Longer orders pay a little extra.', '越长的工作单，报酬多一点点。')}</div><div className="sub">{t('Stopping early still pays for the time worked, but adds no heart.', '提前结束也按已工作时间付钱，只是不加心。')}</div></div>
         <div className="row"><button className="btn ghost" onClick={back}>{t('Back to the office', '回到办公室')}</button><button className="btn primary" onClick={next}>{t('Take this order', '接这张工作单')}</button></div></div>
@@ -366,7 +372,7 @@ function Focus({ s, name, back, start }: { s: Save; name: string; back: () => vo
       <div className="cols">
         <div className="slip on fixed"><div className="mins"><span className="pix">{p.mins}</span> {t('min', '分钟')}</div>
           {c ? <><div className="for"><Head id={c.id} size={30} /><b>{t('For ', '帮')}{c.name}</b></div><div className="job">{c.jobs[p.job].title}</div></> : <div className="job">{t('Custom time', '自定时间')}</div>}
-          <div className="reward"><Coin /> +{p.practice ? PRACTICE_PAY : pay(p.mins)} {t('coins', '金币')} · +{p.practice ? PRACTICE_PAY : pay(p.mins)} {t('XP', '经验')}</div></div>
+          <div className="reward"><Coin /> +{p.practice ? PRACTICE_PAY : coinsAt(pay(p.mins), s.xp)} {t('coins', '金币')} · +{p.practice ? PRACTICE_PAY : xpAt(pay(p.mins), s.xp)} {t('XP', '经验')}</div></div>
         <div className="form">
           <b>{t('What will you focus on in real life?', '现实中你要专注做什么？')}</b>
           <input className="field" autoFocus maxLength={60} placeholder={t('Read chapter 3', '读第三章')} value={focus} onChange={(e) => setFocus(e.target.value)} />
