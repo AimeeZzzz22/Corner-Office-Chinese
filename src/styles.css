@@ -1554,3 +1554,32 @@ html:lang(zh-CN) .wk-hand { font-family: 'Caveat', 'Kaiti SC', 'STKaiti', 'KaiTi
 .card.settings > label, .card.settings > .set-h { grid-column: 1 / -1; }
 .card.settings > .btn { padding: 8px 10px; font-size: 13px; min-height: 0; }
 .set-h { font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: #a08a62; margin-top: 6px; padding-top: 8px; border-top: 2px dashed #e8dcc0; }
+
+/* blind packs: sparkles, the secret guarantee, series, swapping */
+.bb-fair { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; font-weight: 600; color: #8a7a62; margin: 4px 0 2px; }
+.bb-fair b { color: #b08a3c; font-size: 14px; }
+button.bb-cell { border: 0; cursor: default; padding: 0; } button.bb-cell.unfound { cursor: pointer; } button.bb-cell.unfound:hover { background: rgba(176, 138, 60, .14); }
+.bb-cell.want { box-shadow: 0 0 0 2px #e0a93a; background: #fff6d6; }
+.bb-series .bb-sname { font-size: 14px; display: flex; gap: 6px; align-items: center; } .bb-series .bb-sname em { font-style: normal; font-size: 10px; font-weight: 800; color: #fff; background: #e8708a; padding: 1px 7px; border-radius: 99px; }
+.bb-series.feat { box-shadow: 0 0 0 2px #ffc2d4; }
+.bb-sbar { height: 6px; border-radius: 3px; background: rgba(0, 0, 0, .07); overflow: hidden; margin: 4px 0 6px; } .bb-sbar i { display: block; height: 100%; background: linear-gradient(90deg, #f2c14e, #e8708a); border-radius: 3px; }
+.bb-claim { justify-self: start; margin-bottom: 6px; }
+.bb-swap { display: flex; align-items: center; gap: 10px; padding: 8px 10px; margin-top: 6px; border-radius: 12px; background: #fff6d6; box-shadow: 0 0 0 2px #f2d27a; font-size: 13px; font-weight: 600; }
+.bb-swap > span:not(.bb-pic) { flex: 1; } .bb-swap > .bb-pic { flex: none; } .bb-swap .bb-x.small { width: 26px; height: 26px; font-size: 12px; }
+.ho-name em.spark { background: #f2c14e; color: #5a4210; }
+/* "almost there" on the result screen */
+.nudges { display: grid; gap: 6px; padding: 10px 12px; border-radius: 14px; background: #f6f1ff; }
+.nudges > b { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: #8a70d6; }
+.nudge { display: grid; grid-template-columns: 22px 1fr; gap: 2px 8px; align-items: center; font-size: 13px; font-weight: 600; color: #4a4258; }
+.nudge i { font-style: normal; grid-row: span 2; font-size: 16px; }
+.nudge em { height: 5px; border-radius: 3px; background: linear-gradient(90deg, #8a70d6 var(--f), rgba(138, 112, 214, .15) var(--f)); }
+.bb-panel.inside .bb-h { white-space: nowrap; } .bb-panel.inside .bb-tabs { gap: 2px; } .bb-panel.inside .bb-tabs .chip { padding: 4px 9px; }
+/* coworker stories: unlocked by hearts, on their card in Coworkers; and the P.S. on a thank-you note */
+.acc-story { display: grid; gap: 6px; margin-top: 4px; }
+.acc-story p { margin: 0; display: flex; gap: 8px; font-size: 13px; line-height: 1.4; color: #4a4258; }
+.acc-story p i { font-style: normal; color: #e8708a; font-size: 11px; flex: none; width: 30px; padding-top: 2px; letter-spacing: -1px; }
+.acc-story p.locked { color: #b0a6b6; }
+.mail-paper.note .note-ps { font-size: 21px !important; line-height: 28px; margin: 0; color: var(--ink2); }
+html:lang(zh-CN) .mail-paper.note .note-ps { font-size: 18px !important; }
+.acc-strip.on .acc-open { overflow-y: auto; scrollbar-width: thin; }
+.acc-story { max-width: 330px; }

@@ -39,6 +39,7 @@ export interface Save {
   // the piggy bank: minutes of finished work toward the next blind box, boxes waiting to be opened, and today's count
   blind: { mins: number; ready: number; day: string; earned: number };
   pack: Record<string, number>;
+  sinceSecret: number; sparkles: number; setsClaimed: string[];   // packs since the last secret (a secret is guaranteed by 40), sparkles from repeats, finished series already rewarded
   treats: { day: string; have: string[]; used: string[] };   // today's food and drink; used = bonuses already spent today
   fridge: { day: string; item: string | null; fortune: number };   // what (if anything) is in the fridge today
   notes: Note[]; mailbox: Note[]; payWeek: string;
@@ -57,7 +58,7 @@ export const fresh = (): Save => {
   const company: CompanyId = Math.random() < 0.5 ? 'stitchlight' : 'moonpuff';      // the offer letter comes from a random company
   return { v: 1, name: '', coins: 0, xp: 0, company, hearts: zero(), ordersDone: zero(), tray: newTray(company), picked: null, order: null, result: null, phase: 'offer', fast: false, sound: true, labelsBy: {},
     look: { ...DEFAULT_LOOK }, pet: 'orange_cat', birthday: null, badgeNo: `${String(Math.floor(Math.random() * 9000) + 1000)}`, vibe: null, vibeDraws: 0,
-    quiz: { focus: null, sound: null, reminders: null }, tourStop: 0, firstOrder: true, lookDone: false, history: [], desk: [], place: {}, blind: { mins: 0, ready: 0, day: '', earned: 0 }, pack: {}, treats: { day: '', have: [], used: [] }, fridge: { day: '', item: null, fortune: 0 }, surprise: 'none', notes: [], mailbox: [], payWeek: '', started: Date.now(), recapWeek: '', finds: [], guide: -1, tipsSeen: [] };
+    quiz: { focus: null, sound: null, reminders: null }, tourStop: 0, firstOrder: true, lookDone: false, history: [], desk: [], place: {}, blind: { mins: 0, ready: 0, day: '', earned: 0 }, pack: {}, treats: { day: '', have: [], used: [] }, fridge: { day: '', item: null, fortune: 0 }, surprise: 'none', notes: [], mailbox: [], payWeek: '', started: Date.now(), recapWeek: '', finds: [], sinceSecret: 0, sparkles: 0, setsClaimed: [], guide: -1, tipsSeen: [] };
 };
 
 const KEY = ZH ? 'corner-office-demo-v1-zh' : 'corner-office-demo-v1';   // both sites share one origin on GitHub Pages
@@ -82,7 +83,10 @@ export function load(): Save {
       if (!Array.isArray(s.mailbox)) out.mailbox = [];
       if (typeof s.started !== 'number') out.started = Math.min(Date.now(), ...(s.history ?? []).map((h: { at: number }) => h.at));
       if (typeof s.recapWeek !== 'string') out.recapWeek = '';
-      if (!Array.isArray(s.finds)) out.finds = [];   // letters already read, kept in the computer's Mail app
+      if (!Array.isArray(s.finds)) out.finds = [];
+      if (typeof s.sinceSecret !== 'number') out.sinceSecret = 0;
+      if (typeof s.sparkles !== 'number') out.sparkles = 0;
+      if (!Array.isArray(s.setsClaimed)) out.setsClaimed = [];   // letters already read, kept in the computer's Mail app
       if (!s.surprise) out.surprise = s.lookDone && ['free', 'tray', 'focus', 'work', 'timesup', 'result', 'desk'].includes(s.phase) ? 'waiting' : 'none';
       out.look = fixLook(out.look); out.history = out.history ?? [];
       return out;

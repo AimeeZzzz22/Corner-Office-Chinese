@@ -8,7 +8,7 @@ import DeskView, { WorkScene } from './Desk';
 import { DEFAULT_LOOK, Parts, compose, loadParts } from './look';
 import { TOUR } from './obdata';
 import Computer from './Tasklet';
-import Shop, { BOX_DAY_MAX, addMinutes, piggyToday } from './BlindBox';
+import Shop, { BOX_DAY_MAX, BOX_MINS, PITY, addMinutes, piggyToday } from './BlindBox';
 import VibeGallery from './VibeGallery';
 import { ZH, t, t as tr } from './lang';
 import { AvatarStack, MailLetter, PullSummary, thisWeek, weekKey, weekStart } from './ui';
@@ -259,7 +259,9 @@ export default function App() {
             <div className={menuX > 256 ? 'card menu left' : 'card menu'}>
               <div className="row"><Head id={menu} /><div><b>{COWORKERS[menu].name}</b><div className="sub">{COWORKERS[menu].role}</div><Hearts points={s.hearts[menu]} /></div></div>
               <div className="sub">{ZH ? `离下一颗心 ${s.hearts[menu] % HEART_POINTS} / ${HEART_POINTS} · ${name}帮TA完成了 ${s.ordersDone[menu]} 张工作单` : `${s.hearts[menu] % HEART_POINTS} / ${HEART_POINTS} to the next heart · ${name} finished ${s.ordersDone[menu]} of their orders`}</div>
-              {chat ? <div className="chat">“{COWORKERS[menu].chat}”</div> : <button className="opt" onClick={() => { tap(); setChat(true); }}><b>{t('Chat', '聊天')}</b><span>{t('Say hi', '打个招呼')}</span></button>}
+              {chat ? <div className="chat">“{(() => { const last = [...s.history].reverse().find((h) => h.who === menu && h.at > Date.now() - 3 * 864e5);
+                if (last?.focus && last.focus !== t('Focus time', '专注时间')) return ZH ? `“${last.focus}”做得怎么样？谢谢你帮我${last.finished ? '完成' : '做'}「${last.job}」。` : `How did “${last.focus}” go? Thanks again for ${last.job.toLowerCase()}.`;
+                return COWORKERS[menu].chat; })()}”</div> : <button className="opt" onClick={() => { tap(); setChat(true); }}><b>{t('Chat', '聊天')}</b><span>{t('Say hi', '打个招呼')}</span></button>}
               {(() => { const t = treatsToday(s.treats); return t.have.includes('macaron_tower') && !t.used.includes('macaron_tower')
                 ? <button className="opt g-gift" onClick={() => { play('heart_pop', 0.5); gEmit('gift'); up({ hearts: { ...s.hearts, [menu]: s.hearts[menu] + 2 }, treats: { ...t, used: [...t.used, 'macaron_tower'] }, notes: [...s.notes, ...thanks(menu, s.hearts[menu], s.hearts[menu] + 2)] }); }}><b>{tr('Share your macarons', '分享马卡龙')}</b><span>{tr('+2 friendship points', '友情 +2')}</span></button>
                 : <button className="opt" disabled><b>{tr('Give a gift', '送礼物')}</b><span>{tr('No gifts in the backpack yet', '背包里还没有礼物')}</span></button>; })()}
@@ -317,6 +319,15 @@ export default function App() {
               <div className="bar pink"><span style={{ width: `${((s.result.heartAfter % HEART_POINTS) / HEART_POINTS) * 100 || 100}%` }} /></div></div>
               <span className="sub">{s.result.heartAfter % HEART_POINTS || HEART_POINTS}/{HEART_POINTS}</span></div>
           )}
+          {/* "almost there": the one or two goals closest to done, so the next session already has a reason */}
+          {(() => { const r = s.result!, b = piggyToday(s.blind), g = gradeOf(s.xp), hi = GRADES[g + 1], cands: { k: string; f: number; text: string; icon: string }[] = [];
+            if (b.earned < BOX_DAY_MAX) { const left = Math.ceil(BOX_MINS - b.mins); cands.push({ k: 'pack', f: b.mins / BOX_MINS, icon: '🎁', text: ZH ? `再专注 ${left} 分钟，就能攒到下一个盲包` : `${left} more min of focus for your next blind pack` }); }
+            if (r.who) { const pts = r.heartAfter % HEART_POINTS, n = Math.floor(r.heartAfter / HEART_POINTS) + 1, c = COWORKERS[r.who];
+              if (pts > 0) cands.push({ k: 'heart', f: pts / HEART_POINTS, icon: '💗', text: ZH ? `再帮${c.name} ${HEART_POINTS - pts} 次，就是第 ${n} 颗心` : `Help ${c.name} ${HEART_POINTS - pts} more time${HEART_POINTS - pts > 1 ? 's' : ''} for heart no. ${n}` }); }
+            if (hi) { const lo = GRADES[g]; cands.push({ k: 'xp', f: (s.xp - lo) / (hi - lo), icon: '⭐', text: ZH ? `离升职还差 ${hi - s.xp} 经验` : `${hi - s.xp} XP to your next promotion` }); }
+            const pity = PITY - (s.sinceSecret ?? 0); if (pity <= 10) cands.push({ k: 'pity', f: 1 - pity / PITY, icon: '✦', text: ZH ? `再拆 ${pity} 个盲包，保证出隐藏款` : `A secret is guaranteed within ${pity} more pack${pity > 1 ? 's' : ''}` });
+            const pick = cands.filter((x) => x.f >= 0.4).sort((a, b) => b.f - a.f).slice(0, 2);
+            return pick.length > 0 && <div className="nudges"><b>{t('Almost there', '就差一点')}</b>{pick.map((x) => <div key={x.k} className="nudge"><i>{x.icon}</i><span>{x.text}</span><em style={{ ['--f' as string]: `${Math.min(100, x.f * 100)}%` }} /></div>)}</div>; })()}
           <button className="btn primary" onClick={() => { tap(); up({ phase: fromDesk ? 'desk' : 'free', result: null }); }}>{fromDesk ? t('Back to my desk', '回到我的工位') : t('Back to the office', '回到办公室')}</button>
         </div>
         {(() => { const b = piggyToday(s.blind), tt = treatsToday(s.treats), today = s.history.filter((h) => new Date(h.at).toDateString() === new Date().toDateString()); return (

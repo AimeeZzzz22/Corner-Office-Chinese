@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { COMPANIES, COWORKERS, CoworkerId, HEART_POINTS, TaskType, TYPE_LABEL } from './data';
+import { STORY, STORY_AT, beatAt } from './stories';
 import { ZH, t as tr } from './lang';
 import { gEmit } from './Guide';
 import { Note, Past, Save } from './state';
@@ -105,6 +106,9 @@ export function TeamAccordion({ s }: { s: Save }) {
               <div className="acc-hearts">{Array.from({ length: 10 }, (_, i) => <img key={i} src={`${A}${i < hearts ? 'heart' : 'heart_empty'}.png`} alt="" />)}</div>
               <div className="sub">{ZH ? `离下一颗心 ${s.hearts[id] % HEART_POINTS} / ${HEART_POINTS} · 为TA完成了 ${s.ordersDone[id]} 张工作单` : `${s.hearts[id] % HEART_POINTS} / ${HEART_POINTS} to the next heart · ${s.ordersDone[id]} orders done for them`}</div>
               <div className="acc-quote">“{c.chat}”</div>
+              <div className="acc-story">{STORY_AT.map((at, k) => hearts >= at
+                ? <p key={at}><i>{'♥'.repeat(Math.min(at, 3))}</i>{STORY[id][k]}</p>
+                : <p key={at} className="locked"><i>🔒</i>{ZH ? `${at} 颗心解锁` : `Unlocks at ${at} heart${at > 1 ? 's' : ''}`}</p>)}</div>
             </div>
           </div>);
       })}
@@ -280,6 +284,7 @@ export function MailLetter({ note, name, s, keep, opened, weekOpen }: { note: No
               <div className="mail-hand">{ZH ? `亲爱的${name}：` : `Dear ${name},`}</div>
               <p className="mail-hand body">{note.kind === 'welcome' ? tr('Your first order, done! That is all there is to it. Welcome to the team, properly this time.', '第一张工作单完成啦！就是这么简单。这次正式说一声：欢迎加入！') : THANKS[note.from!] ?? tr('Thank you for all your help. It means a lot.', '谢谢你的帮助，这对我意义重大。')}</p>
               {note.kind === 'thanks' && from && <div className="note-hearts">{Array.from({ length: note.level }, (_, i) => <img key={i} src={`${A}heart.png`} alt="" style={{ rotate: `${(i % 3 - 1) * 8}deg` }} />)}<span className="mail-hand">{ZH ? `我们之间的 ${note.level} 颗心` : `${note.level} heart${note.level > 1 ? 's' : ''} between us`}</span></div>}
+              {note.kind === 'thanks' && from && beatAt(from.id, note.level) && <p className="mail-hand note-ps">{tr('P.S. ', '附：')}{beatAt(from.id, note.level)}</p>}
               <div className="mail-hand mail-sign">— {from?.name}<svg className="note-doodle" viewBox="0 0 24 22" width="22" height="20"><path d="M12 20 C4 14 1 10 3 6 C5 2 10 3 12 7 C14 3 19 2 21 6 C23 10 20 14 12 20Z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /></svg></div>
               {note.kind === 'welcome' && <span className="note-confetti" aria-hidden>{Array.from({ length: 12 }, (_, i) => <i key={i} />)}</span>}
             </div>); })()}
