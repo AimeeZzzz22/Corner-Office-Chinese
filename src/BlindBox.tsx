@@ -197,14 +197,14 @@ export const MAX_AT_ONCE = 5;
 type Look = { key: string; name: string; c: string; d: string; l: string; ink: string; icon: string };
 // eight packs, each with a game thing on the front as a glossy sticker
 export const LOOKS: Look[] = [
-  { key: 'cow', name: t('Moo', '牛牛'), c: '#ff7f6e', d: '#e0594a', l: '#ffab9e', ink: '#ffffff', icon: 'cow' },
-  { key: 'horse', name: t('Neigh', '马马'), c: '#2fbf9c', d: '#1d9a7c', l: '#72dcbf', ink: '#ffffff', icon: 'horse' },
-  { key: 'coffee', name: t('Latte', '拿铁'), c: '#b07d5b', d: '#8c5d40', l: '#d0a283', ink: '#ffffff', icon: 'coffee' },
-  { key: 'star', name: t('Star', '星星'), c: '#7d4ee6', d: '#5a30bc', l: '#a787f4', ink: '#ffffff', icon: 'star' },
-  { key: 'moon', name: t('Moon', '月亮'), c: '#2f3780', d: '#1f245c', l: '#5660b0', ink: '#ffffff', icon: 'moon' },
-  { key: 'clock', name: t('Alarm', '闹钟'), c: '#f7c843', d: '#dca424', l: '#ffe189', ink: '#4a3a10', icon: 'clock' },
-  { key: 'gift', name: t('Gift', '礼物'), c: '#f58fb8', d: '#d86894', l: '#fbb9d3', ink: '#ffffff', icon: 'gift' },
-  { key: 'piggy', name: t('Piggy', '存钱罐'), c: '#3f8fe0', d: '#2a6cb8', l: '#7db6f0', ink: '#ffffff', icon: 'piggy' },
+  { key: 'cow', name: t('Office cow', '牛马日常'), c: '#ff7f6e', d: '#e0594a', l: '#ffab9e', ink: '#ffffff', icon: 'cow' },
+  { key: 'horse', name: t('Workhorse', '马不停蹄'), c: '#2fbf9c', d: '#1d9a7c', l: '#72dcbf', ink: '#ffffff', icon: 'horse' },
+  { key: 'coffee', name: t('Coffee break', '续命咖啡'), c: '#b07d5b', d: '#8c5d40', l: '#d0a283', ink: '#ffffff', icon: 'coffee' },
+  { key: 'star', name: t('Star of the month', '本月之星'), c: '#7d4ee6', d: '#5a30bc', l: '#a787f4', ink: '#ffffff', icon: 'star' },
+  { key: 'moon', name: t('Overtime', '加班到月亮'), c: '#2f3780', d: '#1f245c', l: '#5660b0', ink: '#ffffff', icon: 'moon' },
+  { key: 'clock', name: t('Clock out on time', '准时下班'), c: '#f7c843', d: '#dca424', l: '#ffe189', ink: '#4a3a10', icon: 'clock' },
+  { key: 'gift', name: t('Payday treat', '发薪日'), c: '#f58fb8', d: '#d86894', l: '#fbb9d3', ink: '#ffffff', icon: 'gift' },
+  { key: 'piggy', name: t('Rainy day fund', '小金库'), c: '#3f8fe0', d: '#2a6cb8', l: '#7db6f0', ink: '#ffffff', icon: 'piggy' },
 ];
 const TEASE: Record<Tier, number> = { normal: 450, cute: 1700, secret: 2800 };
 const STRIP_W = 230;
@@ -217,16 +217,16 @@ const zig = (w: number, h: number, edge: 'top' | 'bottom', step = 10, depth = 7)
 };
 // the pack itself, drawn in CSS (glossy foil, crimped ends, a "tear here" strip) around a pixel sticker
 export function PackArt({ look, n, face = 0, tearP = 0, snap = false, torn = false, handlers }: { look: Look; n: number; face?: number; tearP?: number; snap?: boolean; torn?: boolean; handlers?: Record<string, unknown> }) {
-  const strip = <><div className="ho-crimp" /><span className="ho-tearhere">{t('TEAR HERE ⟶', '从这里撕开 ⟶')}</span></>;
+  const strip = <><div className="ho-crimp" /><span className="ho-tearhere">{t('TEAR TO CLOCK OUT ⟶', '撕开就下班 ⟶')}</span></>;
   return (
     <div className="ho-pack" style={{ ['--c' as string]: look.c, ['--d' as string]: look.d, ['--l' as string]: look.l, ['--ink' as string]: look.ink }} {...handlers}>
       <div className={`ho-body${torn ? ' torn' : ''}`} style={{ clipPath: zig(230, 288, 'bottom') }}>
         <div className="ho-crimp bot" />
-        <span className="ho-brand pix">{t('Little Things', '小物杂货铺')}</span>
+        <span className="ho-brand pix">{t('Corner Office', '角落办公室')}</span>
         <span className="ho-series">{look.name.toUpperCase()}</span>
         <div className={`ho-mascot${face === 1 ? ' tug' : face === 2 ? ' pop' : ''}`} style={{ backgroundImage: `url(${A}icon_${look.icon}.png)`, ["--icon" as string]: `url("${new URL(`${A}icon_${look.icon}.png`, document.baseURI).href}")` }} />
-        <span className="ho-foot l">{t('Blind pack', '盲包')}</span>
-        <span className="ho-foot r">{ZH ? `${n} 件小东西` : `${n} thing${n > 1 ? 's' : ''}`}</span>
+        <span className="ho-foot l">{t('Office blind pack', '打工人盲包')}</span>
+        <span className="ho-foot r">{ZH ? `${n} 件工位好物` : `${n} desk find${n > 1 ? 's' : ''}`}</span>
         <div className="ho-gloss" />
       </div>
       <div className={`ho-strip${snap ? ' snap' : ''}`} style={{ ['--p' as string]: tearP }}>
