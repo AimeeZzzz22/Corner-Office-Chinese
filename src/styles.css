@@ -1456,3 +1456,25 @@ html:lang(zh-CN) .mail-hand { font-size: 25px; } html:lang(zh-CN) .mail-hand.bod
 .mail-env.thanks .mail-front, .mail-env.welcome .mail-front { background-color: #fbe6ea; }
 html:lang(zh-CN) .mail-paper.payslip { font-family: 'Courier Prime', 'Courier New', 'Songti SC', 'STSong', serif; }
 html:lang(zh-CN) .mail-paper.note .mail-hand.body { font-size: 21px; line-height: 32px; }
+
+/* ======== the envelope, rebuilt: the strip IS the envelope's top edge. Tearing it removes that part of the
+   envelope (the letter inside shows through the opening), and the envelope comes in straight, not tilted. ======== */
+.mail-env { --env: #f6e7cc; animation: mailIn .45s cubic-bezier(.2, 1.15, .4, 1) both; }
+.mail-env.payday { --env: #e6cf9f; } .mail-env.thanks, .mail-env.welcome { --env: #fbe6ea; }
+@keyframes mailIn { from { transform: translateY(-260px); opacity: 0; } }
+.mail-env .mail-front { top: 34px; border-top: 0; border-radius: 0 0 6px 6px; background-color: var(--env) !important;
+  box-shadow: inset 0 3px 0 -1px rgba(0, 0, 0, .04); }
+/* the perforation along the top of the front, until it's torn; after that a ragged paper edge */
+.mail-env .mail-front::before { content: ''; position: absolute; left: 6px; right: 6px; top: 0; border-top: 3px dashed rgba(120, 90, 60, .45); }
+.mail-dim:not(.m-in) .mail-env .mail-front { border-top: 0; clip-path: polygon(0 4px, 4% 0, 9% 5px, 14% 1px, 19% 4px, 25% 0, 31% 5px, 37% 1px, 43% 4px, 50% 0, 56% 5px, 62% 1px, 68% 4px, 74% 0, 80% 5px, 86% 1px, 92% 4px, 96% 0, 100% 3px, 100% 100%, 0 100%); }
+.mail-dim:not(.m-in) .mail-env .mail-front::before { display: none; }
+.mail-env .mail-strip span { background-color: var(--env); border-bottom: 0; border-radius: 6px 6px 0 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='3'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .4 0 0 0 0 .3 0 0 0 .1 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E"); }
+.mail-env .mail-torn { transform: translateY(calc(var(--p) * -6px)) rotate(calc(var(--p) * -24deg)); }
+/* a little pull tab at the strip's start */
+.mail-env .mail-strip::after { content: ''; position: absolute; left: -10px; top: 8px; width: 14px; height: 18px; border-radius: 4px 0 0 4px; background: var(--env); border: 3px solid #3a3a50; border-right: 0; opacity: calc(1 - var(--p) * 4); }
+.mail-env .mail-to { top: 58px; } .mail-env .mail-from { top: 106px; } .mail-env .mail-stamp { top: 22px; }
+@keyframes mailUp2 { from { transform: translateY(0); } to { transform: translateY(-140px); } }
+.mail-dim.m-out .mail-letter { animation: mailUp2 1s cubic-bezier(.3, .9, .3, 1) forwards; }
+@keyframes mailGrow2 { from { transform: translateY(-140px); } to { transform: translate(-80px, -228px); width: 480px; height: 440px; } }
+.mail-dim.m-read .mail-letter { animation: mailGrow2 .7s cubic-bezier(.3, 1.2, .4, 1) forwards; }
