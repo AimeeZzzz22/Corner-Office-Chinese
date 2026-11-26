@@ -1549,3 +1549,8 @@ html:lang(zh-CN) .wk-hand { font-family: 'Caveat', 'Kaiti SC', 'STKaiti', 'KaiTi
 .wk-bestnote { animation: wkShow .4s 2.4s forwards; } @keyframes wkShow { to { opacity: 1; } }
 .wk-book { height: 548px; }
 .wk-bars .wk-bestnote { position: absolute; top: auto; left: 50%; font-style: normal; z-index: 2; }
+/* settings: two columns, player settings on top, test tools below; never taller than the screen */
+.card.settings { width: 560px; grid-template-columns: 1fr 1fr; gap: 8px; max-height: calc(100% - 100px); overflow-y: auto; align-content: start; }
+.card.settings > label, .card.settings > .set-h { grid-column: 1 / -1; }
+.card.settings > .btn { padding: 8px 10px; font-size: 13px; min-height: 0; }
+.set-h { font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: #a08a62; margin-top: 6px; padding-top: 8px; border-top: 2px dashed #e8dcc0; }

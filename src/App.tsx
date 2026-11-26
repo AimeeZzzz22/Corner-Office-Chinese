@@ -203,6 +203,7 @@ export default function App() {
           <label><input type="checkbox" checked={s.fast} disabled={s.phase === 'work'} onChange={(e) => up({ fast: e.target.checked })} /> {t('Fast demo time (1 minute = 1 second)', '快速演示时间（1 分钟 = 1 秒）')}</label>
           <label><input type="checkbox" checked={s.sound} onChange={(e) => up({ sound: e.target.checked })} /> {t('Sound', '声音')}</label>
           {(s.phase === 'free' || s.phase === 'desk') && <button className="btn ghost" onClick={() => { tap(); setSettings(false); setMenu(null); up({ guide: 0, tipsSeen: [] }); }}>{t('Replay the first-day guide', '重看新手引导')}</button>}
+          <div className="set-h">{t('Test tools', '测试工具')}</div>
           {s.phase === 'free' && <button className="btn ghost" onClick={() => { tap(); setEditing(true); setSettings(false); setMenu(null); }}>{t('Edit walk labels', '编辑行走标记')}</button>}
           {s.phase === 'free' && (() => { const other: CompanyId = s.company === 'stitchlight' ? 'moonpuff' : 'stitchlight'; return (
             <button className="btn ghost" onClick={() => { tap(); setMenu(null); setSettings(false); up({ company: other, tray: newTray(other), picked: null }); }}>{t('Switch to ', '切换到')}{COMPANIES[other].name}</button>); })()}
