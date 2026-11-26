@@ -1,6 +1,5 @@
 import { gEmit } from './Guide';
 import { useEffect, useRef, useState } from 'react';
-import { COWORKERS, CoworkerId } from './data';
 import { Save } from './state';
 import { play } from './sfx';
 import { LiquidTabs, useTear } from './ui';
@@ -48,14 +47,17 @@ export function BlindBoxTab({ s, up, close }: { s: Save; up: (p: Partial<Save>) 
   useEffect(() => { loadItems().then(setData).catch(() => {}); }, []);
   const b = piggyToday(s.blind);
   const [puff, setPuff] = useState(0);            // the pig puffs up a little when coins drop in
-  const [opening, setOpening] = useState<Item | null>(null);
+  const [opening, setOpening] = useState<Got[] | null>(null);
+  const [want, setWant] = useState(1);
   const [sim, setSim] = useState<Record<Tier, number> | null>(null);
   const [view, setView] = useState<Tier | 'all'>('all');
   const [wantNext, setWantNext] = useState(false);   // "Open another": opens once the last opening has been saved
   const pack = s.pack;
   const found = (t: Tier) => data ? data.items.filter((i) => i.tier === t && pack[i.id]).length : 0;
   const total = (t: Tier) => data ? data.items.filter((i) => i.tier === t).length : 0;
-  const canOpen = b.ready > 0 && s.coins >= BOX_COST;
+  const most = Math.min(MAX_AT_ONCE, b.ready, Math.floor(s.coins / BOX_COST));   // how many can be opened right now
+  const howMany = Math.max(1, Math.min(want, most));
+  const canOpen = most > 0;
 
   const work = (mins: number) => {
     const nb = addMinutes(s.blind, mins); play('piggy_coin_drop', 0.5); setPuff((p) => p + 1);
@@ -65,9 +67,10 @@ export function BlindBoxTab({ s, up, close }: { s: Save; up: (p: Partial<Save>) 
   const open = () => {
     gEmit('pack-open');
     if (!data || !canOpen) return;
-    const it = draw(data.items, data.odds);
-    up({ coins: s.coins - BOX_COST, blind: { ...b, ready: b.ready - 1 }, pack: { ...pack, [it.id]: (pack[it.id] ?? 0) + 1 } });
-    setOpening(it);
+    const np = { ...pack }, got: Got[] = [];
+    for (let i = 0; i < howMany; i++) { const it = draw(data.items, data.odds); got.push({ it, isNew: !np[it.id] }); np[it.id] = (np[it.id] ?? 0) + 1; }
+    up({ coins: s.coins - BOX_COST * howMany, blind: { ...b, ready: b.ready - howMany }, pack: np });
+    setOpening(got);
   };
   // test: open lots of boxes at once (free, not added to your pack) to see the odds come out
   const simulate = (n: number) => {
@@ -94,10 +97,10 @@ export function BlindBoxTab({ s, up, close }: { s: Save; up: (p: Partial<Save>) 
           {/* boxes waiting */}
           <div className="bb-panel mid">
             <div className="pix bb-h">{b.ready ? (ZH ? `${b.ready} 个盲包待拆` : `${b.ready} pack${b.ready > 1 ? 's' : ''} ready`) : t('No packs yet', '还没有盲包')}</div>
-            <div className="bb-boxes">{b.ready ? Array.from({ length: Math.min(3, b.ready) }, (_, i) => <img key={i} src={`${A}pack_${PACKS[i]}.png`} alt="" style={{ transform: `translate(${(i - (Math.min(3, b.ready) - 1) / 2) * 56}px, ${i % 2 ? 14 : 0}px) rotate(${(i - 1) * 6}deg)`, zIndex: 3 - i }} />)
+            <div className="bb-boxes">{b.ready ? Array.from({ length: Math.min(3, b.ready) }, (_, i) => <div key={i} className="bb-mini" style={{ transform: `translate(${(i - (Math.min(3, b.ready) - 1) / 2) * 62}px, ${i % 2 ? 12 : 0}px) rotate(${(i - (Math.min(3, b.ready) - 1) / 2) * 7}deg) scale(.42)`, zIndex: 3 - i }}><PackArt look={LOOKS[i]} n={1} /></div>)
               : <div className="sub center">{t('Finish an hour of work orders to earn one.', '完成一小时的工作单就能得到一个。')}</div>}</div>
-            {b.ready > 0 && <div className="bb-q">{t('What will it be?', '会是什么呢？')}</div>}
-            <button className="btn primary bb-open" disabled={!canOpen} onClick={() => { tap(); open(); }}>{t('Open a pack', '拆一个盲包')} · {BOX_COST} {t('coins', '金币')}</button>
+            {b.ready > 0 && <div className="bb-howmany"><span>{t('Open', '一次拆')}</span>{Array.from({ length: MAX_AT_ONCE }, (_, i) => i + 1).map((k2) => <button key={k2} className={`chip small${howMany === k2 ? ' on' : ''}`} disabled={k2 > Math.max(1, most)} onClick={() => { tap(); setWant(k2); }}>{k2}</button>)}<span>{t('at once', '个')}</span></div>}
+            <button className="btn primary bb-open" disabled={!canOpen} onClick={() => { tap(); open(); }}>{howMany > 1 ? (ZH ? `拆 ${howMany} 个盲包` : `Open ${howMany} packs`) : t('Open a pack', '拆一个盲包')} · {BOX_COST * howMany} {t('coins', '金币')}</button>
             <div className="sub center">{b.ready > 0 && s.coins < BOX_COST ? (ZH ? `还差 ${BOX_COST - s.coins} 金币。` : `You need ${BOX_COST - s.coins} more coins.`) : t("That's 30 minutes of coins. You keep the rest.", '相当于 30 分钟的金币，剩下的归你。')}</div>
             <button className="btn ghost" onClick={() => { tap(); close(); }}>{t('Save for later', '留着以后拆')}</button>
           </div>
@@ -128,7 +131,7 @@ export function BlindBoxTab({ s, up, close }: { s: Save; up: (p: Partial<Save>) 
           <button className="chip" onClick={() => { tap(); up({ pack: {}, blind: { mins: 0, ready: 0, day: '', earned: 0 } }); setSim(null); }}>{t('Start over', '重新开始')}</button>
           {sim && <span className="bb-sim">{TIER.normal.label} {(sim.normal / 10).toFixed(1)}% · {TIER.cute.label} {(sim.cute / 10).toFixed(1)}% · {TIER.secret.label} {(sim.secret / 10).toFixed(1)}%</span>}
         </div>
-      {opening && <Opening it={opening} count={pack[opening.id] ?? 1} again={canOpen} next={() => { setOpening(null); setWantNext(true); }} done={() => setOpening(null)} />}
+      {opening && <Opening got={opening} again={canOpen} againN={howMany} next={() => { setOpening(null); setWantNext(true); }} done={() => setOpening(null)} />}
     </>
   );
 }
@@ -185,96 +188,162 @@ function Catalogue({ s, up }: { s: Save; up: (p: Partial<Save>) => void }) {
   );
 }
 
-// ---------------- opening a box: a foil blind pack. Tear the strip off the top (drag it, or just click), ribbons and
-// confetti burst out, one card rises, the pack drops away, the card back wiggles (harder for rarer finds) and flips. ----
-type Stage = 'in' | 'tear' | 'rise' | 'tease' | 'flip' | 'reveal';
-const PACKS = ['lilac', 'pink', 'mint', 'butter', 'sky', 'peach', 'latte', 'night'];
-// how long the face-down card builds up before it flips: a normal one barely waits, a cute one slowly glows pink,
-// a secret one gathers gold and rainbow light for a good while
-const TEASE: Record<Tier, number> = { normal: 600, cute: 1800, secret: 3000 };
-const STRIP_W = 180;
-const RIBBON = ['#ec6f6f', '#f2a65a', '#f2c14e', '#8fd18a', '#7ec4e8', '#9b8ce0', '#f4a6bf'];
-function Opening({ it, count, again, next, done }: { it: Item; count: number; again: boolean; next: () => void; done: () => void }) {
-  const tier = it.tier as Tier;
+// ---------------- opening packs: a glossy foil pack with a little mascot on it. Tear the strip off the top (drag it, or
+// just click), rainbow ribbons and confetti burst out, the cards fly up out of the pack, scatter, and settle in a row
+// (up to five at once). Then they turn over one by one: a normal one right away, a cute one after glowing pink, a secret
+// one after gathering gold light. All the light sits BEHIND the cards, so it never tints them. Each card tilts toward the
+// pointer with a soft glare, and a face-down card can be clicked to turn it over sooner. ----
+export const MAX_AT_ONCE = 5;
+type Look = { key: string; name: string; c: string; d: string; l: string; ink: string; mascot: string };
+export const LOOKS: Look[] = [
+  { key: 'berry', name: t('Berry', '莓果蓝'), c: '#3f52e4', d: '#2a37b4', l: '#7484f4', ink: '#ffffff', mascot: 'mochi' },
+  { key: 'grape', name: t('Grape', '葡萄紫'), c: '#7d4ee6', d: '#5a30bc', l: '#a787f4', ink: '#ffffff', mascot: 'cloud' },
+  { key: 'peach', name: t('Peach', '蜜桃'), c: '#ff7f6e', d: '#e0594a', l: '#ffab9e', ink: '#ffffff', mascot: 'heart' },
+  { key: 'lemon', name: t('Lemon', '柠檬'), c: '#f7c843', d: '#dca424', l: '#ffe189', ink: '#4a3a10', mascot: 'star' },
+  { key: 'mint', name: t('Mint', '薄荷'), c: '#2fbf9c', d: '#1d9a7c', l: '#72dcbf', ink: '#ffffff', mascot: 'drop' },
+  { key: 'sakura', name: t('Sakura', '樱花'), c: '#f58fb8', d: '#d86894', l: '#fbb9d3', ink: '#ffffff', mascot: 'bunny' },
+];
+const TEASE: Record<Tier, number> = { normal: 450, cute: 1700, secret: 2800 };
+const STRIP_W = 230;
+const RIBBON = ['#ff6b6b', '#ffa94d', '#ffd43b', '#69db7c', '#4dabf7', '#9775fa', '#f783ac'];
+const zig = (w: number, h: number, edge: 'top' | 'bottom', step = 10, depth = 7) => {
+  const pts: string[] = [];
+  if (edge === 'top') { for (let x = 0; x <= w; x += step / 2) pts.push(`${x}px ${(x / (step / 2)) % 2 ? 0 : depth}px`); pts.push(`${w}px ${h}px`, `0px ${h}px`); }
+  else { pts.push('0px 0px', `${w}px 0px`); for (let x = w; x >= 0; x -= step / 2) pts.push(`${x}px ${h - ((x / (step / 2)) % 2 ? 0 : depth)}px`); }
+  return `polygon(${pts.join(',')})`;
+};
+// the pack itself, drawn in CSS (glossy foil, crimped ends, a "tear here" strip) around a pixel mascot
+export function PackArt({ look, n, face = 0, tearP = 0, snap = false, torn = false, handlers }: { look: Look; n: number; face?: number; tearP?: number; snap?: boolean; torn?: boolean; handlers?: Record<string, unknown> }) {
+  const strip = <><div className="ho-crimp" /><span className="ho-tearhere">{t('TEAR HERE ⟶', '从这里撕开 ⟶')}</span></>;
+  return (
+    <div className="ho-pack" style={{ ['--c' as string]: look.c, ['--d' as string]: look.d, ['--l' as string]: look.l, ['--ink' as string]: look.ink }} {...handlers}>
+      <div className={`ho-body${torn ? ' torn' : ''}`} style={{ clipPath: zig(230, 288, 'bottom') }}>
+        <div className="ho-crimp bot" />
+        <span className="ho-brand pix">{t('Little Things', '小物杂货铺')}</span>
+        <span className="ho-series">{look.name.toUpperCase()}</span>
+        <div className="ho-mascot" style={{ backgroundImage: `url(${A}mascot_${look.mascot}.png)`, backgroundPosition: `${face * 50}% 0` }} />
+        <span className="ho-foot l">{t('Blind pack', '盲包')}</span>
+        <span className="ho-foot r">{ZH ? `${n} 件小东西` : `${n} thing${n > 1 ? 's' : ''}`}</span>
+        <div className="ho-gloss" />
+      </div>
+      <div className={`ho-strip${snap ? ' snap' : ''}`} style={{ ['--p' as string]: tearP }}>
+        <div className="ho-strip-part attached" style={{ clipPath: `inset(0 0 0 ${tearP * 100}%)` }}><div className="ho-strip-in" style={{ clipPath: zig(230, 48, 'top') }}>{strip}</div></div>
+        <div className="ho-strip-part tornoff" style={{ clipPath: `inset(0 ${(1 - tearP) * 100}% 0 0)` }}><div className="ho-strip-in" style={{ clipPath: zig(230, 48, 'top') }}>{strip}</div></div>
+      </div>
+    </div>
+  );
+}
+type Stage = 'in' | 'burst' | 'scatter' | 'row';
+type Phase = 'down' | 'tease' | 'up';
+interface Got { it: Item; isNew: boolean }
+function Opening({ got, again, againN, next, done }: { got: Got[]; again: boolean; againN: number; next: () => void; done: () => void }) {
+  const n = got.length;
   const [stage, setStage] = useState<Stage>('in');
-  const [color] = useState(() => PACKS[Math.floor(Math.random() * PACKS.length)]);
-  const hero = useRef<HTMLDivElement>(null);
+  const [look] = useState(() => LOOKS[Math.floor(Math.random() * LOOKS.length)]);
+  const [phase, setPhase] = useState<Phase[]>(() => got.map(() => 'down'));
+  const [face, setFace] = useState(0);
+  const scene = useRef<HTMLDivElement>(null);
   const timers = useRef<number[]>([]);
   const T = (ms: number, f: () => void) => timers.current.push(window.setTimeout(f, ms));
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
-  const [bits] = useState(() => Array.from({ length: 46 }, (_, i) => ({
-    dx: (Math.random() - 0.5) * 520, up: 160 + Math.random() * 220, fall: 260 + Math.random() * 200, r: (Math.random() - 0.5) * 720,
-    c: RIBBON[i % RIBBON.length], s: Math.random() < 0.3 ? 12 : 6, d: Math.random() * 120 })));
+  const tierOf = (i: number) => got[i].it.tier as Tier;
+  // where each card goes: a row (bigger cards when there are fewer), a loose scatter on the way, and a stack in the pack
+  const k = n === 1 ? 1.25 : n <= 3 ? 1 : 0.82, CW = 204 * k, gap = CW + (n <= 3 ? 34 : 18);
+  const [scat] = useState(() => got.map(() => ({ x: (Math.random() - 0.5) * 520, y: -80 - Math.random() * 120, r: (Math.random() - 0.5) * 40 })));
+  const place = (i: number) => {
+    const off = i - (n - 1) / 2;
+    if (stage === 'in') return { x: 0, y: 140, r: 0, s: 0.6 * k, o: 0 };
+    if (stage === 'burst') return { x: off * 14, y: -205 - i * 8, r: off * 5, s: 0.78 * k, o: 1 };
+    if (stage === 'scatter') return { x: scat[i].x, y: scat[i].y, r: scat[i].r, s: 0.92 * k, o: 1 };
+    return { x: off * gap, y: Math.abs(off) * 10 - 30, r: off * 3, s: k, o: 1 };
+  };
+  const tf = (q: ReturnType<typeof place>) => `translate(${q.x}px, ${q.y}px) rotate(${q.r}deg) scale(${q.s})`;
+  // tearing: the mascot squints while you pull; the burst, the scatter and the row follow
   const finish = () => {
-    setStage('tear'); play('blindbox_open', 0.5);
-    T(650, () => setStage('rise'));
-    T(1500, () => setStage('tease'));
-    T(1500 + 500 + TEASE[tier], () => { setStage('flip'); play('ui_tap', 0.4); });
-    T(1500 + 500 + TEASE[tier] + 650, () => { setStage('reveal'); play(tier === 'secret' ? 'blindbox_secret' : tier === 'cute' ? 'blindbox_cute' : 'coin', 0.6); });
+    setFace(2); setStage('burst'); play('blindbox_open', 0.5);
+    T(750, () => setStage('scatter'));
+    T(1450, () => setStage('row'));
   };
   const { p, snap, handlers } = useTear(STRIP_W, finish);
-  // the finished card tilts toward the pointer and its foil shine follows it
-  const tilt = (e: React.PointerEvent) => {
-    if (stage !== 'reveal' || !hero.current) return;
-    const r = hero.current.getBoundingClientRect(), mx = (e.clientX - r.left) / r.width, my = (e.clientY - r.top) / r.height;
-    hero.current.style.setProperty('--mx', `${mx * 100}%`); hero.current.style.setProperty('--my', `${my * 100}%`);
-    hero.current.style.setProperty('--ry', `${(mx - 0.5) * 22}deg`); hero.current.style.setProperty('--rx', `${(0.5 - my) * 16}deg`);
+  useEffect(() => { if (stage === 'in') setFace(p > 0.02 ? 1 : 0); }, [p, stage]);
+  // the turn-overs: one at a time, left to right, each after its own build-up
+  const turn = (i: number, ms: number) => {
+    setPhase((ph) => ph.map((v, j) => (j === i ? 'tease' : v)));
+    T(ms, () => { setPhase((ph) => ph.map((v, j) => (j === i ? 'up' : v))); const tr = tierOf(i); play(tr === 'secret' ? 'blindbox_secret' : tr === 'cute' ? 'blindbox_cute' : 'coin', 0.55); });
   };
-  // the light show's little bits: motes for a normal find, rising hearts for cute, sparkles for secret
-  const [parts] = useState(() => Array.from({ length: tier === 'secret' ? 28 : tier === 'cute' ? 18 : 10 }, () => ({
-    x: (Math.random() < 0.5 ? -1 : 1) * (110 + Math.random() * 170), y: (Math.random() - 0.5) * 320, d: Math.random() * 2.4, s: 0.6 + Math.random() * 0.9, h: Math.floor(Math.random() * 360) })));
-  const [dust] = useState(() => Array.from({ length: 26 }, () => ({ x: Math.random() * 100, y: Math.random() * 100, d: Math.random() * 6, s: 2 + Math.random() * 3 })));
-  const lit = stage === 'tease' || stage === 'flip' || stage === 'reveal';
-  const fav = it.fav ? COWORKERS[it.fav as CoworkerId] : null;
-  const strip = `${A}pack_${color}_strip.png`;
+  useEffect(() => {
+    if (stage !== 'row' || phase.includes('tease')) return;
+    const i = phase.indexOf('down'); if (i < 0) return;
+    const id = window.setTimeout(() => turn(i, TEASE[tierOf(i)]), i === 0 && phase.every((v) => v === 'down') ? 900 : 380);
+    return () => clearTimeout(id);
+  }, [stage, phase]);
+  const allUp = phase.every((v) => v === 'up');
+  const teasing = phase.map((v, i) => (v === 'tease' ? tierOf(i) : null)).find((v) => v && v !== 'normal');
+  // the pack and the cards lean toward the pointer, the glare follows it
+  const lean = (e: React.PointerEvent) => {
+    const el = scene.current; if (!el) return;
+    const r = el.getBoundingClientRect();
+    el.style.setProperty('--px', `${((e.clientX - r.left) / r.width - 0.5).toFixed(3)}`); el.style.setProperty('--py', `${((e.clientY - r.top) / r.height - 0.5).toFixed(3)}`);
+  };
+  const cardLean = (e: React.PointerEvent<HTMLDivElement>) => {
+    const el = e.currentTarget, r = el.getBoundingClientRect(), mx = (e.clientX - r.left) / r.width, my = (e.clientY - r.top) / r.height;
+    el.style.setProperty('--mx', `${mx * 100}%`); el.style.setProperty('--my', `${my * 100}%`);
+    el.style.setProperty('--ry', `${(mx - 0.5) * 24}deg`); el.style.setProperty('--rx', `${(0.5 - my) * 18}deg`);
+  };
+  const cardLeave = (e: React.PointerEvent<HTMLDivElement>) => { const el = e.currentTarget; el.style.setProperty('--ry', '0deg'); el.style.setProperty('--rx', '0deg'); };
+  const [bits] = useState(() => Array.from({ length: 60 }, (_, i) => ({
+    dx: (Math.random() - 0.5) * 760, up: 220 + Math.random() * 300, fall: 380 + Math.random() * 260, r: (Math.random() - 0.5) * 900,
+    c: RIBBON[i % RIBBON.length], w: Math.random() < 0.35 ? 12 : 8, h: Math.random() < 0.5 ? 5 : 9, d: Math.random() * 160 })));
+  const [parts] = useState(() => got.map((g) => Array.from({ length: g.it.tier === 'secret' ? 16 : g.it.tier === 'cute' ? 10 : 0 }, () => ({
+    x: (Math.random() - 0.5) * 300, y: (Math.random() - 0.5) * 340, d: Math.random() * 2.2, s: 0.6 + Math.random() * 0.8 }))));
+  const news = got.filter((g) => g.isNew).length;
   return (
-    <div className={`bb-open-dim pk ${tier} s-${stage}`} onPointerMove={tilt} style={{ ['--tease' as string]: `${TEASE[tier]}ms` }}>
-      {/* a dark velvet stage with drifting dust, so the pack and the card are the only things to look at */}
-      <div className="rv-dust">{dust.map((d, i) => <i key={i} style={{ left: `${d.x}%`, top: `${d.y}%`, width: d.s, height: d.s, animationDelay: `${d.d}s` }} />)}</div>
-      <div className="pk-hero" ref={hero}>
-        {/* the build-up behind the card: a glow in the tier's colour, for a secret one turning gold light with soft halos, and little bits */}
-        {(stage === 'reveal' || (tier === 'secret' && lit)) && <div className={`bb-rays ${tier}`} />}
-        {lit && <div className="rv-aura" />}
-        {lit && tier === 'secret' && <div className="rv-halo"><b /><b /><b /></div>}
-        {lit && tier === 'secret' && <div className="rv-flare" />}
-        {lit && <div className="rv-parts">{parts.map((q, i) => <i key={i} style={{ ['--x' as string]: `${q.x}px`, ['--y' as string]: `${q.y}px`, ['--s' as string]: q.s, ['--h' as string]: q.h, animationDelay: `${q.d}s` }}>{tier === 'cute' ? '♥' : tier === 'secret' ? '✦' : ''}</i>)}</div>}
-        {tier === 'secret' && stage === 'flip' && <div className="rv-flash" />}
+    <div className={`ho-scene s-${stage}${allUp ? ' all-up' : ''}`} ref={scene} onPointerMove={lean}>
+      <div className="ho-dust" />
+      <div className="ho-hint">{stage === 'in' ? t('Drag along the top to tear it open, or just click the pack.', '沿着顶部拖动把它撕开，或者直接点一下盲包。')
+        : teasing === 'secret' ? t('Golden light… a secret one?!', '金光闪闪……难道是隐藏款？！') : teasing === 'cute' ? t("It's glowing pink…", '泛起粉粉的光……')
+        : stage === 'row' && !allUp ? t('Click a card to turn it over sooner.', '点一下卡片可以提前翻开。') : ' '}</div>
+      <div className="ho-stage">
+        {/* the light, in its own layer behind every card */}
+        <div className="ho-glows">{got.map((g, i) => { const tr = g.it.tier as Tier, q = place(i), lit = phase[i] !== 'down'; return (
+          <div key={i} className={`ho-glow ${tr}${lit ? ' lit' : ''}${phase[i] === 'up' ? ' up' : ''}`} style={{ transform: `translate(${q.x}px, ${q.y}px) scale(${q.s})`, ['--tease' as string]: `${TEASE[tr]}ms` }}>
+            {lit && tr !== 'normal' && <div className="ho-aura" />}
+            {lit && tr === 'secret' && <><div className="ho-rays" /><div className="ho-halo"><b /><b /><b /></div></>}
+            {lit && tr === 'normal' && phase[i] === 'up' && <div className="ho-aura soft" />}
+            {lit && parts[i].length > 0 && <div className="ho-parts">{parts[i].map((m, j) => <i key={j} style={{ left: m.x, top: m.y, animationDelay: `${m.d}s`, fontSize: `${18 * m.s}px` }}>{tr === 'cute' ? '♥' : '✦'}</i>)}</div>}
+          </div>); })}</div>
         {/* ribbons and confetti, out of the top of the pack */}
-        {stage !== 'in' && <div className="pk-burst">
-          {RIBBON.map((c, i) => <svg key={i} className="pk-ribbon" style={{ ['--a' as string]: `${-54 + i * 18}deg`, animationDelay: `${i * 25}ms` }} viewBox="0 0 24 160" width="24" height="160" shapeRendering="crispEdges">
-            <polyline points={Array.from({ length: 17 }, (_, k) => `${12 + Math.round(Math.sin(k * 0.9 + i) * 6)},${160 - k * 10}`).join(' ')} fill="none" stroke={c} strokeWidth="6" /></svg>)}
-          {bits.map((b, i) => <i key={i} className="pk-bit" style={{ ['--dx' as string]: `${b.dx}px`, ['--up' as string]: `${-b.up}px`, ['--fall' as string]: `${b.fall}px`, ['--r' as string]: `${b.r}deg`, background: b.c, width: b.s, height: b.s, animationDelay: `${b.d}ms` }} />)}
+        {stage !== 'in' && <div className="ho-burst">
+          {RIBBON.map((c, i) => <svg key={i} className="ho-ribbon" style={{ ['--a' as string]: `${-48 + i * 16}deg`, animationDelay: `${i * 30}ms` }} viewBox="0 0 40 420" width="40" height="420">
+            <path d={`M20 420 ${Array.from({ length: 14 }, (_, k2) => `Q ${20 + (k2 % 2 ? -14 : 14)} ${420 - k2 * 30 - 15} 20 ${420 - (k2 + 1) * 30}`).join(' ')}`} fill="none" stroke={c} strokeWidth="11" strokeLinecap="round" /></svg>)}
+          {bits.map((q, i) => <i key={i} className="ho-bit" style={{ ['--dx' as string]: `${q.dx}px`, ['--up' as string]: `${-q.up}px`, ['--fall' as string]: `${q.fall}px`, ['--r' as string]: `${q.r}deg`, background: q.c, width: q.w, height: q.h, animationDelay: `${q.d}ms` }} />)}
         </div>}
-        {/* the card: back first, then it flips to the find */}
-        <div className="pk-card"><div className="pk-flip">
-          <div className="pk-face back" style={{ backgroundImage: `url(${A}card_back.png)` }} />
-          <div className="pk-face front" style={{ backgroundImage: `url(${A}card_${tier}.png)` }}>
-            <div className="pk-win"><ItemPic it={it} size={120} /></div>
-            <div className="pk-plate pix">{TIER[tier].label}{tier === 'secret' ? ' ✦' : ''}</div>
-            <div className="pk-holo" />
-          </div>
-        </div></div>
-        {/* the pack */}
-        <div className="pk-pack" {...handlers}>
-          <img className="pk-body" src={`${A}pack_${color}_body.png`} alt={t('A blind pack', '盲包')} draggable={false} />
-          <div className={`pk-strip${snap ? ' snap' : ''}`} style={{ ['--p' as string]: p }}>
-            <span className="pk-attached" style={{ backgroundImage: `url(${strip})` }} />
-            <span className="pk-torn" style={{ backgroundImage: `url(${strip})` }} />
-          </div>
-          {stage === 'in' && <span className="pk-grab" style={{ opacity: p > 0.05 ? 0 : 1 }}>{t('drag ➜', '拖动 ➜')}</span>}
-        </div>
+        {/* the cards */}
+        {got.map((g, i) => { const tr = g.it.tier as Tier, q = place(i); return (
+          <div key={i} className={`ho-slot ${tr} ${phase[i]}`} style={{ transform: tf(q), opacity: q.o, transitionDelay: `${stage === 'row' ? i * 60 : stage === 'burst' ? i * 50 : 0}ms`, zIndex: stage === 'row' ? 10 + i : 10 + n - i }}>
+            <div className={`ho-card${phase[i] === 'down' && stage === 'row' ? ' clickable' : ''}`} onPointerMove={cardLean} onPointerLeave={cardLeave}
+              onClick={() => { if (stage === 'row' && phase[i] === 'down') { play('ui_tap', 0.4); turn(i, Math.min(TEASE[tr], tr === 'secret' ? 1400 : 700)); } }}>
+              <div className="ho-flip">
+                <div className="ho-face back" style={{ backgroundImage: `url(${A}card_back.png)` }} />
+                <div className="ho-face front" style={{ backgroundImage: `url(${A}card_${tr}.png)` }}>
+                  <div className="pk-win"><ItemPic it={g.it} size={120} /></div>
+                  <div className="pk-plate pix">{TIER[tr].label}{tr === 'secret' ? ' ✦' : ''}</div>
+                  <div className="ho-glare" />
+                </div>
+              </div>
+            </div>
+            {phase[i] === 'up' && <div className="ho-name"><b>{g.it.name}</b>{g.isNew && <em>{t('NEW', '新')}</em>}</div>}
+          </div>); })}
+        {/* the pack: tilts toward the pointer, then drops away once the cards are out */}
+        <div className="ho-packwrap"><div className="ho-tilt"><PackArt look={look} n={n} face={face} tearP={p} snap={snap} torn={stage !== 'in'} handlers={stage === 'in' ? handlers : undefined} /></div><div className="ho-shadow" /></div>
       </div>
-      <div className="pk-hint">{stage === 'in' ? t('Drag along the top to tear it open, or just click the pack.', '沿着顶部拖动把它撕开，或者直接点一下盲包。') : stage === 'tease' ? (tier === 'secret' ? t('Golden light… a secret one?!', '金光闪闪……难道是隐藏款？！') : tier === 'cute' ? t("It's glowing pink…", '泛起粉粉的光……') : ' ') : ' '}</div>
-      {stage === 'reveal' && <div className="card bb-reveal">
-        <span className="bb-tag" style={{ background: TIER[tier].col }}>{TIER[tier].label}{tier === 'secret' ? ' ✦' : ''}</span>
-        <div className="pix h1">{it.name}</div>
-        <div className="sub">{fav ? (ZH ? `${fav.name}最喜欢的礼物。${it.why}。` : `${fav.name}'s favourite gift. ${it.why}.`) : count > 1 ? (ZH ? `重复了：你现在有 ${count} 个。` : `A repeat: you have ${count} now.`) : t('New! It goes into your backpack.', '新的！已放进你的背包。')}</div>
-        {count === 1 && <span className="bb-new">{t('NEW', '新')}</span>}
-        <div className="row bb-btns">
-          {again && <button className="btn ghost" onClick={() => { tap(); next(); }}>{t('Open another', '再拆一个')} · {BOX_COST} {t('coins', '金币')}</button>}
+      <div className="ho-bar">
+        {allUp ? <>
+          <span className="ho-sum">{ZH ? (news ? `${news} 件新东西放进了背包` : '都放进了背包') : news ? `${news} new thing${news > 1 ? 's' : ''} in your backpack` : 'All in your backpack'}{n - news > 0 ? (ZH ? `，${n - news} 件重复` : `, ${n - news} repeat${n - news > 1 ? 's' : ''}`) : ''}</span>
+          {again && <button className="btn ghost" onClick={() => { tap(); next(); }}>{ZH ? `再拆 ${againN} 个` : `Open ${againN} more`} · {againN * BOX_COST} {t('coins', '金币')}</button>}
           <button className="btn primary" onClick={() => { tap(); done(); }}>{t('Done', '完成')}</button>
-        </div>
-      </div>}
+        </> : stage === 'row' ? <button className="btn ghost small ho-skip" onClick={() => { tap(); setPhase((ph) => ph.map(() => 'up')); }}>{t('Turn them all over', '全部翻开')}</button> : null}
+      </div>
     </div>
   );
 }
