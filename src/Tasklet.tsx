@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { MagnifyDock, TeamAccordion } from './ui';
+import { MagnifyDock, TeamAccordion, WinDots, stageK } from './ui';
 import { piggyToday } from './BlindBox';
 import { hhmm, officeClock, people, statusOf } from './clock';
 import { COMPANIES, COWORKERS, CoworkerId, PRACTICE_PAY, coinsAt, pay } from './data';
@@ -25,7 +25,18 @@ type Pick = NonNullable<Save['picked']>;
 type Tab = 'new' | 'past' | 'team';
 export default function Computer({ s, name, close, take, openShop, openMail, practice }: { s: Save; name: string; close: () => void; take: (p: Pick) => void; openShop: (t: 'shop' | 'blind') => void; openMail: (n: Note, opened: boolean) => void; practice?: boolean }) {
   const [app, setAppRaw] = useState<Tab | 'mail' | null>(null);
-  const setApp = (a: Tab | 'mail' | null) => { if (a === 'new') gEmit('tasklet'); setAppRaw(a); };
+  const setApp = (a: Tab | 'mail' | null) => { if (a === 'new') gEmit('tasklet'); setAppRaw(a); setMin(false); setZoomed(false); };
+  // the window's controls: minimised = tucked into its dock icon (kept as it was); zoomed = filling the whole screen
+  const [min, setMin] = useState(false), [zoomed, setZoomed] = useState(false), [tuck, setTuck] = useState<{ x: number; y: number } | null>(null);
+  const winRef = useRef<HTMLDivElement>(null);
+  const minimise = () => {
+    const w = winRef.current?.querySelector(':scope > .pc-win'), icon = document.querySelector(`.dock-app[data-key="${app}"]`);
+    if (!w || !icon) { setMin(true); return; }
+    const k = stageK(w), a = w.getBoundingClientRect(), b = icon.getBoundingClientRect();
+    setTuck({ x: (b.left + b.width / 2 - (a.left + a.width / 2)) / k, y: (b.top + b.height / 2 - (a.top + a.height / 2)) / k });
+    setTimeout(() => { setMin(true); setTuck(null); }, 340);
+  };
+  const chrome = { min, zoomed, tuck, dots: <WinDots close={() => setApp(null)} min={minimise} zoom={() => setZoomed((z) => !z)} zoomed={zoomed} />, onTitle: () => setZoomed((z) => !z) };
   const ready = piggyToday(s.blind).ready;
   const co = COMPANIES[s.company], os = s.company === 'stitchlight' ? tx('Stitch Desk', '织光桌面') : tx('PuffOS', '月芙系统');
   const clock = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
@@ -33,23 +44,23 @@ export default function Computer({ s, name, close, take, openShop, openMail, pra
     <div className="pc-dim">
       <div className="pc">
         <div className="pc-bezel">
-          <div className="pc-screen">
+          <div className="pc-screen" ref={winRef}>
             <div className="pc-top"><span className="pix">{os}</span><span>{ZH ? `${name}的工位 · ${co.name}` : `${name}'s desk · ${co.name}`}</span><span>{clock}</span></div>
             <div className="pc-desktop">
               <button className="pc-icon" onClick={() => { tap(); setApp('new'); }}>
                 <span className="pc-icon-img"><i /><i /><i /></span><span>{tx('Tasklet', '任务夹')}</span>{/* a number badge here is kept for later: messages from coworkers, not orders you haven't taken */}
               </button>
             </div>
-            {app && app !== 'mail' && <Tasklet key={app} s={s} name={name} tab0={app} practice={practice} close={() => { tap(); setApp(null); }} take={take} />}
-            {app === 'mail' && <MailApp s={s} name={name} open={openMail} close={() => { tap(); setApp(null); }} />}
-            <MagnifyDock open={(k) => (k === 'shop' || k === 'blind' ? openShop(k) : setApp(k as Tab | 'mail'))} apps={[
+            {app && app !== 'mail' && <Tasklet key={app} s={s} name={name} tab0={app} practice={practice} chrome={chrome} take={take} />}
+            {app === 'mail' && <MailApp s={s} name={name} open={openMail} chrome={chrome} />}
+            <MagnifyDock open={(k) => (k === 'shop' || k === 'blind' ? openShop(k) : k === app && min ? setMin(false) : setApp(k as Tab | 'mail'))} apps={[
               { key: 'new', label: tx('Tasklet', '任务夹'), icon: '📥', bg: '#f6d37a', badge: s.tray.length },
               { key: 'mail', label: tx('Mail', '信箱'), icon: '✉️', bg: '#f7c9a6', badge: s.notes.length },
               { key: 'team', label: tx('Coworkers', '同事'), icon: '👥', bg: '#a7d8b8' },
               { key: 'past', label: tx('Past orders', '历史工作单'), icon: '🗂', bg: '#b9c7f2' },
               { key: 'blind', label: tx('Blind packs', '盲包'), icon: '🎁', bg: '#d9c6f4', badge: ready },
               { key: 'shop', label: tx('Shop', '商店'), icon: '🛍', bg: '#f6b9cb' },
-            ]} />
+            ].map((a) => ({ ...a, running: a.key === app }))} />
           </div>
         </div>
         <div className="pc-stand" />
@@ -59,7 +70,10 @@ export default function Computer({ s, name, close, take, openShop, openMail, pra
   );
 }
 
-function Tasklet({ s, name, close, take, tab0, practice }: { s: Save; name: string; close: () => void; take: (p: Pick) => void; tab0: Tab; practice?: boolean }) {
+type Chrome = { min: boolean; zoomed: boolean; tuck: { x: number; y: number } | null; dots: React.ReactNode; onTitle: () => void };
+const winCls = (c: Chrome, extra = '') => `pc-win${extra}${c.zoomed ? ' zoomed' : ''}${c.tuck ? ' tucking' : ''}${c.min ? ' minimised' : ''}`;
+const winStyle = (c: Chrome) => (c.tuck ? ({ ['--tx' as string]: `${c.tuck.x}px`, ['--ty' as string]: `${c.tuck.y}px` }) : undefined);
+function Tasklet({ s, name, chrome, take, tab0, practice }: { s: Save; name: string; chrome: Chrome; take: (p: Pick) => void; tab0: Tab; practice?: boolean }) {
   const [tab, setTab] = useState<Tab>(tab0);
   const [own, setOwn] = useState(25);
   const [filter, setFilter] = useState<'all' | CoworkerId>('all');
@@ -67,8 +81,8 @@ function Tasklet({ s, name, close, take, tab0, practice }: { s: Save; name: stri
   const past = useMemo(() => [...s.history].reverse().filter((h) => filter === 'all' || h.who === filter), [s.history, filter]);
   const done = s.history.filter((h) => h.finished).length, mins = s.history.reduce((a, h) => a + h.worked, 0), coins = s.history.reduce((a, h) => a + h.coins, 0);
   return (
-            <div className="pc-win">
-              <div className="pc-title"><i /><i /><i /><b>{tx('Tasklet', '任务夹')}</b><button className="pc-x" onClick={close} aria-label={tx('Close Tasklet', '关闭任务夹')}>✕</button></div>
+            <div className={winCls(chrome)} style={winStyle(chrome)}>
+              <div className="pc-title" onDoubleClick={chrome.onTitle}>{chrome.dots}<b>{tx('Tasklet', '任务夹')}</b></div>
               <div className="pc-body">
                 <div className="pc-side">
                   <SideBlob tab={tab} />
@@ -192,7 +206,7 @@ function SideBlob({ tab }: { tab: Tab }) {
 // New letters are sealed (a wax seal in the sender's colour, a stamp, "new"); clicking one opens it with the tear-open
 // envelope. Letters you've read stay here, flap open, to read again.
 const SEAL: Record<Note['kind'], { c: string; mark: string }> = { thanks: { c: '#e8708a', mark: '♥' }, payday: { c: '#e0a93a', mark: '¢' }, welcome: { c: '#5fb38a', mark: '★' }, recap: { c: '#6f8fe0', mark: '✎' }, birthday: { c: '#f2a65a', mark: '🎂' } };
-function MailApp({ s, name, open, close }: { s: Save; name: string; open: (n: Note, opened: boolean) => void; close: () => void }) {
+function MailApp({ s, name, open, chrome }: { s: Save; name: string; open: (n: Note, opened: boolean) => void; chrome: Chrome }) {
   const co = COMPANIES[s.company];
   const fresh = [...s.notes].sort((a, b) => b.id - a.id), kept = s.mailbox;
   const subject = (n: Note) => n.kind === 'payday' ? (ZH ? `发薪日的额外奖励 · ${n.coins} 金币` : `Payday bonus · ${n.coins} coins`)
@@ -207,8 +221,8 @@ function MailApp({ s, name, open, close }: { s: Save; name: string; open: (n: No
       <span className="mb-stamp">{isNew ? tx('NEW', '新') : tx('read', '已读')}</span>
     </button>); };
   return (
-    <div className="pc-win mb-win">
-      <div className="pc-title"><i /><i /><i /><b>{tx('Mail', '信箱')}</b><button className="pc-x" onClick={close} aria-label={tx('Close Mail', '关闭信箱')}>✕</button></div>
+    <div className={winCls(chrome, ' mb-win')} style={winStyle(chrome)}>
+      <div className="pc-title" onDoubleClick={chrome.onTitle}>{chrome.dots}<b>{tx('Mail', '信箱')}</b></div>
       <div className="mb-body">
         <div className="mb-head"><div><div className="pc-h">{ZH ? `${name}的信箱` : `${name}'s mail`}</div>
           <div className="sub">{fresh.length ? (ZH ? `${fresh.length} 封新信，点开看看` : `${fresh.length} new letter${fresh.length > 1 ? 's' : ''}. Click one to open it.`) : tx('All read. Coworkers write when you help them, and payday comes once a week.', '都读完啦。帮同事完成工作单，他们会写信给你；每周还有一次发薪日。')}</div></div>

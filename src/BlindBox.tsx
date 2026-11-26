@@ -2,7 +2,7 @@ import { gEmit } from './Guide';
 import { useEffect, useRef, useState } from 'react';
 import { Save } from './state';
 import { play } from './sfx';
-import { LiquidTabs, useTear } from './ui';
+import { LiquidTabs, WinDots, stageK, useTear } from './ui';
 import { ZH, t } from './lang';
 
 // ---------------- blind boxes, from the glass piggy bank ----------------
@@ -182,16 +182,25 @@ export function BlindBoxTab({ s, up, close }: { s: Save; up: (p: Partial<Save>) 
 export default function Shop({ s, up, close, tab: tab0 = 'shop' }: { s: Save; up: (p: Partial<Save>) => void; close: () => void; tab?: 'shop' | 'blind' }) {
   const [tab, setTab] = useState(tab0);
   const ready = piggyToday(s.blind).ready;
+  // the browser window's controls: red closes, yellow tucks it back into its dock icon, green fills the screen
+  const [zoomed, setZoomed] = useState(false), [tuck, setTuck] = useState<{ x: number; y: number } | null>(null);
+  const win = useRef<HTMLDivElement>(null);
+  const minimise = () => {
+    const icon = document.querySelector(`.dock-app[data-key="${tab}"]`) ?? document.querySelector('.dock-app[data-key="shop"]');
+    if (!win.current || !icon) { close(); return; }
+    const k = stageK(win.current), a = win.current.getBoundingClientRect(), b = icon.getBoundingClientRect();
+    setTuck({ x: (b.left + b.width / 2 - (a.left + a.width / 2)) / k, y: (b.top + b.height / 2 - (a.top + a.height / 2)) / k });
+    setTimeout(close, 340);
+  };
   return (
-    <div className="bb-dim">
-      <div className="card bb">
-        {/* an online shop, opened from the computer: a little browser bar on top */}
-        <div className="bb-browser"><i /><i /><i /><span>🔒 {t('Little Things · online shop', '小物杂货铺 · 网店')}</span></div>
+    <div className={`bb-dim${tuck ? ' tucking' : ''}`}>
+      <div ref={win} className={`card bb${zoomed ? ' zoomed' : ''}${tuck ? ' tucking' : ''}`} style={tuck ? { ['--tx' as string]: `${tuck.x}px`, ['--ty' as string]: `${tuck.y}px` } : undefined}>
+        {/* an online shop, opened from the computer: a little browser bar on top, with working window controls */}
+        <div className="bb-browser" onDoubleClick={() => setZoomed((z) => !z)}><WinDots close={close} min={minimise} zoom={() => setZoomed((z) => !z)} zoomed={zoomed} /><span>🔒 {t('Little Things · online shop', '小物杂货铺 · 网店')}</span></div>
         <div className="bb-head">
           <div className="pix bb-title">{t('Little Things Shop', '小物杂货铺')}</div>
           <LiquidTabs className="bb-maintabs" value={tab} onChange={setTab} tabs={[{ key: 'shop', label: t('Shop', '商店') }, { key: 'blind', label: <>{t('Blind packs', '盲包')}{ready > 0 && <em>{ready}</em>}</> }]} />
           <div className="bb-coins"><img src={`${import.meta.env.BASE_URL}assets/coin.png`} alt="" /> <b>{s.coins.toLocaleString()}</b></div>
-          <button className="bb-x" onClick={() => { tap(); close(); }} aria-label={t('Close', '关闭')}>✕</button>
         </div>
         {tab === 'blind' ? <BlindBoxTab s={s} up={up} close={close} /> : <Catalogue s={s} up={up} />}
       </div>

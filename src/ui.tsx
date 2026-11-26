@@ -10,7 +10,7 @@ import { play, preloadTear, tear } from './sfx';
 // Small reusable pieces of "feels alive" UI used around the game (see the delightful-ui-motion skill).
 const A = `${import.meta.env.BASE_URL}assets/`;
 const tap = () => play('ui_tap', 0.4);
-const stageK = (el: Element | null) => { const st = el?.closest('.stage') as HTMLElement | null; return st ? st.getBoundingClientRect().width / 1280 : 1; };
+export const stageK = (el: Element | null) => { const st = el?.closest('.stage') as HTMLElement | null; return st ? st.getBoundingClientRect().width / 1280 : 1; };
 export const Head = ({ id, size = 40 }: { id: CoworkerId; size?: number }) => <span className="head" style={{ width: size, height: size }}><img src={`${A}heads/${id}.png`} alt="" /></span>;
 const STATUS = { working: tr('Working', '工作中'), break: tr('On a break', '休息中'), lunch: tr('At lunch', '午饭中'), meeting: tr('In a meeting', '开会中') };
 const useClock = (scale: number, every = 1000) => {
@@ -118,7 +118,18 @@ export function TeamAccordion({ s }: { s: Save }) {
 
 // ---------------- magnify dock: the desk computer's app bar ----------------
 // The icon nearest the mouse grows and lifts; its neighbours grow a little; sizes follow the mouse smoothly.
-export interface DockApp { key: string; label: string; icon: string; bg: string; badge?: number }
+export interface DockApp { key: string; label: string; icon: string; bg: string; badge?: number; running?: boolean }
+// ---------------- window controls, like a Mac: red closes, yellow tucks the window into its dock icon, green fills the screen ----------------
+export function WinDots({ close, min, zoom, zoomed }: { close: () => void; min: () => void; zoom: () => void; zoomed?: boolean }) {
+  return (
+    <span className="win-dots" onDoubleClick={(e) => e.stopPropagation()}>
+      <button className="wd-close" onClick={(e) => { e.stopPropagation(); tap(); close(); }} aria-label={tr('Close', '关闭')} title={tr('Close', '关闭')}><svg viewBox="0 0 10 10"><path d="M2.5 2.5l5 5M7.5 2.5l-5 5" /></svg></button>
+      <button className="wd-min" onClick={(e) => { e.stopPropagation(); tap(); min(); }} aria-label={tr('Minimise to the dock', '收进底栏')} title={tr('Minimise to the dock', '收进底栏')}><svg viewBox="0 0 10 10"><path d="M2 5h6" /></svg></button>
+      <button className="wd-zoom" onClick={(e) => { e.stopPropagation(); tap(); zoom(); }} aria-label={zoomed ? tr('Back to normal size', '恢复大小') : tr('Fill the screen', '放大到全屏')} title={zoomed ? tr('Back to normal size', '恢复大小') : tr('Fill the screen', '放大到全屏')}>
+        <svg viewBox="0 0 10 10">{zoomed ? <path d="M4.6 4.6V1.8L1.8 4.6zM5.4 5.4v2.8l2.8-2.8z" /> : <path d="M2.2 2.2h3.4L2.2 5.6zM7.8 7.8H4.4l3.4-3.4z" />}</svg></button>
+    </span>
+  );
+}
 export function MagnifyDock({ apps, open }: { apps: DockApp[]; open: (key: string) => void }) {
   const [mx, setMx] = useState<number | null>(null);
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -136,6 +147,7 @@ export function MagnifyDock({ apps, open }: { apps: DockApp[]; open: (key: strin
         <button key={a.key} ref={(el) => { refs.current[i] = el; }} data-key={a.key} className="dock-app" style={{ transform: `translateY(${-(k - 1) * 26}px) scale(${k})` }} onClick={() => { tap(); open(a.key); }} aria-label={a.label}>
           <span className="dock-tile" style={{ background: a.bg }}>{a.icon}</span>
           {!!a.badge && <em>{a.badge}</em>}
+          {a.running && <i className="dock-run" />}
           {i === big && k > 1.3 && <span className="dock-tip">{a.label}</span>}
         </button>); })}
     </div>

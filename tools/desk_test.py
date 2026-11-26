@@ -41,6 +41,6 @@ async def main():
         print('place',await pg.evaluate("JSON.parse(localStorage.getItem('corner-office-demo-v1')).place"))
         await pg.click('.pc-hot'); await pg.wait_for_timeout(500); await pg.screenshot(path=O+'11_desktop.png')
         await pg.click('.pc-icon'); await pg.wait_for_timeout(500); await pg.screenshot(path=O+'12_tasklet.png')
-        await pg.click('.pc-x'); await pg.click('text=Leave the computer'); await pg.click('text=Back to the office'); await pg.wait_for_timeout(800); await pg.screenshot(path=O+'13_office.png')
+        await pg.click('.pc-win .wd-close'); await pg.click('text=Leave the computer'); await pg.click('text=Back to the office'); await pg.wait_for_timeout(800); await pg.screenshot(path=O+'13_office.png')
         print('errors',errs); await b.close()
 asyncio.run(main())
