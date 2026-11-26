@@ -229,8 +229,8 @@ const THANKS: Partial<Record<CoworkerId, string>> = {
   mei: tr('Welcome to the team, properly this time. We are lucky to have you.', '这次正式地说一声：欢迎加入团队。有你是我们的幸运。'),
 };
 type MailStage = 'in' | 'out' | 'read';
-export function MailLetter({ note, name, s, keep }: { note: Note; name: string; s: Save; keep: (n: Note, week?: boolean) => void }) {
-  const [stage, setStage] = useState<MailStage>('in');
+export function MailLetter({ note, name, s, keep, opened }: { note: Note; name: string; s: Save; keep: (n: Note, week?: boolean) => void; opened?: boolean }) {
+  const [stage, setStage] = useState<MailStage>(opened ? 'read' : 'in');
   const W = 360;
   const { p, snap, handlers } = useTear(W, () => { play('blindbox_open', 0.4); setStage('out'); setTimeout(() => setStage('read'), 1100); });
   const from = note.from ? COWORKERS[note.from] : null, co = COMPANIES[s.company];
@@ -262,8 +262,8 @@ export function MailLetter({ note, name, s, keep }: { note: Note; name: string; 
       </div>
       <div className="mail-hint">{stage === 'in' ? tr('Drag the strip to open it, or just click the envelope.', '拖动封条打开，或者直接点信封。') : ' '}</div>
       {stage === 'read' && <div className="row mail-btns">
-        <button className="btn primary" onClick={() => { tap(); keep(note); }}>{note.kind === 'payday' ? (ZH ? `收下 ${note.coins} 金币` : `Add ${note.coins} coins`) : tr('Keep the note', '收好这封信')}</button>
-        {note.kind === 'payday' && <button className="btn ghost" onClick={() => { tap(); keep(note, true); }}>{tr('Add and see my week', '收下并看看我这周')}</button>}
+        <button className="btn primary" onClick={() => { tap(); keep(note); }}>{opened ? tr('Put it back', '放回信箱') : note.kind === 'payday' ? (ZH ? `收下 ${note.coins} 金币` : `Add ${note.coins} coins`) : tr('Keep the note', '收好这封信')}</button>
+        {note.kind === 'payday' && !opened && <button className="btn ghost" onClick={() => { tap(); keep(note, true); }}>{tr('Add and see my week', '收下并看看我这周')}</button>}
       </div>}
     </div>
   );

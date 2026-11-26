@@ -157,7 +157,7 @@ export default function DeskView({ s, sheet, up, mode, openPc, leave }: {
         <canvas ref={ref} width={W} height={H} />
         {/* your computer: click it to use it */}
         {mode === 'desk' && <button className="pc-hot" style={{ ...pct(585, 288), width: `${(110 / W) * 100}%`, height: `${(98 / H) * 100}%` }}
-          onPointerDown={(e) => e.stopPropagation()} onClick={() => { tap(); openPc?.(); }} aria-label={t('Use the computer', '用电脑')}><span>{t('Tasklet', '任务夹')}</span></button>}
+          onPointerDown={(e) => e.stopPropagation()} onClick={() => { tap(); openPc?.(); }} aria-label={t('Use the computer', '用电脑')}><span>{t('Tasklet', '任务夹')}</span>{s.notes.length > 0 && <i className="pc-mailflag"><b>✉</b>{s.notes.length}</i>}</button>}
         {/* spots an item can go: shown while one is picked up */}
         {marks.map((sl) => (
           <button key={sl.id} className={`slot-mark${sl.id === showFor!.from ? ' here' : ''}`} style={pct(sl.at[0], sl.at[1])} aria-label={t('Put it here', '放在这里')}

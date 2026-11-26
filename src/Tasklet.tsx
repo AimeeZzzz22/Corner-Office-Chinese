@@ -4,7 +4,7 @@ import { piggyToday } from './BlindBox';
 import { hhmm, officeClock, people, statusOf } from './clock';
 import { COMPANIES, COWORKERS, CoworkerId, PRACTICE_PAY, coinsAt, pay } from './data';
 import { gEmit } from './Guide';
-import { Save } from './state';
+import { Note, Save } from './state';
 import { play } from './sfx';
 import { ZH, t as tx } from './lang';
 
@@ -23,9 +23,9 @@ type Pick = NonNullable<Save['picked']>;
 // Tasklet holds the new work orders and everything the character has done. Close the app to get back to the
 // desktop; leave the computer to get back to the desk.
 type Tab = 'new' | 'past' | 'team';
-export default function Computer({ s, name, close, take, openShop, practice }: { s: Save; name: string; close: () => void; take: (p: Pick) => void; openShop: (t: 'shop' | 'blind') => void; practice?: boolean }) {
-  const [app, setAppRaw] = useState<Tab | null>(null);
-  const setApp = (a: Tab | null) => { if (a === 'new') gEmit('tasklet'); setAppRaw(a); };
+export default function Computer({ s, name, close, take, openShop, openMail, practice }: { s: Save; name: string; close: () => void; take: (p: Pick) => void; openShop: (t: 'shop' | 'blind') => void; openMail: (n: Note, opened: boolean) => void; practice?: boolean }) {
+  const [app, setAppRaw] = useState<Tab | 'mail' | null>(null);
+  const setApp = (a: Tab | 'mail' | null) => { if (a === 'new') gEmit('tasklet'); setAppRaw(a); };
   const ready = piggyToday(s.blind).ready;
   const co = COMPANIES[s.company], os = s.company === 'stitchlight' ? tx('Stitch Desk', '织光桌面') : tx('PuffOS', '月芙系统');
   const clock = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
@@ -40,9 +40,11 @@ export default function Computer({ s, name, close, take, openShop, practice }: {
                 <span className="pc-icon-img"><i /><i /><i /></span><span>{tx('Tasklet', '任务夹')}</span>{/* a number badge here is kept for later: messages from coworkers, not orders you haven't taken */}
               </button>
             </div>
-            {app && <Tasklet key={app} s={s} name={name} tab0={app} practice={practice} close={() => { tap(); setApp(null); }} take={take} />}
-            <MagnifyDock open={(k) => (k === 'shop' || k === 'blind' ? openShop(k) : setApp(k as Tab))} apps={[
+            {app && app !== 'mail' && <Tasklet key={app} s={s} name={name} tab0={app} practice={practice} close={() => { tap(); setApp(null); }} take={take} />}
+            {app === 'mail' && <MailApp s={s} name={name} open={openMail} close={() => { tap(); setApp(null); }} />}
+            <MagnifyDock open={(k) => (k === 'shop' || k === 'blind' ? openShop(k) : setApp(k as Tab | 'mail'))} apps={[
               { key: 'new', label: tx('Tasklet', '任务夹'), icon: '📥', bg: '#f6d37a', badge: s.tray.length },
+              { key: 'mail', label: tx('Mail', '信箱'), icon: '✉️', bg: '#f7c9a6', badge: s.notes.length },
               { key: 'team', label: tx('Coworkers', '同事'), icon: '👥', bg: '#a7d8b8' },
               { key: 'past', label: tx('Past orders', '历史工作单'), icon: '🗂', bg: '#b9c7f2' },
               { key: 'blind', label: tx('Blind packs', '盲包'), icon: '🎁', bg: '#d9c6f4', badge: ready },
@@ -184,4 +186,40 @@ function SideBlob({ tab }: { tab: Tab }) {
     return () => cancelAnimationFrame(raf.current);
   }, [tab]);
   return <svg className="pc-blob" ref={svg} aria-hidden><path ref={path} /></svg>;
+}
+
+// ---------------- Mail: the letters coworkers and the company send, as envelopes in a little inbox ----------------
+// New letters are sealed (a wax seal in the sender's colour, a stamp, "new"); clicking one opens it with the tear-open
+// envelope. Letters you've read stay here, flap open, to read again.
+const SEAL: Record<Note['kind'], { c: string; mark: string }> = { thanks: { c: '#e8708a', mark: '♥' }, payday: { c: '#e0a93a', mark: '¢' }, welcome: { c: '#5fb38a', mark: '★' } };
+function MailApp({ s, name, open, close }: { s: Save; name: string; open: (n: Note, opened: boolean) => void; close: () => void }) {
+  const co = COMPANIES[s.company];
+  const fresh = [...s.notes].sort((a, b) => b.id - a.id), kept = s.mailbox;
+  const subject = (n: Note) => n.kind === 'payday' ? (ZH ? `发薪日的额外奖励 · ${n.coins} 金币` : `Payday bonus · ${n.coins} coins`)
+    : n.kind === 'welcome' ? tx('Welcome to the team, properly', '正式欢迎你加入') : (ZH ? `谢谢你！· ${n.level} 颗心` : `Thank you! · ${n.level} heart${n.level > 1 ? 's' : ''}`);
+  const row = (n: Note, isNew: boolean) => { const from = n.from ? COWORKERS[n.from] : null, seal = SEAL[n.kind]; return (
+    <button key={n.id} className={`mb-row${isNew ? ' new' : ''}`} onClick={() => { tap(); open(n, !isNew); }}>
+      <span className="mb-flap" />
+      <span className="mb-seal" style={{ background: seal.c }}>{seal.mark}</span>
+      {from ? <Head id={from.id} size={34} /> : <span className="head mb-co pix" style={{ width: 34, height: 34 }}>{co.name.slice(0, 1)}</span>}
+      <span className="mb-what"><b>{from ? from.name : co.name}</b><span>{subject(n)}</span></span>
+      <span className="mb-when">{when(n.id)}</span>
+      <span className="mb-stamp">{isNew ? tx('NEW', '新') : tx('read', '已读')}</span>
+    </button>); };
+  return (
+    <div className="pc-win mb-win">
+      <div className="pc-title"><i /><i /><i /><b>{tx('Mail', '信箱')}</b><button className="pc-x" onClick={close} aria-label={tx('Close Mail', '关闭信箱')}>✕</button></div>
+      <div className="mb-body">
+        <div className="mb-head"><div><div className="pc-h">{ZH ? `${name}的信箱` : `${name}'s mail`}</div>
+          <div className="sub">{fresh.length ? (ZH ? `${fresh.length} 封新信，点开看看` : `${fresh.length} new letter${fresh.length > 1 ? 's' : ''}. Click one to open it.`) : tx('All read. Coworkers write when you help them, and payday comes once a week.', '都读完啦。帮同事完成工作单，他们会写信给你；每周还有一次发薪日。')}</div></div>
+          <span className="mb-box" aria-hidden><i />{fresh.length > 0 && <em>{fresh.length}</em>}</span></div>
+        <div className="mb-list">
+          {fresh.map((n) => row(n, true))}
+          {kept.length > 0 && <div className="mb-sep">{tx('Letters you kept', '收好的信')}</div>}
+          {kept.map((n) => row(n, false))}
+          {!fresh.length && !kept.length && <div className="mb-empty">✉<span>{tx('No letters yet', '还没有信')}</span></div>}
+        </div>
+      </div>
+    </div>
+  );
 }

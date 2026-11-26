@@ -45,7 +45,7 @@ export default function App() {
   // the fridge gets a fresh roll each day: on some days there's a little treat in it
   useEffect(() => { if (s.fridge.day !== new Date().toDateString()) up({ fridge: fridgeToday(s.fridge) }); }, [s.phase]);
   const [vibes, setVibes] = useState(() => typeof location !== 'undefined' && location.hash === '#vibes');   // the work vibe gallery
-  const [mail, setMail] = useState(false);       // reading the letter on top of the mail pile
+  const [mail, setMail] = useState<{ note: Note; opened: boolean } | null>(null);   // a letter being read (opened from the computer's Mail app)
   const [week, setWeek] = useState(false);       // the weekly recap
   const [tray, setTray] = useState(false);       // the result screen's peek tray
   // payday: from Friday on, an envelope with a little extra (10% of the week's coins) arrives once a week
@@ -143,7 +143,7 @@ export default function App() {
   useEffect(() => { if (s.guide >= 0 || tip || onboarding) return; const id = setInterval(() => look((x) => x + 1), 700); return () => clearInterval(id); }, [s.guide, tip, onboarding]);
   useEffect(() => { setGev(new Set()); }, [s.guide, tip?.id, tip?.i]);
   useEffect(() => { const on = (e: Event) => setGev((o) => new Set(o).add((e as CustomEvent).detail)); window.addEventListener('guide', on); return () => window.removeEventListener('guide', on); }, []);
-  const gctx: GCtx = { s, co, name: s.name || t('Juniper', '小柏'), ev: gev, menu, chat, spot, shop, week, pcOpen, mail, peek: tray };
+  const gctx: GCtx = { s, co, name: s.name || t('Juniper', '小柏'), ev: gev, menu, chat, spot, shop, week, pcOpen, mail: !!mail, peek: tray };
   useEffect(() => {
     if (s.guide < 0 || onboarding) return;
     const st = STEPS[s.guide]; if (!st) { up({ guide: -1 }); return; }
@@ -180,7 +180,6 @@ export default function App() {
             : <><div className="xp"><span style={{ width: '100%' }} /></div><div className="sub">{t(`Top intern grade · raise +${g * RAISE * 100}%`, `实习生最高级 · 加薪 +${g * RAISE * 100}%`)}</div></>; })()}</div>
             <AvatarStack s={s} /></div>
           <div className="hud-r">
-            {s.notes.length > 0 && <button className="card hud-mail" onClick={() => { tap(); setMenu(null); setMail(true); }} title={t('You have mail', '你有新信件')}><span className="hud-env" />{s.notes.length > 1 && <em>{s.notes.length}</em>}</button>}
             {treatsToday(s.treats).have.length > 0 && <div className="card hud-treats">{treatsToday(s.treats).have.map((k) => { const t = treat(k); return (
               <span key={k} className={treatsToday(s.treats).used.includes(k) ? 'used' : ''} title={`${t.name}${t.bonus ? `${ZH ? '：' : ': '}${t.bonus}` : ''}${treatsToday(s.treats).used.includes(k) ? (ZH ? '（今天已用）' : ' (used today)') : ''}`}><img src={`${A}ob/treats/${k}.png`} alt={t.name} /></span>); })}</div>}
             <div className="card hud-right"><Coin /><b>{s.coins.toLocaleString()}</b></div>
@@ -256,7 +255,7 @@ export default function App() {
         </>
       )}
 
-      {pcOpen && s.phase === 'desk' && <Computer s={s} name={name} practice={s.guide >= 0 && s.guide <= STEPS.findIndex((x) => x.id === 'practice')} openShop={(t) => { setShop(t); }} close={() => setPcOpen(false)} take={(p) => { setPcOpen(false); setFromDesk(true); up({ phase: 'focus', picked: p }); }} />}
+      {pcOpen && s.phase === 'desk' && <Computer s={s} name={name} practice={s.guide >= 0 && s.guide <= STEPS.findIndex((x) => x.id === 'practice')} openShop={(t) => { setShop(t); }} openMail={(note, opened) => setMail({ note, opened })} close={() => setPcOpen(false)} take={(p) => { setPcOpen(false); setFromDesk(true); up({ phase: 'focus', picked: p }); }} />}
       {s.phase === 'tray' && <Tray s={s} name={name} pick={(p) => { tap(); up({ picked: p }); }} back={() => { tap(); up({ phase: 'free' }); }} next={() => { tap(); up({ phase: 'focus' }); }} />}
       {s.phase === 'focus' && s.picked && <Focus s={s} name={name} back={() => { tap(); if (fromDesk) { setPcOpen(true); up({ phase: 'desk' }); } else up({ phase: 'tray' }); }} start={start} />}
 
@@ -318,10 +317,12 @@ export default function App() {
           </div>); })()}
         </div>
       )}
-      {mail && s.notes[0] && <MailLetter key={s.notes[0].id} note={s.notes[0]} name={name} s={s} keep={(n, wk) => {
+      {mail && <MailLetter key={mail.note.id} note={mail.note} opened={mail.opened} name={name} s={s} keep={(n, wk) => {
+        setMail(null); if (mail.opened) return;
+        // a new letter goes into the kept letters once it's read (the newest 40); payday's coins are added
         play(n.kind === 'payday' ? 'coins_many' : 'heart_pop', 0.5);
-        const rest = s.notes.filter((x) => x.id !== n.id); up({ notes: rest, coins: s.coins + (n.kind === 'payday' ? n.coins : 0) });
-        if (wk) { setMail(false); setWeek(true); } else if (!rest.length) setMail(false); }} />}
+        up({ notes: s.notes.filter((x) => x.id !== n.id), mailbox: [n, ...s.mailbox.filter((x) => x.id !== n.id)].slice(0, 40), coins: s.coins + (n.kind === 'payday' ? n.coins : 0) });
+        if (wk) setWeek(true); }} />}
       {s.guide >= 0 && !onboarding && !editing && <Coach c={gctx} st={STEPS[s.guide]} step={s.guide} total={STEPS.length} stage={stage} next={() => up({ guide: s.guide + 1 >= STEPS.length ? -1 : s.guide + 1 })} skip={() => { tap(); up({ guide: -1 }); }} />}
       {tip && s.guide < 0 && (() => { const tp = TIPS.find((x) => x.id === tip.id)!; return <Coach key={tip.id} tip c={gctx} st={tp.steps[tip.i]} step={tip.i} total={tp.steps.length} stage={stage}
         next={() => (tip.i + 1 >= tp.steps.length ? endTip(true) : setTip({ id: tip.id, i: tip.i + 1 }))} skip={() => { tap(); endTip(true); }} />; })()}

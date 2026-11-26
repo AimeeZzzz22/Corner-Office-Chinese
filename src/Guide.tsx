@@ -61,7 +61,7 @@ export const STEPS: GStep[] = [
   { id: 'desk', at: 'office', text: () => t('Now, your desk', '现在去你的工位'), target: () => ({ sel: '.new-order' }), done: (c) => c.s.phase === 'desk', hide: (c) => !!c.shop || !!c.spot },
   // ---- the desk and the computer
   { id: 'pc', at: 'desk', text: () => t('Your computer', '点电脑'), target: () => ({ sel: '.pc-hot', pop: false }), done: (c) => c.pcOpen },
-  { id: 'dock', at: 'desk', text: () => t('Orders, coworkers, blind packs and the online shop all live here', '工作单、同事、盲包和网店都在电脑里'), target: (c) => (c.pcOpen ? { sel: '.dock', pop: false } : { sel: '.pc-hot', pop: false }), ok: true },
+  { id: 'dock', at: 'desk', text: () => t('Orders, mail, coworkers, blind packs and the online shop all live here', '工作单、信箱、同事、盲包和网店都在电脑里'), target: (c) => (c.pcOpen ? { sel: '.dock', pop: false } : { sel: '.pc-hot', pop: false }), ok: true },
   { id: 'tasklet', at: 'desk', text: () => t('Open Tasklet', '打开任务夹'), target: (c) => (c.pcOpen ? { sel: '.pc-icon' } : { sel: '.pc-hot', pop: false }), done: (c) => c.ev.has('tasklet') || has('.g-practice') },
   { id: 'practice', at: 'desk', text: () => t('A 1-minute practice order', '先接一张 1 分钟练习单'), target: (c) => deskPath(c),
     done: (c) => ['focus', 'work', 'timesup', 'result'].includes(c.s.phase) },
@@ -74,7 +74,7 @@ export const STEPS: GStep[] = [
   { id: 'gain', at: 'any', text: () => t('Coins, XP and a heart', '金币、经验和心，到手'), target: () => ({ sel: '.result-wrap .gain', pop: false }), ok: true, hide: (c) => c.s.phase !== 'result' },
   { id: 'piggy', at: 'any', text: () => t('Focus time fills the piggy bank: a pack every hour', '专注攒进存钱罐，满 60 分钟换一个盲包'), target: () => ({ sel: '.peek-line', pop: false }), done: (c) => c.peek, hide: (c) => c.s.phase !== 'result' },
   { id: 'back', at: 'any', text: () => t('Back to your desk', '回工位'), target: () => ({ sel: '.result-wrap .side .btn.primary' }), done: (c) => c.s.phase !== 'result', hide: (c) => c.s.phase !== 'result' },
-  { id: 'mail', at: 'any', text: () => t('You have mail!', '你有一封信！'), target: () => ({ sel: '.hud-mail' }), done: (c) => c.mail || !c.s.notes.length, hide: (c) => c.s.phase === 'result' },
+  { id: 'mail', at: 'desk', text: () => t('You have mail! It comes to your computer', '有你的信！信都寄到电脑里'), target: (c) => (!c.pcOpen ? { sel: '.pc-hot', pop: false } : has('.mb-row.new') ? { sel: '.mb-row.new' } : { sel: '.dock-app[data-key="mail"]' }), done: (c) => c.mail || !c.s.notes.length, hide: (c) => c.s.phase === 'result' },
   { id: 'decor', at: 'desk', text: () => t('Drag things around your desk, or into the backpack', '拖动东西布置工位，或者收进背包'), target: () => ({ sel: '.desk-storage', pop: false }), ok: true, hide: (c) => c.mail },
   { id: 'end', at: 'any', text: () => t("That's everything! Take a real order whenever you're ready", '全都会啦！准备好了就接一张真正的工作单吧'), target: () => null, ok: true, hide: (c) => c.mail, chain: GOAL },
 ];
