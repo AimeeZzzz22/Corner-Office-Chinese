@@ -110,7 +110,7 @@ export interface OfficeProps {
   onCoworker: (id: CoworkerId | null, x?: number) => void; frozen: boolean; menu: CoworkerId | null; onPc: () => void;
   startAt?: Tile;      // where the player stands when the office opens (back from the desk: right beside it)
   goDesk?: number;     // bump to walk the player to their desk
-  extras?: { fridge: boolean; surprise: boolean };   // a treat waiting in the fridge; the welcome gift still waiting
+  extras?: { fridge: boolean; surprise: boolean; deco?: string | null };   // a treat waiting in the fridge; the welcome gift still waiting
   onSpot?: (kind: 'food' | 'fridge' | 'surprise') => void;
   editing: boolean; labels: string[] | null; onLabels: (rows: string[], defaults: string[]) => void; co: Company;
   playerSheet: HTMLCanvasElement | null;
@@ -540,6 +540,7 @@ export default function Office({ onCoworker, frozen, menu, editing, labels, onLa
   return (
     <div className="office"><div className="office-inner" ref={innerRef}>
       <canvas ref={ref} width={1536} height={1056} onClick={click} />
+      {extras?.deco && <div className={`deco deco-${extras.deco}`} aria-hidden>{extras.deco === 'winter' && <span className="snow">{Array.from({ length: 28 }, (_, i) => <i key={i} style={{ left: `${(i * 37) % 100}%`, animationDelay: `${(i * 0.7) % 9}s`, animationDuration: `${8 + (i % 5)}s` }} />)}</span>}</div>}
       {bubble && (
         <div data-kind={bubble.kind} className={bubble.kind === 'game' || (bubble.kind === 'fridge' && !extras?.fridge) ? 'spot-bubble' : 'spot-bubble act'} style={{ left: `${(bubble.x / 512) * 100}%`, top: `${((bubble.y - (bubble.kind === 'surprise' ? 18 : 22)) / 352) * 100}%` }}>
           <b>{bubble.name}</b>

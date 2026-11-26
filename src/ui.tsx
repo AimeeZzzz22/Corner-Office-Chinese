@@ -247,7 +247,17 @@ export function MailLetter({ note, name, s, keep, opened, weekOpen }: { note: No
     <div className={`mail-dim m-${stage}`}>
       <div className="mail-scene">
         <div className="mail-letter">
-          {note.kind === 'payday' ? (() => {
+          {note.kind === 'birthday' ? (() => {
+            // the birthday card: everyone in the office signs it, with a little gift from the team
+            const wishes = ZH ? ['生日快乐！', '新的一岁也要开心！', '蛋糕留了最大块给你', '今天不许加班！', '愿望都会实现的', '生日快乐呀～'] : ['Happy birthday!', 'Have the best year!', 'Saved you the biggest slice', 'No overtime today!', 'Make a wish!', 'Hip hip hooray!'];
+            return (
+            <div className="mail-paper bcard">
+              <span className="bc-confetti" aria-hidden>{Array.from({ length: 18 }, (_, i) => <i key={i} />)}</span>
+              <div className="bc-cake" aria-hidden><i /><b /><em /></div>
+              <div className="bc-title">{tr('Happy birthday', '生日快乐')}<span>{ZH ? `，${name}！` : `, ${name}!`}</span></div>
+              <div className="bc-sigs">{co.people.map((id, i) => <div key={id} className="bc-sig" style={{ ['--r' as string]: `${(i % 3 - 1) * 4}deg` }}><Head id={id} size={28} /><span className="mail-hand">{wishes[i % wishes.length]}<br /><b>— {COWORKERS[id].name}</b></span></div>)}</div>
+              <div className="bc-gift"><img src={`${A}coin.png`} alt="" /><span className="pix">+{note.coins}</span><small>{tr('a little something from all of us', '大家凑的一点小心意')}</small></div>
+            </div>); })() : note.kind === 'payday' ? (() => {
             // payday: the company's letterhead, a short typed letter, the week in numbers, and a cheque to tear off
             const w0 = new Date(note.week).getTime(), wk = isNaN(w0) ? week : s.history.filter((h) => h.at >= w0 && h.at < w0 + 7 * 864e5);
             const orders = wk.filter((h) => h.finished).length, mins = wk.reduce((a, h) => a + h.worked, 0), earned = wk.reduce((a, h) => a + h.coins, 0);
@@ -297,7 +307,7 @@ export function MailLetter({ note, name, s, keep, opened, weekOpen }: { note: No
       </div>
       <div className="mail-hint">{stage === 'in' ? tr('Drag the strip to open it, or just click the envelope.', '拖动封条打开，或者直接点信封。') : ' '}</div>
       {stage === 'read' && <div className="row mail-btns">
-        <button className="btn primary" onClick={() => { tap(); keep(note); }}>{opened ? tr('Put it back', '放回信箱') : note.kind === 'payday' ? (ZH ? `收下 ${note.coins} 金币` : `Add ${note.coins} coins`) : tr('Keep the note', '收好这封信')}</button>
+        <button className="btn primary" onClick={() => { tap(); keep(note); }}>{opened ? tr('Put it back', '放回信箱') : note.kind === 'payday' || note.kind === 'birthday' ? (ZH ? `收下 ${note.coins} 金币` : `Add ${note.coins} coins`) : tr('Keep the note', '收好这封信')}</button>
         {note.kind === 'payday' && !opened && weekOpen && <button className="btn ghost" onClick={() => { tap(); keep(note, true); }}>{tr('Add and see my week', '收下并看看我这周')}</button>}
       </div>}
     </div>

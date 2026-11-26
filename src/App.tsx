@@ -13,6 +13,7 @@ import VibeGallery from './VibeGallery';
 import { ZH, t, t as tr } from './lang';
 import { AvatarStack, MailLetter, PullSummary, thisWeek, weekKey, weekStart } from './ui';
 import { WEEK_MS, WeekJournal } from './Week';
+import { BIRTHDAY, Holiday, birthdayToday, holidayOn, isBirthday } from './holidays';
 import type { Note } from './state';
 import { Bakery, Fridge } from './Bakery';
 import { FORTUNES, FRIDGE, fridgeToday, treat, treatsToday } from './treats';
@@ -67,6 +68,15 @@ export default function App() {
     return { ...o, recapWeek: wk, notes: [...o.notes, { id: Date.now() + 2, kind: 'recap', from: null, level: 0, coins: 0, week: weekKey(last) }] };
   });
   useEffect(() => { if (s.phase === 'free' || s.phase === 'desk') recap(); }, [s.phase]);
+  // the player's birthday: once a year, a card from everyone with a little gift
+  const bdayCard = (force = false) => setS((o) => {
+    const y = new Date().getFullYear(); if (!force && (!isBirthday(o.birthday) || o.bdayYear === y)) return o;
+    return { ...o, bdayYear: y, notes: [...o.notes, { id: Date.now() + 3, kind: 'birthday', from: COMPANIES[o.company].host, level: 0, coins: 100, week: weekKey() }] };
+  });
+  useEffect(() => { if (s.lookDone && (s.phase === 'free' || s.phase === 'desk')) bdayCard(); }, [s.phase]);
+  const [decoPreview, setDecoPreview] = useState<Holiday | null | undefined>(undefined);   // test: show a holiday's decorations now
+  const deco = decoPreview === undefined ? holidayOn() : decoPreview;
+  const bdays = birthdayToday(COMPANIES[s.company].people);
   // welcome back: after 6 hours or more away, a little card of what happened meanwhile (only good news, never a penalty)
   const [away] = useState(() => (s.lookDone && s.guide < 0 && ['free', 'desk'].includes(s.phase) && Date.now() - s.lastSeen > 6 * 36e5 ? s.lastSeen : 0));
   const [welcomeBack, setWelcomeBack] = useState(!!away);
@@ -128,10 +138,12 @@ export default function App() {
     const o = s.order!; const total = o.endsAt - o.startedAt;
     const worked = Math.min(o.mins, Math.floor((Math.min(Date.now(), o.endsAt) - o.startedAt) / total * o.mins));
     const reward = o.practice ? PRACTICE_PAY : finished ? pay(o.mins) : worked >= o.mins ? pay(o.mins) : Math.floor(pay(o.mins) * (worked / o.mins) / 5) * 5;
-    const before = o.who ? s.hearts[o.who] : 0, after = finished && o.who ? before + 1 : before;
+    const bday = !!o.who && finished && isBirthday(BIRTHDAY[o.who]);   // an order on their birthday counts double for friendship
+    const before = o.who ? s.hearts[o.who] : 0, after = finished && o.who ? before + (bday ? 2 : 1) : before;
     // today's treats: iced coffee +50% coins on the first finished order, strawberry milk +10% XP, matcha +10 piggy minutes
     // the raise from promotions (and Intern III's extra XP) comes before the treats
     const tt = treatsToday(s.treats), bonus: string[] = []; let coins = o.practice ? reward : coinsAt(reward, s.xp), xp = o.practice ? reward : xpAt(reward, s.xp), extraMins = 0;
+    if (bday) bonus.push(ZH ? `${COWORKERS[o.who!].name}今天生日：友情 +1` : `${COWORKERS[o.who!].name}'s birthday: +1 friendship`);
     const base = coins; const used = [...tt.used];
     if (finished && tt.have.includes('iced_coffee') && !used.includes('iced_coffee')) { coins = Math.round(base * 1.5); used.push('iced_coffee'); bonus.push(ZH ? `冰咖啡：+${coins - base} 金币` : `Iced coffee: +${coins - base} coins`); }
     if (finished && tt.have.includes('strawberry_milk')) { const x0 = xp; xp = Math.round(x0 * 1.1); bonus.push(ZH ? `草莓牛奶：+${xp - x0} 经验` : `Strawberry milk: +${xp - x0} XP`); }
@@ -184,7 +196,8 @@ export default function App() {
 
   return (
     <div className={`stage co-${s.company}`} ref={stage}>
-      {inOffice && <Office key={s.company} co={co} onCoworker={onCoworker} frozen={s.phase !== 'free' || !!spot || !!shop} menu={menu} startAt={backAt} goDesk={goDesk} extras={{ fridge: !!s.fridge.item && s.fridge.day === new Date().toDateString(), surprise: s.surprise === 'waiting' }} onSpot={(k) => { play('ui_tap', 0.5); setMenu(null); setSpot(k); }} onPc={() => { play('ui_tap', 0.5); setMenu(null); up({ phase: 'desk' }); }} editing={editing} labels={myLabels} onLabels={onLabels} playerSheet={sheet} tour={stopZone ? { zone: stopZone, stop: s.tourStop } : null} onTourArrive={setTourReady} clockScale={s.fast ? 60 : 1} />}
+      {inOffice && s.phase === 'free' && bdays.length > 0 && <div className="bday-ribbon">🎂 {ZH ? `今天是${bdays.map((id) => COWORKERS[id].name).join('和')}的生日！` : `Today is ${bdays.map((id) => COWORKERS[id].name).join(' and ')}'s birthday!`}<small>{t(' An order for them counts double for friendship.', ' 今天帮TA接单，友情加倍。')}</small></div>}
+      {inOffice && <Office key={s.company} co={co} onCoworker={onCoworker} frozen={s.phase !== 'free' || !!spot || !!shop} menu={menu} startAt={backAt} goDesk={goDesk} extras={{ fridge: !!s.fridge.item && s.fridge.day === new Date().toDateString(), surprise: s.surprise === 'waiting', deco }} onSpot={(k) => { play('ui_tap', 0.5); setMenu(null); setSpot(k); }} onPc={() => { play('ui_tap', 0.5); setMenu(null); up({ phase: 'desk' }); }} editing={editing} labels={myLabels} onLabels={onLabels} playerSheet={sheet} tour={stopZone ? { zone: stopZone, stop: s.tourStop } : null} onTourArrive={setTourReady} clockScale={s.fast ? 60 : 1} />}
       {(s.phase === 'work' || s.phase === 'timesup' || s.phase === 'result') && <WorkScene sheet={sheet} pet={s.pet} place={s.place} />}
       {s.phase === 'desk' && <DeskView s={s} sheet={sheet} up={up} mode="desk" openPc={() => setPcOpen(true)} leave={() => { setPcOpen(false); setBackAt([...co.pc.stand] as Tile); up({ phase: 'free' }); }} />}
       {s.phase === 'focus' && fromDesk && <DeskView s={s} sheet={sheet} up={up} mode="still" />}
@@ -216,6 +229,8 @@ export default function App() {
           {!ZH && <button className="btn ghost" onClick={() => { tap(); setSettings(false); setVibes(true); }}>{t('Work vibe gallery', '工作风格总览')}</button>}
           <button className="btn ghost" onClick={() => { tap(); setSettings(false); setWeek({ start: weekStart().getTime(), sample: true }); }}>{t('See a sample week (test)', '看一个示例周（测试）')}</button>
           <button className="btn ghost" onClick={() => { tap(); setSettings(false); up({ started: Math.min(s.started, Date.now() - WEEK_MS - 1000), recapWeek: '' }); setTimeout(() => recap(true), 50); }}>{t('Jump a week ahead (test)', '快进一周（测试）')}</button>
+          <button className="btn ghost" onClick={() => { tap(); setSettings(false); bdayCard(true); }}>{t('Birthday card (test)', '生日贺卡（测试）')}</button>
+          <button className="btn ghost" onClick={() => { tap(); const all: (Holiday | null)[] = ['winter', 'lunar', 'love', 'spooky', null]; setDecoPreview(all[(all.indexOf(deco) + 1) % all.length]); }}>{t('Next holiday decorations (test)', '换个节日装饰（测试）')}{deco ? ` · ${deco}` : ''}</button>
           <button className="btn ghost" onClick={() => { tap(); setSettings(false); setWelcomeBack(true); }}>{t('Welcome-back card (test)', '欢迎回来卡片（测试）')}</button>
           <button className="btn ghost" onClick={() => { tap(); setSettings(false); up({ plantDays: [2, 5, 10, 20, 0][[0, 2, 5, 10, 20].indexOf(PLANT.reduce((a, d) => (s.plantDays >= d ? d : a), 0))] }); }}>{t('Grow the plant (test)', '让绿植长大（测试）')}</button>
           <button className="btn ghost" onClick={() => { tap(); setSettings(false); payday(true); }}>{t('Payday envelope (test)', '发薪信封（测试）')}</button>
@@ -267,6 +282,7 @@ export default function App() {
               <div className="row"><Head id={menu} /><div><b>{COWORKERS[menu].name}</b><div className="sub">{COWORKERS[menu].role}</div><Hearts points={s.hearts[menu]} /></div></div>
               <div className="sub">{ZH ? `离下一颗心 ${s.hearts[menu] % HEART_POINTS} / ${HEART_POINTS} · ${name}帮TA完成了 ${s.ordersDone[menu]} 张工作单` : `${s.hearts[menu] % HEART_POINTS} / ${HEART_POINTS} to the next heart · ${name} finished ${s.ordersDone[menu]} of their orders`}</div>
               {chat ? <div className="chat">“{(() => { const last = [...s.history].reverse().find((h) => h.who === menu && h.at > Date.now() - 3 * 864e5);
+                if (isBirthday(BIRTHDAY[menu])) return t("It's my birthday today! Thanks for stopping by.", '今天是我生日！谢谢你过来看我。');
                 if (last?.focus && last.focus !== t('Focus time', '专注时间')) return ZH ? `“${last.focus}”做得怎么样？谢谢你帮我${last.finished ? '完成' : '做'}「${last.job}」。` : `How did “${last.focus}” go? Thanks again for ${last.job.toLowerCase()}.`;
                 return COWORKERS[menu].chat; })()}”</div> : <button className="opt" onClick={() => { tap(); setChat(true); }}><b>{t('Chat', '聊天')}</b><span>{t('Say hi', '打个招呼')}</span></button>}
               {(() => { const t = treatsToday(s.treats); return t.have.includes('macaron_tower') && !t.used.includes('macaron_tower')
@@ -352,8 +368,8 @@ export default function App() {
       {mail && <MailLetter key={mail.note.id} note={mail.note} opened={mail.opened} weekOpen={weekOpen} name={name} s={s} keep={(n, wk) => {
         setMail(null); if (mail.opened) return;
         // a new letter goes into the kept letters once it's read (the newest 40); payday's coins are added
-        play(n.kind === 'payday' ? 'coins_many' : 'heart_pop', 0.5);
-        up({ notes: s.notes.filter((x) => x.id !== n.id), mailbox: [n, ...s.mailbox.filter((x) => x.id !== n.id)].slice(0, 40), coins: s.coins + (n.kind === 'payday' ? n.coins : 0) });
+        play(n.kind === 'payday' || n.kind === 'birthday' ? 'coins_many' : 'heart_pop', 0.5);
+        up({ notes: s.notes.filter((x) => x.id !== n.id), mailbox: [n, ...s.mailbox.filter((x) => x.id !== n.id)].slice(0, 40), coins: s.coins + (n.kind === 'payday' || n.kind === 'birthday' ? n.coins : 0) });
         if (wk) setWeek({ start: new Date(n.week).getTime() }); }} />}
       {s.guide >= 0 && !onboarding && !editing && <Coach c={gctx} st={STEPS[s.guide]} step={s.guide} total={STEPS.length} stage={stage} next={() => up({ guide: s.guide + 1 >= STEPS.length ? -1 : s.guide + 1 })} skip={() => { tap(); up({ guide: -1 }); }} />}
       {tip && s.guide < 0 && (() => { const tp = TIPS.find((x) => x.id === tip.id)!; return <Coach key={tip.id} tip c={gctx} st={tp.steps[tip.i]} step={tip.i} total={tp.steps.length} stage={stage}

@@ -15,7 +15,7 @@ export interface Result { finished: boolean; coins: number; xp: number; promoted
 // onboarding: offer letter -> first-day look -> welcome tour -> badge photo -> work vibe -> work style quiz -> first work order
 // one finished or stopped work order, kept for the desk computer's history
 // a letter in the mail: a coworker's thank-you when a new heart fills, or the end-of-week payday envelope
-export interface Note { id: number; kind: 'thanks' | 'payday' | 'welcome' | 'recap'; from: CoworkerId | null; level: number; coins: number; week: string }
+export interface Note { id: number; kind: 'thanks' | 'payday' | 'welcome' | 'recap' | 'birthday'; from: CoworkerId | null; level: number; coins: number; week: string }
 export interface Past { at: number; mins: number; worked: number; who: CoworkerId | null; job: string; focus: string; type: TaskType; finished: boolean; coins: number; xp: number; steps: number; stepsDone: number }
 export type Phase = 'offer' | 'tour' | 'booth' | 'badge' | 'vibe' | 'quiz' | 'gifts' | 'desk' | 'free' | 'tray' | 'focus' | 'work' | 'timesup' | 'result';
 export interface Save {
@@ -40,7 +40,8 @@ export interface Save {
   blind: { mins: number; ready: number; day: string; earned: number };
   pack: Record<string, number>;
   sinceSecret: number; sparkles: number; setsClaimed: string[];
-  plantDays: number; plantLast: string; lastSeen: number;   // days with a finished order (the desk plant grows on them), the last such day; when the player was last here   // packs since the last secret (a secret is guaranteed by 40), sparkles from repeats, finished series already rewarded
+  plantDays: number; plantLast: string; lastSeen: number;
+  bdayYear: number;                          // the last year the birthday card came   // days with a finished order (the desk plant grows on them), the last such day; when the player was last here   // packs since the last secret (a secret is guaranteed by 40), sparkles from repeats, finished series already rewarded
   treats: { day: string; have: string[]; used: string[] };   // today's food and drink; used = bonuses already spent today
   fridge: { day: string; item: string | null; fortune: number };   // what (if anything) is in the fridge today
   notes: Note[]; mailbox: Note[]; payWeek: string;
@@ -59,7 +60,7 @@ export const fresh = (): Save => {
   const company: CompanyId = Math.random() < 0.5 ? 'stitchlight' : 'moonpuff';      // the offer letter comes from a random company
   return { v: 1, name: '', coins: 0, xp: 0, company, hearts: zero(), ordersDone: zero(), tray: newTray(company), picked: null, order: null, result: null, phase: 'offer', fast: false, sound: true, labelsBy: {},
     look: { ...DEFAULT_LOOK }, pet: 'orange_cat', birthday: null, badgeNo: `${String(Math.floor(Math.random() * 9000) + 1000)}`, vibe: null, vibeDraws: 0,
-    quiz: { focus: null, sound: null, reminders: null }, tourStop: 0, firstOrder: true, lookDone: false, history: [], desk: [], place: {}, blind: { mins: 0, ready: 0, day: '', earned: 0 }, pack: {}, treats: { day: '', have: [], used: [] }, fridge: { day: '', item: null, fortune: 0 }, surprise: 'none', notes: [], mailbox: [], payWeek: '', started: Date.now(), recapWeek: '', finds: [], sinceSecret: 0, sparkles: 0, setsClaimed: [], plantDays: 0, plantLast: '', lastSeen: Date.now(), guide: -1, tipsSeen: [] };
+    quiz: { focus: null, sound: null, reminders: null }, tourStop: 0, firstOrder: true, lookDone: false, history: [], desk: [], place: {}, blind: { mins: 0, ready: 0, day: '', earned: 0 }, pack: {}, treats: { day: '', have: [], used: [] }, fridge: { day: '', item: null, fortune: 0 }, surprise: 'none', notes: [], mailbox: [], payWeek: '', started: Date.now(), recapWeek: '', finds: [], sinceSecret: 0, sparkles: 0, setsClaimed: [], plantDays: 0, plantLast: '', lastSeen: Date.now(), bdayYear: 0, guide: -1, tipsSeen: [] };
 };
 
 const KEY = ZH ? 'corner-office-demo-v1-zh' : 'corner-office-demo-v1';   // both sites share one origin on GitHub Pages
@@ -89,7 +90,8 @@ export function load(): Save {
       if (typeof s.sparkles !== 'number') out.sparkles = 0;
       if (!Array.isArray(s.setsClaimed)) out.setsClaimed = [];
       if (typeof s.plantDays !== 'number') { const days = new Set((s.history ?? []).filter((h: { finished: boolean }) => h.finished).map((h: { at: number }) => new Date(h.at).toDateString())); out.plantDays = days.size; out.plantLast = ''; }
-      if (typeof s.lastSeen !== 'number') out.lastSeen = Date.now();   // letters already read, kept in the computer's Mail app
+      if (typeof s.lastSeen !== 'number') out.lastSeen = Date.now();
+      if (typeof s.bdayYear !== 'number') out.bdayYear = 0;   // letters already read, kept in the computer's Mail app
       if (!s.surprise) out.surprise = s.lookDone && ['free', 'tray', 'focus', 'work', 'timesup', 'result', 'desk'].includes(s.phase) ? 'waiting' : 'none';
       out.look = fixLook(out.look); out.history = out.history ?? [];
       return out;
