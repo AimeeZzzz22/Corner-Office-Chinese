@@ -1478,3 +1478,12 @@ html:lang(zh-CN) .mail-paper.note .mail-hand.body { font-size: 21px; line-height
 .mail-dim.m-out .mail-letter { animation: mailUp2 1s cubic-bezier(.3, .9, .3, 1) forwards; }
 @keyframes mailGrow2 { from { transform: translateY(-140px); } to { transform: translate(-80px, -228px); width: 480px; height: 440px; } }
 .mail-dim.m-read .mail-letter { animation: mailGrow2 .7s cubic-bezier(.3, 1.2, .4, 1) forwards; }
+/* the envelope sits in the middle of the screen, dead straight: the entrance only slides it down (translate, no
+   rotation), and its resting state has no transform at all */
+.mail-dim .mail-env { top: 140px; transform: none; rotate: none; animation: mailDrop .45s cubic-bezier(.2, 1.1, .4, 1) both; }
+@keyframes mailDrop { from { translate: 0 -220px; opacity: 0; } to { translate: 0 0; opacity: 1; } }
+.mail-dim:not(.m-in) .mail-env { animation: none; translate: 0 0; opacity: 1; }
+.mail-dim.m-read .mail-env { animation: pkFall .55s cubic-bezier(.5, 0, .8, .5) forwards; }
+.mail-dim .mail-letter { top: 150px; }
+@keyframes mailGrow2 { from { transform: translateY(-140px); } to { transform: translate(-80px, -138px); width: 480px; height: 440px; } }
+.mail-dim .mail-hint { margin-top: -70px; }
