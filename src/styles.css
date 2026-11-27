@@ -1817,7 +1817,7 @@ html:lang(zh-CN) .bc-title { font-family: 'Caveat', 'Kaiti SC', 'STKaiti', 'KaiT
 @keyframes knock { 50% { transform: translateX(6px); } }
 .meet-later { position: absolute; right: 18px; top: 14px; border: 2px solid rgba(255, 255, 255, .5); background: rgba(43, 32, 44, .6); color: #fff; border-radius: 10px; padding: 6px 12px; font-size: 13px; font-weight: 700; cursor: pointer; }
 .sb { position: absolute; padding: 10px 14px 12px; background: #fffdf7; border: 3px solid #3e3328; border-radius: 14px; box-shadow: 0 5px 0 rgba(62, 51, 40, .35); animation: sbIn .25s cubic-bezier(.2, 1.4, .5, 1); z-index: 2; }
-.sb b { display: block; font: 700 13px 'Pixelify Sans', monospace; color: #a8822e; letter-spacing: .06em; margin-bottom: 2px; }
+.sb b { display: block; font: 700 13px Inter, system-ui, sans-serif; color: #a8822e; letter-spacing: .06em; margin-bottom: 2px; }
 .sb p { margin: 0; font-size: 16px; line-height: 1.45; color: #3e3328; overflow-wrap: anywhere; }
 .sb-ghost { visibility: hidden; }
 .sb-up::after { content: ''; position: absolute; left: 50%; bottom: -14px; margin-left: -10px; border: 10px solid transparent; border-top: 12px solid #3e3328; border-bottom: 0; }

@@ -283,10 +283,21 @@ def bedroom(day):
         if x <= 252: return 75
         return min(90, 75 + round((x - 252) * 0.3))
     quilt(236, lying, f'home_blanket_{"day" if day else "night"}.png')
-    # sitting up: flat over the lap, a little bump at the knees
-    def sitting(x):
-        k = 274
-        return 98 - round(5 * math.sqrt(max(0, 1 - ((x - k) / 16) ** 2)))
-    quilt(214, sitting, f'home_blanket_{"day" if day else "night"}_sit.png')
+    # sitting up: the quilt over the lap, the sheet turned down across it, the knees making a soft hill
+    q = Pic(W, H); x0 = 212
+    def top(x): return 101 - round(7 * math.sqrt(max(0, 1 - ((x - 266) / 18) ** 2)))
+    for x in range(x0, 307):
+        tp = top(x)
+        for y in range(tp, 110): q.px(x, y, QU)
+        q.px(x, tp, OL); q.px(x, tp + 1, QUH)
+        if x % 10 == 4:
+            for y in range(tp + 5, 109): q.px(x, y, QUD)
+    for y in range(108, 110): q.hl(x0, 306, y, QUD)
+    for x in range(x0, 249):                       # the turned-down sheet across the waist
+        tp = top(x); q.rect(x, tp + 1, x, tp + 3, SH); q.px(x, tp + 4, SHD)
+    q.vl(x0 - 1, top(x0), 110, OL); q.vl(306, top(306), 110, OL); q.hl(x0, 306, 110, OL)
+    q.rect(x0, 106, 306, 112, QUD); q.hl(x0, 306, 112, OL); q.vl(x0 - 1, 106, 112, OL)
+    for x in range(x0 + 4, 306, 8): q.px(x, 113, QUD)
+    q.save(OUT + f'home_blanket_{"day" if day else "night"}_sit.png')
 
 exit_scene('stitchlight'); exit_scene('moonpuff'); train(); bedroom(False); bedroom(True); print('ok')

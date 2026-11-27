@@ -228,7 +228,7 @@ export function GoHome({ s, name, sheet, fresh, start }: { s: Save; name: string
         const ring = stage === 'alarm';
         if (stage === 'ask') {
           // awake: sitting up in bed, a big yawn
-          char(x, sheet, DIR_COL.front + fr(t), 0, 225, 105.5);
+          char(x, sheet, DIR_COL.front + fr(t), 0, 228, 105.5);
           if (ok(blanketSit)) x.drawImage(blanketSit, 0, 0);
         } else {
           lie(x, sleeper ?? sheet, ring ? Math.sin(t * 30) * 0.02 : 0);
