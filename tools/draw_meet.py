@@ -284,7 +284,7 @@ def moonpuff():
     d.rect(60, DESK_TOP - 1, 230, DESK_TOP + 3, TOP); d.hl(61, 229, DESK_TOP, TOPH); d.hl(60, 230, DESK_TOP - 1, OL); d.hl(60, 230, DESK_TOP + 4, OL); d.vl(59, DESK_TOP - 1, DESK_TOP + 4, OL); d.vl(231, DESK_TOP - 1, DESK_TOP + 4, OL)
     d.rect(64, DESK_TOP + 5, 226, 128, FR); d.vl(63, DESK_TOP + 5, 128, OL); d.vl(227, DESK_TOP + 5, 128, OL); d.hl(63, 227, 129, OL); d.hl(64, 226, DESK_TOP + 5, FRD)
     for x in range(70, 226, 16): d.vl(x, DESK_TOP + 7, 127, FRH)
-    for k in range(3): y0 = DESK_TOP + 8 + k * 7; d.box(190, y0, 222, y0 + 5, FR, FRD, FRH); d.hl(202, 210, y0 + 2, hx('8a6a4a'))
+    for k in range(3): y0 = DESK_TOP + 7 + k * 6; d.box(190, y0, 222, y0 + 5, FR, FRD, FRH); d.hl(202, 210, y0 + 2, hx('8a6a4a'))   # three drawers, inside the desk (it ends at 128)
     d.box(68, DESK_TOP + 8, 100, DESK_TOP + 20, FR, FRD, FRH); d.hl(80, 88, DESK_TOP + 13, hx('8a6a4a'))
     d.dither(60, 130, 230, 132, (0, 0, 0, 35))
     # on the desk (left to right): sketchbooks and a pencil cup, the flower pot, the binders, the monitor (its back to us), the figure
