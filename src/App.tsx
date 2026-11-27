@@ -97,6 +97,8 @@ export default function App() {
   const rules = rulesOf(s), needClock = working && rules.clockIn !== null && ruled(s) && s.clock[new Date().toDateString()] === undefined;
   const [clockToast, setClockToast] = useState<string | null>(null);
   const [meet, setMeet] = useState<ChatMsg | null>(null);
+  const [meetWalk, setMeetWalk] = useState<ChatMsg | null>(null);   // walking over to the boss's office
+  const [goBoss, setGoBoss] = useState<{ n: number; id: CoworkerId } | null>(null);
   const [loadPhase] = useState(s.phase);   // reloading while at home starts again at the morning alarm
   const [goHomeFresh, setGoHomeFresh] = useState(false);
   // a new message from the boss pops up as a small toast in the office or at the desk
@@ -212,7 +214,7 @@ export default function App() {
   return (
     <div className={`stage co-${s.company}`} ref={stage}>
       {inOffice && s.phase === 'free' && bdays.length > 0 && <div className="bday-ribbon">🎂 {ZH ? `今天是${bdays.map((id) => COWORKERS[id].name).join('和')}的生日！` : `Today is ${bdays.map((id) => COWORKERS[id].name).join(' and ')}'s birthday!`}<small>{t(' An order for them counts double for friendship.', ' 今天帮TA接单，友情加倍。')}</small></div>}
-      {inOffice && <Office key={s.company} co={co} onCoworker={onCoworker} frozen={s.phase !== 'free' || !!spot || !!shop} menu={menu} startAt={backAt} goDesk={goDesk} extras={{ fridge: !!s.fridge.item && s.fridge.day === new Date().toDateString(), surprise: s.surprise === 'waiting', deco }} onSpot={(k) => { play('ui_tap', 0.5); setMenu(null); setSpot(k); }} onPc={() => { play('ui_tap', 0.5); setMenu(null); up({ phase: 'desk' }); }} editing={editing} labels={myLabels} onLabels={onLabels} playerSheet={sheet} tour={stopZone ? { zone: stopZone, stop: s.tourStop } : null} onTourArrive={setTourReady} clockScale={s.fast ? 60 : 1} />}
+      {inOffice && <Office key={s.company} co={co} onCoworker={onCoworker} frozen={s.phase !== 'free' || !!spot || !!shop} menu={menu} startAt={backAt} goDesk={goDesk} goBoss={goBoss} onBoss={() => { if (meetWalk) { play('ui_tap', 0.5); setMeet(meetWalk); setMeetWalk(null); } }} extras={{ fridge: !!s.fridge.item && s.fridge.day === new Date().toDateString(), surprise: s.surprise === 'waiting', deco }} onSpot={(k) => { play('ui_tap', 0.5); setMenu(null); setSpot(k); }} onPc={() => { play('ui_tap', 0.5); setMenu(null); up({ phase: 'desk' }); }} editing={editing} labels={myLabels} onLabels={onLabels} playerSheet={sheet} tour={stopZone ? { zone: stopZone, stop: s.tourStop } : null} onTourArrive={setTourReady} clockScale={s.fast ? 60 : 1} />}
       {(s.phase === 'work' || s.phase === 'timesup' || s.phase === 'result') && <WorkScene sheet={sheet} pet={s.pet} place={s.place} />}
       {s.phase === 'desk' && <DeskView s={s} sheet={sheet} up={up} mode="desk" openPc={() => setPcOpen(true)} leave={() => { setPcOpen(false); setBackAt([...co.pc.stand] as Tile); up({ phase: 'free' }); }} />}
       {s.phase === 'focus' && fromDesk && <DeskView s={s} sheet={sheet} up={up} mode="still" />}
@@ -313,7 +315,7 @@ export default function App() {
         </>
       )}
 
-      {pcOpen && s.phase === 'desk' && <Computer s={s} name={name} practice={s.guide >= 0 && s.guide <= STEPS.findIndex((x) => x.id === 'practice')} openShop={(t) => { setShop(t); }} openMail={(note, opened) => { if (note.kind === 'recap') { if (!opened) up({ notes: s.notes.filter((x) => x.id !== note.id), mailbox: [note, ...s.mailbox].slice(0, 40) }); setWeek({ start: new Date(note.week).getTime() }); } else setMail({ note, opened }); }} close={() => setPcOpen(false)} take={(p) => { setPcOpen(false); setFromDesk(true); up({ phase: 'focus', picked: p }); }} upChat={up} openMeet={(m) => { setPcOpen(false); setMeet(m); }} />}
+      {pcOpen && s.phase === 'desk' && <Computer s={s} name={name} practice={s.guide >= 0 && s.guide <= STEPS.findIndex((x) => x.id === 'practice')} openShop={(t) => { setShop(t); }} openMail={(note, opened) => { if (note.kind === 'recap') { if (!opened) up({ notes: s.notes.filter((x) => x.id !== note.id), mailbox: [note, ...s.mailbox].slice(0, 40) }); setWeek({ start: new Date(note.week).getTime() }); } else setMail({ note, opened }); }} close={() => setPcOpen(false)} take={(p) => { setPcOpen(false); setFromDesk(true); up({ phase: 'focus', picked: p }); }} upChat={up} openMeet={(m) => { setPcOpen(false); setBackAt([...co.pc.stand] as Tile); up({ phase: 'free' }); setMeetWalk(m); setGoBoss({ n: Date.now(), id: rules.boss }); }} />}
       {s.phase === 'tray' && <Tray s={s} name={name} pick={(p) => { tap(); up({ picked: p }); }} back={() => { tap(); up({ phase: 'free' }); }} next={() => { tap(); up({ phase: 'focus' }); }} />}
       {s.phase === 'focus' && s.picked && <Focus s={s} name={name} back={() => { tap(); if (fromDesk) { setPcOpen(true); up({ phase: 'desk' }); } else up({ phase: 'tray' }); }} start={start} />}
 
@@ -397,11 +399,12 @@ export default function App() {
       {needClock && !pcOpen && <button className="clockin" onClick={() => { const at = minsNow(); const late = rules.clockIn !== null && at > rules.clockIn + rules.grace; play(late ? 'ui_tap' : 'coin', 0.5); up(clockIn(s)); setClockToast(late ? (ZH ? `${fmtClock(at)} 打卡（稍微晚了一点）` : `Clocked in at ${fmtClock(at)} (a little late)`) : (ZH ? `${fmtClock(at)} 准时打卡 ✓` : `Clocked in at ${fmtClock(at)}, on time ✓`)); setTimeout(() => setClockToast(null), 3200); }}>
         <i>🕘</i><span><b>{t('Clock in', '打卡')}</b><small>{ZH ? `上班 ${fmtClock(rules.clockIn!)} · 现在 ${fmtClock(minsNow())}` : `Starts ${fmtClock(rules.clockIn!)} · now ${fmtClock(minsNow())}`}</small></span></button>}
       {clockToast && <div className="clock-toast">{clockToast}</div>}
+      {meetWalk && !meet && <div className="clock-toast walk">{rules.boss === 'rio' ? (ZH ? `正去找${COWORKERS[rules.boss].name}喝咖啡……` : `Heading over to ${COWORKERS[rules.boss].name} for a coffee...`) : (ZH ? `正走去${COWORKERS[rules.boss].name}的办公室……` : `Walking to ${COWORKERS[rules.boss].name}'s office...`)}</div>}
       {working && toastFor > s.chatSeen && lastBoss && lastBoss.from !== 'me' && !pcOpen && <button className="chat-toast" onClick={() => { tap(); setToastFor(0); }}>
         <Head id={lastBoss.from} size={30} /><span><b>{COWORKERS[lastBoss.from].name}</b><small>{lastBoss.text}</small><em>{t('Reply in Chat on your computer', '去电脑的「消息」里回复')}</em></span></button>}
-      {meet && <Meeting s={s} msg={meet} close={(choice) => { const b = rules.boss as 'margaux' | 'rio', c = MEET_CHOICES().find((x) => x.key === choice); const id = meet.id; setMeet(null); if (!c) return;
+      {meet && <Meeting s={s} msg={meet} sheet={sheet} close={(choice) => { const b = rules.boss as 'margaux' | 'rio', c = MEET_CHOICES().find((x) => x.key === choice); const id = meet.id; setMeet(null); if (!c) return;
         const now = Date.now(); up({ chat: [...s.chat.map((m) => (m.id === id ? { ...m, done: true } : m)), { id: now, from: 'me', at: now, text: c.text }, { id: now + 1, from: rules.boss, at: now + 1, text: c.reply[b] }], chatSeen: now + 1 }); }} />}
-      {s.phase === 'home' && <GoHome s={s} name={name} fresh={goHomeFresh || loadPhase !== 'home'} start={() => { setGoHomeFresh(false); const d = new Date().toDateString(); up({ phase: 'free', guide: 0, day1: d, clock: rules.clockIn !== null ? { [d]: minsNow() } : {} }); }} />}
+      {s.phase === 'home' && <GoHome s={s} name={name} sheet={sheet} fresh={goHomeFresh || loadPhase !== 'home'} start={() => { setGoHomeFresh(false); const d = new Date().toDateString(); up({ phase: 'free', guide: 0, day1: d, clock: rules.clockIn !== null ? { [d]: minsNow() } : {} }); }} />}
       {welcomeBack && (() => {
         const b = piggyToday(s.blind), pal = co.people.filter((p) => s.hearts[p] >= HEART_POINTS).sort((a, b2) => s.hearts[b2] - s.hearts[a])[0];
         const newMonth = new Date(away).getMonth() !== new Date().getMonth(), feat = featured();

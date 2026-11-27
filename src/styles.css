@@ -1808,3 +1808,29 @@ html:lang(zh-CN) .bc-title { font-family: 'Caveat', 'Kaiti SC', 'STKaiti', 'KaiT
 .pull-meter { flex: 1; height: 8px; border-radius: 4px; background: rgba(0, 0, 0, .08); overflow: hidden; min-width: 40px; }
 .pull-meter i { display: block; height: 100%; background: #4cba76; border-radius: 4px; }
 @keyframes pkFade { from { opacity: 0; } }
+
+/* ---------- the one-to-one in the boss's office, and the way home (canvas scenes) ---------- */
+.meet { position: absolute; inset: 0; z-index: 70; background: #140e18; }
+.meet canvas, .gh canvas { position: absolute; inset: 0; width: 1280px; height: 720px; image-rendering: pixelated; }
+.meet-tag { position: absolute; left: 18px; top: 16px; padding: 6px 12px; border-radius: 10px; background: rgba(43, 32, 44, .82); color: #fff4d1; font-size: 15px; letter-spacing: .04em; }
+.meet-knock { position: absolute; left: 60px; top: 430px; font: 700 26px 'Pixelify Sans', monospace; color: #fff4d1; text-shadow: 0 3px 0 #3e3328; animation: knock .5s ease-in-out 2; }
+@keyframes knock { 50% { transform: translateX(6px); } }
+.meet-later { position: absolute; right: 18px; top: 14px; border: 2px solid rgba(255, 255, 255, .5); background: rgba(43, 32, 44, .6); color: #fff; border-radius: 10px; padding: 6px 12px; font-size: 13px; font-weight: 700; cursor: pointer; }
+.sb { position: absolute; padding: 10px 14px 12px; background: #fffdf7; border: 3px solid #3e3328; border-radius: 14px; box-shadow: 0 5px 0 rgba(62, 51, 40, .35); animation: sbIn .25s cubic-bezier(.2, 1.4, .5, 1); z-index: 2; }
+.sb b { display: block; font: 700 13px 'Pixelify Sans', monospace; color: #a8822e; letter-spacing: .06em; margin-bottom: 2px; }
+.sb p { margin: 0; font-size: 16px; line-height: 1.45; color: #3e3328; overflow-wrap: anywhere; }
+.sb-ghost { visibility: hidden; }
+.sb-up::after { content: ''; position: absolute; left: 50%; bottom: -14px; margin-left: -10px; border: 10px solid transparent; border-top: 12px solid #3e3328; border-bottom: 0; }
+.sb-up::before { content: ''; position: absolute; left: 50%; bottom: -9px; margin-left: -7px; border: 7px solid transparent; border-top: 9px solid #fffdf7; border-bottom: 0; z-index: 1; }
+.sb-left::after { content: ''; position: absolute; right: 60px; bottom: -14px; border: 10px solid transparent; border-top: 12px solid #3e3328; border-bottom: 0; }
+.sb-left::before { content: ''; position: absolute; right: 63px; bottom: -9px; border: 7px solid transparent; border-top: 9px solid #fffdf7; border-bottom: 0; z-index: 1; }
+@keyframes sbIn { from { transform: scale(.85); opacity: 0; } }
+.meet-opts { position: absolute; right: 22px; bottom: 22px; width: 440px; display: grid; gap: 8px; padding: 14px; border-radius: 16px; background: rgba(255, 251, 240, .96); border: 3px solid #3e3328; box-shadow: 0 6px 0 rgba(62, 51, 40, .35); animation: sbIn .3s ease-out; }
+.meet-opts > span { font: 700 12px 'Pixelify Sans', monospace; letter-spacing: .12em; text-transform: uppercase; color: #a8822e; }
+.meet-opts.end > span { text-transform: none; letter-spacing: 0; font: 600 13px Inter, sans-serif; color: var(--muted); }
+.meet-opts button { text-align: left; border: 2px solid #e2cfa0; background: #fff; border-radius: 10px; padding: 9px 12px; font-size: 14px; font-weight: 600; cursor: pointer; overflow-wrap: anywhere; }
+.meet-opts button:hover { border-color: #c9962e; background: #fff4d1; }
+.meet-opts button.go { background: var(--primary); border-color: var(--primary-d); box-shadow: 0 3px 0 var(--primary-d); font-weight: 700; text-align: center; }
+.gh-cap { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); margin: 0; max-width: 80%; padding: 9px 18px; border-radius: 99px; background: rgba(28, 22, 36, .78); color: #fff4d1; font-size: 16px; text-align: center; animation: ghIn 1s ease-out; overflow-wrap: anywhere; z-index: 2; }
+.gh .gh-ask { position: absolute; left: 5%; right: auto; top: 50%; transform: translateY(-50%); width: 420px; max-width: 44%; z-index: 3; }
+.gh-s-black { background: #000; }

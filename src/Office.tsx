@@ -110,6 +110,8 @@ export interface OfficeProps {
   onCoworker: (id: CoworkerId | null, x?: number) => void; frozen: boolean; menu: CoworkerId | null; onPc: () => void;
   startAt?: Tile;      // where the player stands when the office opens (back from the desk: right beside it)
   goDesk?: number;     // bump to walk the player to their desk
+  goBoss?: { n: number; id: CoworkerId } | null;   // walk the player over to a coworker (the boss, for a one-to-one); onBoss fires on arrival
+  onBoss?: (id: CoworkerId) => void;
   extras?: { fridge: boolean; surprise: boolean; deco?: string | null };   // a treat waiting in the fridge; the welcome gift still waiting
   onSpot?: (kind: 'food' | 'fridge' | 'surprise') => void;
   editing: boolean; labels: string[] | null; onLabels: (rows: string[], defaults: string[]) => void; co: Company;
@@ -128,7 +130,8 @@ function frame([zx, zy, zw, zh]: [number, number, number, number]) {
   return clampCam(z, (zx + zw / 2) * K, (zy + zh / 2) * K, zy + zh / 2 > 190 ? 470 : 250);
 }
 const follow = (mx: number, my: number) => clampCam(2.2, mx * K, my * K, 360);
-export default function Office({ onCoworker, frozen, menu, editing, labels, onLabels, co, playerSheet, tour, onPc, onTourArrive, clockScale, startAt, goDesk, extras, onSpot }: OfficeProps) {
+export default function Office({ onCoworker, frozen, menu, editing, labels, onLabels, co, playerSheet, tour, onPc, onTourArrive, clockScale, startAt, goDesk, goBoss, onBoss, extras, onSpot }: OfficeProps) {
+  const bossRef = useRef<CoworkerId | null>(null), onBossRef = useRef(onBoss); onBossRef.current = onBoss;
   const extrasRef = useRef(extras); extrasRef.current = extras;
   // every place with a bubble: mini-games, the treat counter, the fridge, and the welcome gift while it's waiting
   type Spot = { name: string; at: [number, number]; stand: [number, number]; kind: 'game' | 'food' | 'fridge' | 'surprise' };
@@ -145,6 +148,7 @@ export default function Office({ onCoworker, frozen, menu, editing, labels, onLa
   const [map, setMap] = useState<MapFile | null>(null);
   const rows = useMemo(() => (!map ? null : labels && labels.length === map.h ? map.labels.map((r, y) => [...r].map((c, x) => (c === '#' || labels[y][x] === '#' ? c : labels[y][x])).join('')) : map.labels), [map, labels]);
   const grid = useMemo(() => (map && rows ? derive(map, rows) : null), [map, rows]);
+  const gridRef = useRef(grid); gridRef.current = grid;
   const editRef = useRef(editing); editRef.current = editing; const rowsRef = useRef(rows); rowsRef.current = rows;
   const [bubble, setBubble] = useState<{ name: string; x: number; y: number; kind: Spot['kind'] } | null>(null);
   const me = useRef({ ...walker(startAt ?? co.start), goal: null as CoworkerId | null, target: null as Tile | null, wait: 0, stuck: 0, follow: false, delay: 0, resume: null as Tile | null });
@@ -268,7 +272,7 @@ export default function Office({ onCoworker, frozen, menu, editing, labels, onLa
           // walking up to your own desk sits you down at it (the close desk view)
           if (!tourRef.current && p.cur[0] === co.pc.stand[0] && p.cur[1] === co.pc.stand[1]) { p.dir = 1; onPcRef.current(); }
           if (p.goal) { const who = list.find((n) => n.id === p.goal)!; const gx = up(who) ? who.x : COWORKERS[who.id].seat[0], gy = up(who) ? who.y : COWORKERS[who.id].seat[1] + 24;
-            faceTo(p, gx, gy); const id = p.goal; p.goal = null; onCoworker(id, gx); }
+            faceTo(p, gx, gy); const id = p.goal; p.goal = null; if (bossRef.current === id) { bossRef.current = null; who.hold = false; onBossRef.current?.(id); } else onCoworker(id, gx); }
         }
       }
 
@@ -494,6 +498,23 @@ export default function Office({ onCoworker, frozen, menu, editing, labels, onLa
     const rest = path.slice(1), mid = Math.abs(p.x - centre(p.cur)[0]) > 0.01 || Math.abs(p.y - centre(p.cur)[1]) > 0.01;
     p.path = mid ? [p.cur, ...rest] : rest; p.target = co.pc.stand; p.goal = null; p.wait = 0; p.stuck = 0; onCoworker(null);
   }, [goDesk]);
+
+  // walk over to the boss (for the one-to-one): like clicking them, but arriving opens the meeting instead of the menu
+  useEffect(() => {
+    if (!goBoss) return; let tries = 0, timer = 0;
+    const go = () => {
+      const grid = gridRef.current;
+      if (!grid || !npcs.current || frozenRef.current) { if (tries++ < 25) timer = window.setTimeout(go, 200); else onBossRef.current?.(goBoss.id); return; }
+      const p = me.current, who = npcs.current.find((n) => n.id === goBoss.id); if (!who) { onBossRef.current?.(goBoss.id); return; }
+      const t = new Set<number>(); for (const n of npcs.current) { if (n.state !== 'sit') holds(n, grid, t); else seatTiles(n.id, grid, t); }
+      const rt = routes(grid, p.cur, t);
+      const target = who.state !== 'sit' ? rt.nearest(who.x, who.y) : rt.nearest(COWORKERS[who.id].spot[0], COWORKERS[who.id].spot[1] + 22);
+      const path = rt.pathTo(target); if (!path || path.length < 2) { onBossRef.current?.(goBoss.id); return; }
+      const rest = path.slice(1), mid = Math.abs(p.x - centre(p.cur)[0]) > 0.01 || Math.abs(p.y - centre(p.cur)[1]) > 0.01;
+      p.path = mid ? [p.cur, ...rest] : rest; p.goal = who.id; p.target = target; p.wait = 0; p.stuck = 0; who.hold = true; bossRef.current = who.id; onCoworker(null);
+    };
+    go(); return () => clearTimeout(timer);
+  }, [goBoss?.n]);
 
   const click = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!grid || !map || !rows) return;
