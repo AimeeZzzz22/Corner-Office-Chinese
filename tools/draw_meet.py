@@ -3,7 +3,7 @@
 #   legs, her dark grey tufted chair, the white lilies, the camera on a tripod, the printer, the brass trolley of pens,
 #   the tall calla lily and the grey sectional sofa.
 # Moonpuff: Rio's spot at the long wooden desk in the open studio: cream wall and windows, blue tiles, the desk with
-#   binders, the gift box, the flower pot and the little green figure; through the glass, the games room with its TV,
+#   binders, the sketchbooks and pencil cup, the flower pot and the little green figure; through the glass, the games room with its TV,
 #   bookshelf, moon rug and bean bags.
 # Three layers per company, 320x180 drawn at 4x: back (room, boss chair), desk (in front of the boss), chairs (the
 # visitor chair, in front of the player, who sits with their back to us).
@@ -287,8 +287,12 @@ def moonpuff():
     for k in range(3): y0 = DESK_TOP + 8 + k * 7; d.box(190, y0, 222, y0 + 5, FR, FRD, FRH); d.hl(202, 210, y0 + 2, hx('8a6a4a'))
     d.box(68, DESK_TOP + 8, 100, DESK_TOP + 20, FR, FRD, FRH); d.hl(80, 88, DESK_TOP + 13, hx('8a6a4a'))
     d.dither(60, 130, 230, 132, (0, 0, 0, 35))
-    # on the desk (left to right): the gift box, the flower pot, the binders, the monitor (its back to us), the figure
-    d.box(66, 92, 82, DESK_TOP - 2, hx('fbf5f5'), OL); d.vl(74, 92, DESK_TOP - 2, hx('e86a8a')); d.hl(66, 82, 96, hx('e86a8a')); d.ellipse(71, 90, 2, 1, hx('e86a8a'), OL); d.ellipse(77, 90, 2, 1, hx('e86a8a'), OL)
+    # on the desk (left to right): sketchbooks and a pencil cup, the flower pot, the binders, the monitor (its back to us), the figure
+    # sketchbooks and a pencil cup (as on the map)
+    d.box(64, 96, 78, 99, hx('f08caa'), OL); d.hl(66, 76, 97, hx('fffaf0')); d.box(65, 99, 79, DESK_TOP - 2, hx('f6c85c'), OL); d.hl(67, 77, 100, hx('fffaf0'))
+    d.box(66, 93, 76, 96, hx('5b8fe0'), OL); d.hl(68, 74, 94, hx('fffaf0'))
+    d.box(80, 92, 86, DESK_TOP - 2, hx('6ec8be'), OL, None, hx('50aaa0'))
+    for i, cc in enumerate(['e25a5a', 'f6c85c', '5aaa6e']): d.vl(81 + i * 2, 86 + (i % 2) * 2, 91, hx(cc)); d.px(81 + i * 2, 85 + (i % 2) * 2, OL)
     d.box(88, 94, 96, DESK_TOP - 2, hx('ffffff'), OL); d.vl(92, 86, 93, hx('5cb85c')); d.ellipse(92, 84, 3, 2, hx('ff6f6f'), OL); d.px(92, 84, hx('ffd166')); d.px(89, 90, hx('5cb85c')); d.px(95, 89, hx('5cb85c'))
     for i, cc in enumerate(['5b8fe0', 'e05a5a', '3fae8f']): d.box(100 + i * 6, 88, 105 + i * 6, DESK_TOP - 2, hx(cc), OL); d.hl(101 + i * 6, 104 + i * 6, 92, hx('ffffff'))
     d.box(120, 82, 140, DESK_TOP - 9, hx('9aa1b2'), OL, hx('b9bfcc')); d.ellipse(130, 89, 1, 1, hx('7fe0d0')); d.rect(128, DESK_TOP - 8, 132, DESK_TOP - 3, hx('9aa1b2')); d.box(124, DESK_TOP - 3, 136, DESK_TOP - 2, hx('9aa1b2'), OL)
