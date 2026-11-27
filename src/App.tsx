@@ -99,11 +99,10 @@ export default function App() {
   const [meet, setMeet] = useState<ChatMsg | null>(null);
   const [meetWalk, setMeetWalk] = useState<ChatMsg | null>(null);   // walking over to the boss's office
   const [goBoss, setGoBoss] = useState<{ n: number; id: CoworkerId } | null>(null);
-  // orientation ends once the first-day guide has shown everything and only the first focus is left: you go home,
-  // and the practice order waits for the morning of day one
-  const practiceStep = STEPS.findIndex((x) => x.id === 'practice');
+  // orientation ends once the first-day guide is over (the 1-minute practice order included): you go home, and day one
+  // starts the next morning
   useEffect(() => {
-    if (s.guide !== practiceStep || s.day1 || (s.phase !== 'desk' && s.phase !== 'free')) return;
+    if (s.guide !== -1 || s.day1 || !s.lookDone || (s.phase !== 'desk' && s.phase !== 'free')) return;
     const id = setTimeout(() => { setPcOpen(false); setMenu(null); setShop(null); setGoHomeFresh(true); up({ phase: 'home' }); }, 700);
     return () => clearTimeout(id);
   }, [s.guide, s.day1, s.phase]);
@@ -162,7 +161,7 @@ export default function App() {
   const end = (finished: boolean) => {
     const o = s.order!; const total = o.endsAt - o.startedAt;
     const worked = Math.min(o.mins, Math.floor((Math.min(Date.now(), o.endsAt) - o.startedAt) / total * o.mins));
-    const reward = o.practice ? PRACTICE_PAY : finished ? pay(o.mins) : worked >= o.mins ? pay(o.mins) : Math.floor(pay(o.mins) * (worked / o.mins) / 5) * 5;
+    const reward = o.practice ? (finished ? PRACTICE_PAY : 0) : finished ? pay(o.mins) : worked >= o.mins ? pay(o.mins) : Math.floor(pay(o.mins) * (worked / o.mins) / 5) * 5;
     const bday = !!o.who && finished && isBirthday(BIRTHDAY[o.who]);   // an order on their birthday counts double for friendship
     const before = o.who ? s.hearts[o.who] : 0, after = finished && o.who ? before + (bday ? 2 : 1) : before;
     // today's treats: iced coffee +50% coins on the first finished order, strawberry milk +10% XP, matcha +10 piggy minutes
@@ -355,7 +354,9 @@ export default function App() {
               <div className="reward"><Coin /> +{s.order.practice ? PRACTICE_PAY : coinsAt(pay(s.order.mins), s.xp)} {t('coins', '金币')} · +{s.order.practice ? PRACTICE_PAY : xpAt(pay(s.order.mins), s.xp)} {t('XP', '经验')}{s.order.who ? t(' · +1/10 heart', ' · +1/10 颗心') : ''}</div></>
           ) : <button className="btn primary" onClick={() => { tap(); up({ phase: 'work' }); }}>{t('Keep going', '继续')}</button>}
           <button className="btn ghost" onClick={() => end(false)}>{t('Stopping here', '就到这里')}</button>
-          <div className="sub">{t('You keep the coins and XP for the time worked.', '已工作时间的金币和经验都归你。')}</div><div className="note">{t('No heart this time. Nothing else is lost.', '这次没有心，其他什么都不会损失。')}</div>
+          {s.order.practice && left > 0
+            ? <div className="practice-warn"><b>{t('Heads up: no rewards', '注意：没有奖励哦')}</b><span>{ZH ? `练习单只有做完才有奖励。现在结束的话，${PRACTICE_PAY} 金币和 ${PRACTICE_PAY} 经验都拿不到。只剩一会儿啦！` : `The practice order only pays if you finish it. Stop now and you get none of the ${PRACTICE_PAY} coins or ${PRACTICE_PAY} XP. It's almost done!`}</span></div>
+            : <><div className="sub">{t('You keep the coins and XP for the time worked.', '已工作时间的金币和经验都归你。')}</div><div className="note">{t('No heart this time. Nothing else is lost.', '这次没有心，其他什么都不会损失。')}</div></>}
         </div>
       )}
 
@@ -412,7 +413,7 @@ export default function App() {
         <Head id={lastBoss.from} size={30} /><span><b>{COWORKERS[lastBoss.from].name}</b><small>{lastBoss.text}</small><em>{t('Reply in Chat on your computer', '去电脑的「消息」里回复')}</em></span></button>}
       {meet && <Meeting s={s} msg={meet} sheet={sheet} close={(choice) => { const b = rules.boss as 'margaux' | 'rio', c = MEET_CHOICES().find((x) => x.key === choice); const id = meet.id; setMeet(null); if (!c) return;
         const now = Date.now(); up({ chat: [...s.chat.map((m) => (m.id === id ? { ...m, done: true } : m)), { id: now, from: 'me', at: now, text: c.text }, { id: now + 1, from: rules.boss, at: now + 1, text: c.reply[b] }], chatSeen: now + 1 }); }} />}
-      {s.phase === 'home' && <GoHome s={s} name={name} sheet={sheet} fresh={goHomeFresh || loadPhase !== 'home'} start={() => { setGoHomeFresh(false); const d = new Date().toDateString(), first = s.guide === practiceStep; up({ phase: first ? 'desk' : 'free', day1: d, clock: rules.clockIn !== null ? { [d]: minsNow() } : {} }); }} />}
+      {s.phase === 'home' && <GoHome s={s} name={name} sheet={sheet} fresh={goHomeFresh || loadPhase !== 'home'} start={() => { setGoHomeFresh(false); const d = new Date().toDateString(); up({ phase: 'free', day1: d, clock: rules.clockIn !== null ? { [d]: minsNow() } : {} }); }} />}
       {welcomeBack && (() => {
         const b = piggyToday(s.blind), pal = co.people.filter((p) => s.hearts[p] >= HEART_POINTS).sort((a, b2) => s.hearts[b2] - s.hearts[a])[0];
         const newMonth = new Date(away).getMonth() !== new Date().getMonth(), feat = featured();

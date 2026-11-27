@@ -19,7 +19,9 @@ async def main():
         last=None; same=0; seen=[]
         for it in range(200):
             g=await pg.evaluate("JSON.parse(localStorage.getItem('%s')).guide"%KEY)
-            if g<0: print('guide finished'); break
+            if g<0:
+                print('guide finished')
+                await pg.wait_for_selector('.gh', timeout=5000); print('went home after orientation'); await pg.screenshot(path=f'/tmp/gd/{co}_{lang}_home.png'); break
             sid=await pg.evaluate("document.querySelector('.coach-say b')?.textContent||''")
             if g!=last:
                 seen.append(g); await pg.screenshot(path=f'/tmp/gd/{co}_{lang}_{g:02d}.png'); last=g; same=0

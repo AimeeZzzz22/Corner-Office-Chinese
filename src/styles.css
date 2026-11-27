@@ -1834,3 +1834,5 @@ html:lang(zh-CN) .bc-title { font-family: 'Caveat', 'Kaiti SC', 'STKaiti', 'KaiT
 .gh-cap { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); margin: 0; max-width: 80%; padding: 9px 18px; border-radius: 99px; background: rgba(28, 22, 36, .78); color: #fff4d1; font-size: 16px; text-align: center; animation: ghIn 1s ease-out; overflow-wrap: anywhere; z-index: 2; }
 .gh .gh-ask { position: absolute; left: 5%; right: auto; top: 50%; transform: translateY(-50%); width: 420px; max-width: 44%; z-index: 3; }
 .gh-s-black { background: #000; }
+.practice-warn { display: grid; gap: 3px; padding: 10px 12px; border-radius: 12px; background: #fff0ec; border: 2px solid #f4bfae; color: #8a3b2a; font-size: 13px; line-height: 1.4; overflow-wrap: anywhere; }
+.practice-warn b { font-size: 14px; }

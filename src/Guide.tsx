@@ -69,7 +69,7 @@ export const STEPS: GStep[] = [
   { id: 'focus', at: 'any', text: () => t('Type what you will do, then start', '写下你要做的事，点开始'), target: (c) => (c.s.phase === 'focus' ? { sel: '.panel .foot .btn.primary' } : deskPath(c)),
     done: (c) => ['work', 'timesup', 'result'].includes(c.s.phase), hide: (c) => c.s.phase === 'tray' },
   { id: 'work', at: 'any', text: (c) => (ZH ? `你专注时，${c.name}在替你干活` : `While you focus, ${c.name} does the order`), target: () => ({ sel: '.focus-card', pop: false }), ok: true, hide: (c) => c.s.phase !== 'work' },
-  { id: 'wait', at: 'any', text: () => t('Just one minute…', '只要 1 分钟……'), target: () => ({ sel: '.focus-card .fill-row', pop: false }),
+  { id: 'wait', at: 'any', text: () => t('Just one minute… You can stop early, but only a finished order pays', '只要 1 分钟……可以提前结束，但做完才有奖励'), target: () => ({ sel: '.focus-card', pop: false }),
     done: (c) => ['timesup', 'result'].includes(c.s.phase), hide: (c) => c.s.phase !== 'work' },
   { id: 'finish', at: 'any', text: () => t('Done!', '完成啦！'), target: () => ({ sel: '.side .btn.primary' }), done: (c) => c.s.phase === 'result', hide: (c) => c.s.phase !== 'timesup' },
   { id: 'gain', at: 'any', text: () => t('Coins, XP and a heart', '金币、经验和心，到手'), target: () => ({ sel: '.result-wrap .gain', pop: false }), ok: true, hide: (c) => c.s.phase !== 'result' },
@@ -77,7 +77,7 @@ export const STEPS: GStep[] = [
   { id: 'back', at: 'any', text: () => t('Back to your desk', '回工位'), target: () => ({ sel: '.result-wrap .side .btn.primary' }), done: (c) => c.s.phase !== 'result', hide: (c) => c.s.phase !== 'result' },
   { id: 'mail', at: 'desk', text: () => t('You have mail! It comes to your computer', '有你的信！信都寄到电脑里'), target: (c) => (!c.pcOpen ? { sel: '.pc-hot', pop: false } : has('.mb-row.new') ? { sel: '.mb-row.new' } : { sel: '.dock-app[data-key="mail"]' }), done: (c) => c.mail || !c.s.notes.length, hide: (c) => c.s.phase === 'result' },
   { id: 'decor', at: 'desk', text: () => t('Drag things around your desk, or into the backpack', '拖动东西布置工位，或者收进背包'), target: () => ({ sel: '.desk-storage', pop: false }), ok: true, hide: (c) => c.mail },
-  { id: 'end', at: 'any', text: () => t("That's everything! Take a real order whenever you're ready", '全都会啦！准备好了就接一张真正的工作单吧'), target: () => null, ok: true, hide: (c) => c.mail, chain: GOAL },
+  { id: 'end', at: 'any', text: () => t("That's all of orientation! Time to clock out and head home", '入职培训全部完成！该下班回家啦'), target: () => null, ok: true, hide: (c) => c.mail, chain: GOAL },
 ];
 
 // ---- little tips that show up once, at the moment they matter (and only when the first-day guide is done)
