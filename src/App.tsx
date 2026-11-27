@@ -173,6 +173,9 @@ export default function App() {
     if (finished && tt.have.includes('iced_coffee') && !used.includes('iced_coffee')) { coins = Math.round(base * 1.5); used.push('iced_coffee'); bonus.push(ZH ? `冰咖啡：+${coins - base} 金币` : `Iced coffee: +${coins - base} coins`); }
     if (finished && tt.have.includes('strawberry_milk')) { const x0 = xp; xp = Math.round(x0 * 1.1); bonus.push(ZH ? `草莓牛奶：+${xp - x0} 经验` : `Strawberry milk: +${xp - x0} XP`); }
     if (finished && tt.have.includes('matcha_latte')) { extraMins = 10; bonus.push(t('Matcha latte: +10 piggy bank minutes', '抹茶拿铁：存钱罐 +10 分钟')); }
+    // working at the weekend is optional: it pays 1.5x, and never counts for or against attendance
+    const wd = new Date().getDay();
+    if ((wd === 0 || wd === 6) && !o.practice && (coins || xp)) { const c0 = coins, x0 = xp; coins = Math.round(coins * 1.5); xp = Math.round(xp * 1.5); bonus.push(ZH ? `周末加班 ×1.5：+${coins - c0} 金币，+${xp - x0} 经验` : `Weekend work ×1.5: +${coins - c0} coins, +${xp - x0} XP`); }
     const g0 = gradeOf(s.xp), g1 = gradeOf(s.xp + xp);
     if (g1 > g0) setTimeout(() => play('heart_level', 0.6), 1200);
     const result: Result = { finished, coins, xp, promoted: g1 > g0 ? g1 : undefined, who: o.who, heartBefore: before, heartAfter: after, minutes: worked, bonus };

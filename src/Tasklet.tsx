@@ -232,7 +232,7 @@ function ChatApp({ s, name, chrome, up, openMeet }: { s: Save; name: string; chr
           <div className="ch-conv on"><Head id={boss.id} size={30} /><span><b>{boss.name}</b><small>{boss.role}</small></span></div>
           <div className="ch-rules"><b>{tx('Your job', '你的工作要求')}</b><span>{rule}</span>
             {on ? <span className="ch-today">{ZH ? `今天：${r.clockIn !== null ? (clocked !== undefined ? `${fmtClock(clocked)} 已打卡 · ` : '还没打卡 · ') : ''}已专注 ${mins} / ${r.minFocus} 分钟` : `Today: ${r.clockIn !== null ? (clocked !== undefined ? `clocked in ${fmtClock(clocked)} · ` : 'not clocked in · ') : ''}${mins} / ${r.minFocus} min focus`}</span>
-              : <span className="ch-today">{tx('Weekend: no rules today. Rest up.', '周末：今天没有要求，好好休息。')}</span>}
+              : <span className="ch-today">{tx('Weekend: no rules today. Rest up, or work if you like: it pays 1.5x.', '周末：今天没有要求。好好休息；想加班也可以，收获 1.5 倍。')}</span>}
           </div>
         </aside>
         <section className="ch-main">

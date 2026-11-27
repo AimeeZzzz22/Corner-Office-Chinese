@@ -42,7 +42,16 @@ function drawDesk(x: CanvasRenderingContext2D, pics: Pics, place: Place, sheet: 
     x.globalAlpha = opts.lifted === it.id ? 0.3 : 1;
     if (it.src) {   // from a blind pack or the shop; a picture on the wall slants with the wall (2:1, like the shelves)
       if (!pics.atlas.complete) continue;
-      if (lean) { x.save(); x.translate(at[0], at[1]); x.transform(1, lean * 0.5, 0, 1, 0, 0); x.drawImage(pics.atlas, it.src[0], it.src[1], it.src[2], it.src[3], -bw / 2, -bh, bw, bh); x.restore(); }
+      if (lean) {
+        // hung on the wall: the picture keeps its own look (upright), on a string from a little nail, tipped a touch
+        // towards the wall's slope, with a soft shadow on the wall behind it
+        const top = at[1] - bh, nailY = top - 16, a = lean * 0.04;
+        x.save(); x.fillStyle = 'rgba(90, 60, 40, 0.16)';
+        x.beginPath(); x.moveTo(at[0] - bw / 2 + 6, top + 8 + lean * -3); x.lineTo(at[0] + bw / 2 + 6, top + 8 + lean * 3); x.lineTo(at[0] + bw / 2 + 6, at[1] + 6 + lean * 3); x.lineTo(at[0] - bw / 2 + 6, at[1] + 6 + lean * -3); x.closePath(); x.fill();
+        x.strokeStyle = '#6b5040'; x.lineWidth = 2; x.beginPath(); x.moveTo(at[0] - bw * 0.3, top + 4 - lean * bw * 0.3 * a); x.lineTo(at[0], nailY); x.lineTo(at[0] + bw * 0.3, top + 4 + lean * bw * 0.3 * a); x.stroke();
+        x.translate(at[0], top); x.rotate(a); x.drawImage(pics.atlas, it.src[0], it.src[1], it.src[2], it.src[3], -bw / 2, 0, bw, bh); x.restore();
+        x.fillStyle = '#4a3a30'; x.fillRect(at[0] - 3, nailY - 3, 6, 6); x.fillStyle = '#c9b8a0'; x.fillRect(at[0] - 2, nailY - 2, 2, 2);
+      }
       else x.drawImage(pics.atlas, it.src[0], it.src[1], it.src[2], it.src[3], at[0] - bw / 2, at[1] - bh, bw, bh);
       continue;
     }
