@@ -21,6 +21,8 @@ import { Unwrap } from './Desk';
 import { freeSlot } from './deskSlots';
 import type { Tile } from './Office';
 import { Coach, GCtx, STEPS, TIPS, gEmit } from './Guide';
+import { ChatMsg, MEET_CHOICES, checkLate, clockIn, fmtClock, minsNow, rulesOf, ruled, unreadChat, weekReview, QUICK_LATE, bossLine } from './work';
+import { GoHome, Meeting } from './Work';
 
 const A = `${import.meta.env.BASE_URL}assets/`;
 const mmss = (ms: number) => { const s = Math.max(0, Math.ceil(ms / 1000)); return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`; };
@@ -88,6 +90,19 @@ export default function App() {
   const [copied, setCopied] = useState(false);
   const [side, setSide] = useState<'left' | 'right'>('left');
   const up = useCallback((p: Partial<Save>) => setS((o) => ({ ...o, ...p })), []);
+  // the job: a clock-in check every minute (Stitchlight), and the weekly review on the first visit of a new week
+  const working = s.phase === 'free' || s.phase === 'desk';
+  useEffect(() => { if (!working) return; const tick = () => setS((o) => { const p = checkLate(o); return p ? { ...o, ...p } : o; }); tick(); const id = setInterval(tick, 60000); return () => clearInterval(id); }, [working]);
+  useEffect(() => { if (working) setS((o) => { const p = weekReview(o, weekStart, weekKey()); return p ? { ...o, ...p } : o; }); }, [working]);
+  const rules = rulesOf(s), needClock = working && rules.clockIn !== null && ruled(s) && s.clock[new Date().toDateString()] === undefined;
+  const [clockToast, setClockToast] = useState<string | null>(null);
+  const [meet, setMeet] = useState<ChatMsg | null>(null);
+  const [loadPhase] = useState(s.phase);   // reloading while at home starts again at the morning alarm
+  const [goHomeFresh, setGoHomeFresh] = useState(false);
+  // a new message from the boss pops up as a small toast in the office or at the desk
+  const lastBoss = [...s.chat].reverse().find((m) => m.from !== 'me');
+  const [toastFor, setToastFor] = useState(0);
+  useEffect(() => { if (lastBoss && lastBoss.id > s.chatSeen) { setToastFor(lastBoss.id); const id = setTimeout(() => setToastFor(0), 9000); return () => clearTimeout(id); } }, [lastBoss?.id]);
   const co = COMPANIES[s.company], host = COWORKERS[co.host], myLabels = s.labelsBy[s.company] ?? null;
   const onLabels = useCallback((rows: string[], d: string[]) => { setCopied(false); setS((o) => ({ ...o, labelsBy: { ...o.labelsBy, [o.company]: rows.join() === d.join() ? undefined : rows } })); }, []);
   const setLabels = (rows: string[] | undefined) => setS((o) => ({ ...o, labelsBy: { ...o.labelsBy, [o.company]: rows } }));
@@ -229,6 +244,10 @@ export default function App() {
           {!ZH && <button className="btn ghost" onClick={() => { tap(); setSettings(false); setVibes(true); }}>{t('Work vibe gallery', '工作风格总览')}</button>}
           <button className="btn ghost" onClick={() => { tap(); setSettings(false); setWeek({ start: weekStart().getTime(), sample: true }); }}>{t('See a sample week (test)', '看一个示例周（测试）')}</button>
           <button className="btn ghost" onClick={() => { tap(); setSettings(false); up({ started: Math.min(s.started, Date.now() - WEEK_MS - 1000), recapWeek: '' }); setTimeout(() => recap(true), 50); }}>{t('Jump a week ahead (test)', '快进一周（测试）')}</button>
+          <button className="btn ghost" onClick={() => { tap(); setSettings(false); up({ chat: [...s.chat, { id: Date.now(), from: rules.boss, at: Date.now(), text: bossLine('late', rules.boss, s.chat.length), kind: 'late', replies: QUICK_LATE() }] }); }}>{t('Boss: no clock-in (test)', '上司：没打卡（测试）')}</button>
+          <button className="btn ghost" onClick={() => { tap(); setSettings(false); const p = weekReview(s, weekStart, weekKey(), 'award'); if (p) up(p); }}>{t('Boss: perfect week (test)', '上司：全勤奖（测试）')}</button>
+          <button className="btn ghost" onClick={() => { tap(); setSettings(false); const p = weekReview(s, weekStart, weekKey(), 'meet'); if (p) up(p); }}>{t('Boss: one-to-one (test)', '上司：约谈（测试）')}</button>
+          <button className="btn ghost" onClick={() => { tap(); setSettings(false); setPcOpen(false); setGoHomeFresh(true); up({ phase: 'home' }); }}>{t('Go home after orientation (test)', '入职结束回家（测试）')}</button>
           <button className="btn ghost" onClick={() => { tap(); setSettings(false); bdayCard(true); }}>{t('Birthday card (test)', '生日贺卡（测试）')}</button>
           <button className="btn ghost" onClick={() => { tap(); const all: (Holiday | null)[] = ['winter', 'lunar', 'love', 'spooky', null]; setDecoPreview(all[(all.indexOf(deco) + 1) % all.length]); }}>{t('Next holiday decorations (test)', '换个节日装饰（测试）')}{deco ? ` · ${deco}` : ''}</button>
           <button className="btn ghost" onClick={() => { tap(); setSettings(false); setWelcomeBack(true); }}>{t('Welcome-back card (test)', '欢迎回来卡片（测试）')}</button>
@@ -294,7 +313,7 @@ export default function App() {
         </>
       )}
 
-      {pcOpen && s.phase === 'desk' && <Computer s={s} name={name} practice={s.guide >= 0 && s.guide <= STEPS.findIndex((x) => x.id === 'practice')} openShop={(t) => { setShop(t); }} openMail={(note, opened) => { if (note.kind === 'recap') { if (!opened) up({ notes: s.notes.filter((x) => x.id !== note.id), mailbox: [note, ...s.mailbox].slice(0, 40) }); setWeek({ start: new Date(note.week).getTime() }); } else setMail({ note, opened }); }} close={() => setPcOpen(false)} take={(p) => { setPcOpen(false); setFromDesk(true); up({ phase: 'focus', picked: p }); }} />}
+      {pcOpen && s.phase === 'desk' && <Computer s={s} name={name} practice={s.guide >= 0 && s.guide <= STEPS.findIndex((x) => x.id === 'practice')} openShop={(t) => { setShop(t); }} openMail={(note, opened) => { if (note.kind === 'recap') { if (!opened) up({ notes: s.notes.filter((x) => x.id !== note.id), mailbox: [note, ...s.mailbox].slice(0, 40) }); setWeek({ start: new Date(note.week).getTime() }); } else setMail({ note, opened }); }} close={() => setPcOpen(false)} take={(p) => { setPcOpen(false); setFromDesk(true); up({ phase: 'focus', picked: p }); }} upChat={up} openMeet={(m) => { setPcOpen(false); setMeet(m); }} />}
       {s.phase === 'tray' && <Tray s={s} name={name} pick={(p) => { tap(); up({ picked: p }); }} back={() => { tap(); up({ phase: 'free' }); }} next={() => { tap(); up({ phase: 'focus' }); }} />}
       {s.phase === 'focus' && s.picked && <Focus s={s} name={name} back={() => { tap(); if (fromDesk) { setPcOpen(true); up({ phase: 'desk' }); } else up({ phase: 'tray' }); }} start={start} />}
 
@@ -371,14 +390,23 @@ export default function App() {
         play(n.kind === 'payday' || n.kind === 'birthday' ? 'coins_many' : 'heart_pop', 0.5);
         up({ notes: s.notes.filter((x) => x.id !== n.id), mailbox: [n, ...s.mailbox.filter((x) => x.id !== n.id)].slice(0, 40), coins: s.coins + (n.kind === 'payday' || n.kind === 'birthday' ? n.coins : 0) });
         if (wk) setWeek({ start: new Date(n.week).getTime() }); }} />}
-      {s.guide >= 0 && !onboarding && !editing && <Coach c={gctx} st={STEPS[s.guide]} step={s.guide} total={STEPS.length} stage={stage} next={() => up({ guide: s.guide + 1 >= STEPS.length ? -1 : s.guide + 1 })} skip={() => { tap(); up({ guide: -1 }); }} />}
+      {s.guide >= 0 && !onboarding && !editing && s.phase !== 'home' && <Coach c={gctx} st={STEPS[s.guide]} step={s.guide} total={STEPS.length} stage={stage} next={() => up({ guide: s.guide + 1 >= STEPS.length ? -1 : s.guide + 1 })} skip={() => { tap(); up({ guide: -1 }); }} />}
       {tip && s.guide < 0 && (() => { const tp = TIPS.find((x) => x.id === tip.id)!; return <Coach key={tip.id} tip c={gctx} st={tp.steps[tip.i]} step={tip.i} total={tp.steps.length} stage={stage}
         next={() => (tip.i + 1 >= tp.steps.length ? endTip(true) : setTip({ id: tip.id, i: tip.i + 1 }))} skip={() => { tap(); endTip(true); }} />; })()}
       {vibes && <VibeGallery sheet={sheet} who={name} close={() => setVibes(false)} />}
+      {needClock && !pcOpen && <button className="clockin" onClick={() => { const at = minsNow(); const late = rules.clockIn !== null && at > rules.clockIn + rules.grace; play(late ? 'ui_tap' : 'coin', 0.5); up(clockIn(s)); setClockToast(late ? (ZH ? `${fmtClock(at)} 打卡（稍微晚了一点）` : `Clocked in at ${fmtClock(at)} (a little late)`) : (ZH ? `${fmtClock(at)} 准时打卡 ✓` : `Clocked in at ${fmtClock(at)}, on time ✓`)); setTimeout(() => setClockToast(null), 3200); }}>
+        <i>🕘</i><span><b>{t('Clock in', '打卡')}</b><small>{ZH ? `上班 ${fmtClock(rules.clockIn!)} · 现在 ${fmtClock(minsNow())}` : `Starts ${fmtClock(rules.clockIn!)} · now ${fmtClock(minsNow())}`}</small></span></button>}
+      {clockToast && <div className="clock-toast">{clockToast}</div>}
+      {working && toastFor > s.chatSeen && lastBoss && lastBoss.from !== 'me' && !pcOpen && <button className="chat-toast" onClick={() => { tap(); setToastFor(0); }}>
+        <Head id={lastBoss.from} size={30} /><span><b>{COWORKERS[lastBoss.from].name}</b><small>{lastBoss.text}</small><em>{t('Reply in Chat on your computer', '去电脑的「消息」里回复')}</em></span></button>}
+      {meet && <Meeting s={s} msg={meet} close={(choice) => { const b = rules.boss as 'margaux' | 'rio', c = MEET_CHOICES().find((x) => x.key === choice); const id = meet.id; setMeet(null); if (!c) return;
+        const now = Date.now(); up({ chat: [...s.chat.map((m) => (m.id === id ? { ...m, done: true } : m)), { id: now, from: 'me', at: now, text: c.text }, { id: now + 1, from: rules.boss, at: now + 1, text: c.reply[b] }], chatSeen: now + 1 }); }} />}
+      {s.phase === 'home' && <GoHome s={s} name={name} fresh={goHomeFresh || loadPhase !== 'home'} start={() => { setGoHomeFresh(false); const d = new Date().toDateString(); up({ phase: 'free', guide: 0, day1: d, clock: rules.clockIn !== null ? { [d]: minsNow() } : {} }); }} />}
       {welcomeBack && (() => {
         const b = piggyToday(s.blind), pal = co.people.filter((p) => s.hearts[p] >= HEART_POINTS).sort((a, b2) => s.hearts[b2] - s.hearts[a])[0];
         const newMonth = new Date(away).getMonth() !== new Date().getMonth(), feat = featured();
         const rows: [string, string][] = [];
+        if (unreadChat(s)) rows.push(['💬', ZH ? `${COWORKERS[rulesOf(s).boss].name}给你发了 ${unreadChat(s)} 条消息（在电脑的「消息」里）` : `${COWORKERS[rulesOf(s).boss].name} sent you ${unreadChat(s)} message${unreadChat(s) > 1 ? 's' : ''} (in Chat on your computer)`]);
         if (s.notes.length) rows.push(['✉️', ZH ? `电脑信箱里有 ${s.notes.length} 封新信` : `${s.notes.length} new letter${s.notes.length > 1 ? 's' : ''} in your Mail`]);
         if (b.ready) rows.push(['🎁', ZH ? `${b.ready} 个盲包等你拆` : `${b.ready} blind pack${b.ready > 1 ? 's' : ''} waiting`]);
         if (s.fridge.day === new Date().toDateString() && s.fridge.item) rows.push(['🧁', t("There's something in the fridge today", '今天冰箱里有好吃的')]);

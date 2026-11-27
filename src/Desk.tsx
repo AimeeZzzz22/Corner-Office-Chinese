@@ -164,7 +164,7 @@ export default function DeskView({ s, sheet, up, mode, openPc, leave }: {
           </div>); })()}
         {/* your computer: click it to use it */}
         {mode === 'desk' && <button className="pc-hot" style={{ ...pct(585, 288), width: `${(110 / W) * 100}%`, height: `${(98 / H) * 100}%` }}
-          onPointerDown={(e) => e.stopPropagation()} onClick={() => { tap(); openPc?.(); }} aria-label={t('Use the computer', '用电脑')}><span>{t('Tasklet', '任务夹')}</span>{s.notes.length > 0 && <i className="pc-mailflag"><b>✉</b>{s.notes.length}</i>}</button>}
+          onPointerDown={(e) => e.stopPropagation()} onClick={() => { tap(); openPc?.(); }} aria-label={t('Use the computer', '用电脑')}><span>{t('Tasklet', '任务夹')}</span>{(() => { const c = s.chat.filter((m) => m.from !== 'me' && m.id > s.chatSeen).length, n = s.notes.length + c; return n > 0 && <i className="pc-mailflag"><b>{c ? '💬' : '✉'}</b>{n}</i>; })()}</button>}
         {/* spots an item can go: shown while one is picked up */}
         {marks.map((sl) => (
           <button key={sl.id} className={`slot-mark${sl.id === showFor!.from ? ' here' : ''}`} style={pct(sl.at[0], sl.at[1])} aria-label={t('Put it here', '放在这里')}
@@ -210,7 +210,7 @@ export default function DeskView({ s, sheet, up, mode, openPc, leave }: {
               <div className="row"><button className="linkish" onClick={() => { tap(); setTut(TUT.length); }}>{t('Skip', '跳过')}</button>
                 <button className="btn ghost" onClick={() => { tap(); setTut(tut + 1); }}>{tut === TUT.length - 1 ? t('Got it', '知道啦') : t('Next', '下一步')}</button></div></div>
           </>}
-          {all && tut >= TUT.length && <div className="between foot"><span /><button className="btn primary" onClick={() => { tap(); up({ phase: 'free', surprise: s.surprise === 'opened' ? 'opened' : 'waiting', guide: 0 }); }}>{t('Head into the office →', '去办公室转转 →')}</button></div>}
+          {all && tut >= TUT.length && <div className="between foot"><span /><button className="btn primary" onClick={() => { tap(); up({ phase: 'home', surprise: s.surprise === 'opened' ? 'opened' : 'waiting' }); }}>{t('Wrap up orientation →', '结束入职培训 →')}</button></div>}
         </div>)}
       {mode === 'desk' && !placing && (
         <div className="desk-bar">

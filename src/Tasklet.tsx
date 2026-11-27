@@ -7,6 +7,7 @@ import { gEmit } from './Guide';
 import { Note, Save } from './state';
 import { play } from './sfx';
 import { ZH, t as tx } from './lang';
+import { ChatMsg, fmtClock, focusOn, minsNow, rulesOf, ruled } from './work';
 
 const A = `${import.meta.env.BASE_URL}assets/`;
 const tap = () => play('ui_tap', 0.4);
@@ -23,9 +24,9 @@ type Pick = NonNullable<Save['picked']>;
 // Tasklet holds the new work orders and everything the character has done. Close the app to get back to the
 // desktop; leave the computer to get back to the desk.
 type Tab = 'new' | 'past' | 'team';
-export default function Computer({ s, name, close, take, openShop, openMail, practice }: { s: Save; name: string; close: () => void; take: (p: Pick) => void; openShop: (t: 'shop' | 'blind') => void; openMail: (n: Note, opened: boolean) => void; practice?: boolean }) {
-  const [app, setAppRaw] = useState<Tab | 'mail' | null>(null);
-  const setApp = (a: Tab | 'mail' | null) => { if (a === 'new') gEmit('tasklet'); setAppRaw(a); setMin(false); setZoomed(false); };
+export default function Computer({ s, name, close, take, openShop, openMail, practice, upChat, openMeet }: { s: Save; name: string; close: () => void; take: (p: Pick) => void; openShop: (t: 'shop' | 'blind') => void; openMail: (n: Note, opened: boolean) => void; practice?: boolean; upChat: (p: Partial<Save>) => void; openMeet: (m: ChatMsg) => void }) {
+  const [app, setAppRaw] = useState<Tab | 'mail' | 'chat' | null>(null);
+  const setApp = (a: Tab | 'mail' | 'chat' | null) => { if (a === 'new') gEmit('tasklet'); setAppRaw(a); setMin(false); setZoomed(false); };
   // the window's controls: minimised = tucked into its dock icon (kept as it was); zoomed = filling the whole screen
   const [min, setMin] = useState(false), [zoomed, setZoomed] = useState(false), [tuck, setTuck] = useState<{ x: number; y: number } | null>(null);
   const winRef = useRef<HTMLDivElement>(null);
@@ -51,10 +52,12 @@ export default function Computer({ s, name, close, take, openShop, openMail, pra
                 <span className="pc-icon-img"><i /><i /><i /></span><span>{tx('Tasklet', '任务夹')}</span>{/* a number badge here is kept for later: messages from coworkers, not orders you haven't taken */}
               </button>
             </div>
-            {app && app !== 'mail' && <Tasklet key={app} s={s} name={name} tab0={app} practice={practice} chrome={chrome} take={take} />}
+            {app === 'chat' && <ChatApp s={s} name={name} chrome={chrome} up={upChat} openMeet={openMeet} />}
+            {app && app !== 'mail' && app !== 'chat' && <Tasklet key={app} s={s} name={name} tab0={app} practice={practice} chrome={chrome} take={take} />}
             {app === 'mail' && <MailApp s={s} name={name} open={openMail} chrome={chrome} />}
-            <MagnifyDock open={(k) => (k === 'shop' || k === 'blind' ? openShop(k) : k === app && min ? setMin(false) : setApp(k as Tab | 'mail'))} apps={[
+            <MagnifyDock open={(k) => (k === 'shop' || k === 'blind' ? openShop(k) : k === app && min ? setMin(false) : setApp(k as Tab | 'mail' | 'chat'))} apps={[
               { key: 'new', label: tx('Tasklet', '任务夹'), icon: '📥', bg: '#f6d37a', badge: s.tray.length },
+              { key: 'chat', label: tx('Chat', '消息'), icon: '💬', bg: '#c6d8f7', badge: s.chat.filter((m) => m.from !== 'me' && m.id > s.chatSeen).length },
               { key: 'mail', label: tx('Mail', '信箱'), icon: '✉️', bg: '#f7c9a6', badge: s.notes.length },
               { key: 'team', label: tx('Coworkers', '同事'), icon: '👥', bg: '#a7d8b8' },
               { key: 'past', label: tx('Past orders', '历史工作单'), icon: '🗂', bg: '#b9c7f2' },
@@ -206,6 +209,53 @@ function SideBlob({ tab }: { tab: Tab }) {
 // New letters are sealed (a wax seal in the sender's colour, a stamp, "new"); clicking one opens it with the tear-open
 // envelope. Letters you've read stay here, flap open, to read again.
 const SEAL: Record<Note['kind'], { c: string; mark: string }> = { thanks: { c: '#e8708a', mark: '♥' }, payday: { c: '#e0a93a', mark: '¢' }, welcome: { c: '#5fb38a', mark: '★' }, recap: { c: '#6f8fe0', mark: '✎' }, birthday: { c: '#f2a65a', mark: '🎂' } };
+// Chat: a little work messenger. Your boss writes here: a worried note when you haven't clocked in, the
+// perfect-attendance bonus, a weekly word, and an invitation to a one-to-one when the daily minimum slipped.
+function ChatApp({ s, name, chrome, up, openMeet }: { s: Save; name: string; chrome: Chrome; up: (p: Partial<Save>) => void; openMeet: (m: ChatMsg) => void }) {
+  const r = rulesOf(s), boss = COWORKERS[r.boss], co = COMPANIES[s.company];
+  const last = s.chat.length ? s.chat[s.chat.length - 1].id : 0;
+  useEffect(() => { if (last > s.chatSeen) up({ chatSeen: last }); }, [last]);
+  const listRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => { listRef.current?.scrollTo({ top: 1e6 }); }, [s.chat.length]);
+  const say = (m: ChatMsg, text: string) => { tap(); up({ chat: [...s.chat.map((x) => (x.id === m.id ? { ...x, done: true } : x)), { id: Date.now(), from: 'me', at: Date.now(), text }] }); };
+  const today = new Date().toDateString(), mins = focusOn(s, today), on = ruled(s);
+  const clocked = s.clock[today];
+  const rule = r.clockIn !== null
+    ? (ZH ? `工作日 ${fmtClock(r.clockIn)} 前打卡 · 每天至少专注 ${r.minFocus} 分钟` : `Clock in by ${fmtClock(r.clockIn)} on weekdays · focus at least ${r.minFocus} min a day`)
+    : (ZH ? `不用打卡 · 每天至少专注 ${r.minFocus} 分钟` : `No clock-in · focus at least ${r.minFocus} min a day`);
+  return (
+    <div className={winCls(chrome, ' ch-win')} style={winStyle(chrome)}>
+      <div className="pc-title" onDoubleClick={chrome.onTitle}>{chrome.dots}<b>{tx('Chat', '消息')}</b></div>
+      <div className="ch-body">
+        <aside className="ch-side">
+          <div className="ch-me"><span className="ch-dot" />{name}<small>{co.role}</small></div>
+          <div className="ch-conv on"><Head id={boss.id} size={30} /><span><b>{boss.name}</b><small>{boss.role}</small></span></div>
+          <div className="ch-rules"><b>{tx('Your job', '你的工作要求')}</b><span>{rule}</span>
+            {on ? <span className="ch-today">{ZH ? `今天：${r.clockIn !== null ? (clocked !== undefined ? `${fmtClock(clocked)} 已打卡 · ` : '还没打卡 · ') : ''}已专注 ${mins} / ${r.minFocus} 分钟` : `Today: ${r.clockIn !== null ? (clocked !== undefined ? `clocked in ${fmtClock(clocked)} · ` : 'not clocked in · ') : ''}${mins} / ${r.minFocus} min focus`}</span>
+              : <span className="ch-today">{tx('Weekend: no rules today. Rest up.', '周末：今天没有要求，好好休息。')}</span>}
+          </div>
+        </aside>
+        <section className="ch-main">
+          <div className="ch-head"><Head id={boss.id} size={26} /><b>{boss.name}</b><span className={`ch-status${minsNow() >= 9 * 60 && minsNow() < 18 * 60 ? ' in' : ''}`}>{minsNow() >= 9 * 60 && minsNow() < 18 * 60 ? tx('Available', '在线') : tx('Away', '离开')}</span></div>
+          <div className="ch-list" ref={listRef}>
+            {!s.chat.length && <div className="ch-empty">💬<span>{ZH ? `${boss.name}还没给你发消息。正式上班后，上司会在这里找你。` : `No messages from ${boss.name} yet. Once your first real day starts, your boss writes here.`}</span></div>}
+            {s.chat.map((m) => m.from === 'me'
+              ? <div key={m.id} className="ch-msg me"><p>{m.text}</p><time>{when(m.at)}</time></div>
+              : <div key={m.id} className={`ch-msg${m.kind ? ' k-' + m.kind : ''}`}><Head id={m.from} size={26} /><div>
+                  <p>{m.text}</p>
+                  {m.kind === 'award' && (m.done ? <span className="ch-got">{ZH ? `已领取 ${m.coins} 金币 ✓` : `Collected ${m.coins} coins ✓`}</span>
+                    : <button className="btn primary sm" onClick={() => { play('coin', 0.6); up({ coins: s.coins + (m.coins ?? 0), chat: s.chat.map((x) => (x.id === m.id ? { ...x, done: true } : x)) }); }}>{ZH ? `领取全勤奖 ${m.coins} 金币` : `Collect ${m.coins} coins`}</button>)}
+                  {m.kind === 'meet' && (m.done ? <span className="ch-got">{tx('Talked it through ✓', '已经聊过了 ✓')}</span>
+                    : <button className="btn primary sm" onClick={() => { tap(); openMeet(m); }}>{r.boss === 'rio' ? tx('Grab that coffee', '去喝咖啡') : tx('Go to the one-to-one', '去约谈')}</button>)}
+                  {m.replies && !m.done && <div className="ch-quick">{m.replies.map((q) => <button key={q} onClick={() => say(m, q)}>{q}</button>)}</div>}
+                  <time>{when(m.at)}</time></div></div>)}
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
 function MailApp({ s, name, open, chrome }: { s: Save; name: string; open: (n: Note, opened: boolean) => void; chrome: Chrome }) {
   const co = COMPANIES[s.company];
   const fresh = [...s.notes].sort((a, b) => b.id - a.id), kept = s.mailbox;

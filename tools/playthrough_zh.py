@@ -55,7 +55,9 @@ async def main():
             if k==0: await shot('gift_reveal')
             await pg.click('text=放在我的桌上'); await pg.wait_for_timeout(400)
         for i in range(4): await shot(f'tut{i}'); await pg.locator('.gift-card .btn.ghost').click(); await pg.wait_for_timeout(300)
-        await shot('tut_done'); await pg.click('text=去办公室转转'); await pg.wait_for_timeout(1500); await shot('office')
+        await shot('tut_done'); await pg.click('text=结束入职培训'); await pg.wait_for_timeout(300)
+        for _ in range(8): await pg.click('.gh'); await pg.wait_for_timeout(150)
+        await pg.click('.gh-clock'); await pg.wait_for_timeout(300); await pg.click('.gh-btns .btn.primary'); await pg.wait_for_timeout(1500); await shot('office')
         # the welcome gift
         spots=json.loads(await pg.evaluate("JSON.stringify(null)"))
         cv=await (await pg.query_selector('.office canvas')).bounding_box(); k=cv['width']/512

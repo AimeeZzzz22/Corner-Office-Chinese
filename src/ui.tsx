@@ -1,3 +1,4 @@
+import { fmtClock, rulesOf, ruled } from './work';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { COMPANIES, COWORKERS, CoworkerId, HEART_POINTS, TaskType, TYPE_LABEL } from './data';
 import { STORY, STORY_AT, beatAt } from './stories';
@@ -196,7 +197,7 @@ export function PullSummary({ s, ready, earned, dayMax, treats, onWeek, weekOpen
   const today = s.history.filter((h) => sameDay(h.at));
   const done = today.filter((h) => h.finished).length, mins = today.reduce((a, h) => a + h.worked, 0), coins = today.reduce((a, h) => a + h.coins, 0);
   const clock = useClock(s.fast ? 60 : 1, 5000);
-  const CAP = 44, FULL = 286;
+  const CAP = 44, FULL = ruled(s) ? 314 : 286;
   const [h, setH] = useState(CAP), [dragging, setDragging] = useState(false);
   const drag = useRef<{ y: number; k: number; h0: number; moved: boolean } | null>(null);
   const open = h > CAP + 20;
@@ -220,6 +221,7 @@ export function PullSummary({ s, ready, earned, dayMax, treats, onWeek, weekOpen
           <div><span className="pix">{fmtMins(mins)}</span><small>{tr('focused', '专注时长')}</small></div>
           <div><span className="pix">{coins}</span><small>{tr('coins earned', '获得金币')}</small></div>
         </div>
+        {ruled(s) && (() => { const r = rulesOf(s), c = s.clock[new Date().toDateString()]; return <div className="pull-line"><b>{tr('Daily minimum', '每日要求')}</b><span className="pull-meter"><i style={{ width: `${Math.min(100, (mins / r.minFocus) * 100)}%` }} /></span><span className="sub">{mins >= r.minFocus ? tr('done ✓', '达成 ✓') : `${mins} / ${r.minFocus}${tr(' min', ' 分钟')}`}{r.clockIn !== null && (c !== undefined ? (ZH ? ` · ${fmtClock(c)} 打卡` : ` · in ${fmtClock(c)}`) : tr(' · not clocked in', ' · 未打卡'))}</span></div>; })()}
         <div className="pull-line"><b>{tr('Packs today', '今日卡包')}</b><span className="pull-dots">{Array.from({ length: dayMax }, (_, i) => <i key={i} className={i < earned ? 'on' : ''} />)}</span><span className="sub">{earned} / {dayMax}</span></div>
         <div className="pull-line"><b>{tr('Treats', '甜点')}</b><span className="sub">{treats.length ? treats.join(tr(', ', '、')) : tr('None today. The bakery is open.', '今天还没有。面包房开着呢。')}</span></div>
         <div className="pull-line"><b>{tr('Office time', '办公室时间')}</b><span className="sub">{hhmm(clock)}</span></div>
