@@ -5,9 +5,9 @@ import { t } from './lang';
 // Each item lists the kinds of slot it may go in, so a mug can be kept off the wall shelves, say.
 // To add a slot or let an item go somewhere new, edit the lists below.
 
-export type SlotKind = 'desk' | 'shelf';
+export type SlotKind = 'desk' | 'shelf' | 'wall';
 
-export interface Slot { id: string; kind: SlotKind; at: [number, number] }
+export interface Slot { id: string; kind: SlotKind; at: [number, number]; lean?: -1 | 1 }   // lean: which wall a hanging picture is on (it slants with the wall)
 export const SLOTS: Slot[] = [
   // desk top, left arm (front to back), then the right arm. Spots are evenly spaced along each arm, halfway between the front edge and the raised back shelf.
   { id: 'desk-l1', kind: 'desk', at: [388, 528] },
@@ -25,6 +25,12 @@ export const SLOTS: Slot[] = [
   { id: 'shelf-rt2', kind: 'shelf', at: [992, 268] },
   { id: 'shelf-rb1', kind: 'shelf', at: [896, 300] },
   { id: 'shelf-rb2', kind: 'shelf', at: [992, 348] },
+  // pictures and boards hang on the walls, clear of the shelves: above the desk either side of the corner, and under
+  // each window. They slant with their wall (left wall rises to the right, right wall falls to the right).
+  { id: 'wall-l1', kind: 'wall', at: [548, 222], lean: -1 },
+  { id: 'wall-r1', kind: 'wall', at: [732, 222], lean: 1 },
+  { id: 'wall-l2', kind: 'wall', at: [150, 452], lean: -1 },
+  { id: 'wall-r2', kind: 'wall', at: [1130, 452], lean: 1 },
 ];
 
 export interface DeskItem {
@@ -55,7 +61,7 @@ export const bbId = (id: string) => `bb:${id}`;
 const BLIND = new Map<string, DeskItem>();
 export function registerBlind(list: { id: string; name: string; x: number; y: number; w: number; h: number }[]) {
   for (const i of list) if (deskable(i.id)) BLIND.set(bbId(i.id), { id: bbId(i.id), name: i.name, line: '', box: [0, 0, i.w * 2, i.h * 2], src: [i.x, i.y, i.w, i.h],
-    fits: /^(wall_|trailing)/.test(i.id) ? ['shelf'] : ['desk', 'shelf'], home: '', starter: false });
+    fits: /^wall_/.test(i.id) ? ['wall'] : /^trailing/.test(i.id) ? ['shelf'] : ['desk', 'shelf'], home: '', starter: false });
 }
 export const item = (id: string): DeskItem => ITEMS.find((i) => i.id === id) ?? BLIND.get(id) ?? { id, name: '', line: '', box: [0, 0, 48, 48], fits: ['desk', 'shelf'], home: '', starter: false };
 export const slot = (id: string) => SLOTS.find((s) => s.id === id)!;

@@ -36,11 +36,16 @@ function usePics(pet: string): Pics {
 function drawDesk(x: CanvasRenderingContext2D, pics: Pics, place: Place, sheet: HTMLCanvasElement | null, t: number, opts: { lifted?: string | null; walk?: boolean; treats?: string[] } = {}) {
   x.clearRect(0, 0, W, H);
   if (pics.back.complete) x.drawImage(pics.back, 0, 0);
-  const on = Object.entries(place).filter(([, sl]) => sl).map(([id, sl]) => ({ it: item(id), at: slot(sl!).at })).sort((a, b) => a.at[1] - b.at[1]);
-  for (const { it, at } of on) {
+  const on = Object.entries(place).filter(([, sl]) => sl).map(([id, sl]) => ({ it: item(id), at: slot(sl!).at, lean: slot(sl!).lean ?? 0 })).sort((a, b) => a.at[1] - b.at[1]);
+  for (const { it, at, lean } of on) {
     const [bx, by, bw, bh] = it.box;
     x.globalAlpha = opts.lifted === it.id ? 0.3 : 1;
-    if (it.src) { if (pics.atlas.complete) x.drawImage(pics.atlas, it.src[0], it.src[1], it.src[2], it.src[3], at[0] - bw / 2, at[1] - bh, bw, bh); continue; }   // from a blind pack or the shop
+    if (it.src) {   // from a blind pack or the shop; a picture on the wall slants with the wall (2:1, like the shelves)
+      if (!pics.atlas.complete) continue;
+      if (lean) { x.save(); x.translate(at[0], at[1]); x.transform(1, lean * 0.5, 0, 1, 0, 0); x.drawImage(pics.atlas, it.src[0], it.src[1], it.src[2], it.src[3], -bw / 2, -bh, bw, bh); x.restore(); }
+      else x.drawImage(pics.atlas, it.src[0], it.src[1], it.src[2], it.src[3], at[0] - bw / 2, at[1] - bh, bw, bh);
+      continue;
+    }
     const im = pics.items[it.id]; if (!im?.complete) continue;
     x.drawImage(im, bx, by, bw, bh, at[0] - bw / 2, at[1] - bh, bw, bh);
   }
@@ -95,7 +100,10 @@ export default function DeskView({ s, sheet, up, mode, openPc, leave }: {
   // things from blind packs and the shop live in the backpack too (also the ones bought before they did)
   const [, setReady] = useState(0);
   useEffect(() => { loadItems().then(() => { setReady((n) => n + 1); const miss = Object.keys(s.pack).filter((k) => s.pack[k] > 0 && deskable(k) && !s.desk.includes(bbId(k)));
-    if (miss.length) up({ desk: [...s.desk, ...miss.map(bbId)] }); }).catch(() => {}); }, []);
+    // anything sitting somewhere it no longer fits (a picture that was on a shelf) moves to a spot it does fit, or back into the backpack
+    const pl = { ...s.place }; let moved = false;
+    for (const [id, sl] of Object.entries(pl)) if (sl && !fits(id, sl)) { pl[id] = null; pl[id] = freeSlot(id, pl); moved = true; }
+    if (miss.length || moved) up({ desk: [...s.desk, ...miss.map(bbId)], place: pl }); }).catch(() => {}); }, []);
   const step = (from: number) => setTut((t) => (t === from ? from + 1 : t));
   const place = s.place, live = mode !== 'still';
   const st = useRef({ place, held, sheet, treats: treatsToday(s.treats).have }); st.current = { place, held, sheet, treats: treatsToday(s.treats).have };
