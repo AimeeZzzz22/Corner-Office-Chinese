@@ -3,7 +3,7 @@ import { COMPANIES, COWORKERS, CoworkerId } from './data';
 import { Save } from './state';
 import { play } from './sfx';
 import { ZH, t } from './lang';
-import { DIR_COL, compose, loadParts, randomLook } from './look';
+import { DIR_COL, Look, Parts, compose, loadParts, randomLook } from './look';
 import { ChatMsg, MEET_CHOICES, meetIntro, rulesOf } from './work';
 
 const A = `${import.meta.env.BASE_URL}assets/`;
@@ -23,6 +23,12 @@ function char(x: CanvasRenderingContext2D, sh: Sheet | null | undefined, col: nu
   x.drawImage(sh!, col * 16, row * 32 + r0, 16, r1 - r0, Math.round(cx * B - 8 * K), Math.round(feet * B - (32 - r0) * K), 16 * K, (r1 - r0) * K);
 }
 const fr = (t: number, fps = 4.5) => Math.floor(t * fps) % 6;
+// lying in bed on the left-hand pillow: the whole front-facing figure turned on its side, head to the headboard
+function lie(x: CanvasRenderingContext2D, sh: Sheet | null | undefined, wobble: number) {
+  if (!ok(sh as HTMLImageElement)) return;
+  x.save(); x.translate(231 * B, 88 * B); x.rotate(-Math.PI / 2 + wobble);
+  x.drawImage(sh!, DIR_COL.front * 16, 8, 16, 24, -8 * K, -12 * K, 16 * K, 24 * K); x.restore();
+}
 function zzz(x: CanvasRenderingContext2D, cx: number, cy: number, t: number, col = '#ffffff') {
   x.fillStyle = col; x.font = '700 22px "Pixelify Sans", monospace';
   for (let i = 0; i < 3; i++) { const k = ((t * 0.6 + i / 3) % 1); x.globalAlpha = Math.sin(k * Math.PI); x.fillText('z', cx + k * 40 + i * 4, cy - k * 70); }
@@ -101,6 +107,16 @@ export function Meeting({ s, msg, sheet, close }: { s: Save; msg: ChatMsg; sheet
   );
 }
 
+// the sleeper: the player's own look with the eyes closed (the eye layer left out, a little closed-eye line drawn
+// along the bottom of where the eyes were)
+function sleepSheet(p: Parts, look: Look) {
+  const c = compose(p, { ...look, eyes: -1 }), x = c.getContext('2d')!;
+  const e = document.createElement('canvas'); e.width = 384; e.height = 64; const ex = e.getContext('2d')!;
+  ex.drawImage(p.img.eyes, 0, look.eyes * 64, 384, 64, 0, 0, 384, 64);
+  const a = ex.getImageData(0, 0, 384, 32).data; x.fillStyle = '#3a2a36';
+  for (let col = 0; col < 384; col++) { let low = -1; for (let y = 0; y < 32; y++) if (a[(y * 384 + col) * 4 + 3] > 0) low = y; if (low >= 0) x.fillRect(col, low, 1, 1); }
+  return c;
+}
 // ================================================= going home after orientation =================================================
 // black screen with a few thoughts → walking out of the office at dusk → the train home → home, lamp on, into bed →
 // lights out → morning, the alarm rings → "Day 1. Start now?" (or stay in bed a little longer)
@@ -118,11 +134,12 @@ export function GoHome({ s, name, sheet, fresh, start }: { s: Save; name: string
   const co = COMPANIES[s.company], boss = COWORKERS[rulesOf(s).boss], r = rulesOf(s), host = co.host;
   const [stage, setStage] = useState<Stage>(fresh ? 'black' : 'alarm');
   const [line, setLine] = useState(0);
-  const imgs = useImages([`scene/home_exit_${s.company}.png`, 'scene/home_train.png', 'scene/home_city.png', 'scene/home_room_night.png', 'scene/home_blanket_night.png', 'scene/home_room_day.png', 'scene/home_blanket_day.png', `npc/${host}.png`]);
-  const [exitBg, trainBg, city, roomN, blanketN, roomD, blanketD, hostSheet] = imgs;
+  const imgs = useImages([`scene/home_exit_${s.company}.png`, 'scene/home_train.png', 'scene/home_city.png', 'scene/home_room_night.png', 'scene/home_blanket_night.png', 'scene/home_room_day.png', 'scene/home_blanket_day.png', `npc/${host}.png`, 'scene/home_blanket_day_sit.png', 'scene/home_blanket_night_sit.png']);
+  const [exitBg, trainBg, city, roomN, blanketN, roomD, blanketD, hostSheet, blanketSit, blanketMade] = imgs;
   // three strangers on the train, made from the same character parts as the player
   const [strangers, setStrangers] = useState<HTMLCanvasElement[]>([]);
-  useEffect(() => { loadParts().then((p) => setStrangers([0, 1, 2].map(() => compose(p, randomLook(p))))).catch(() => {}); }, []);
+  const [sleeper, setSleeper] = useState<HTMLCanvasElement | null>(null);
+  useEffect(() => { loadParts().then((p) => { setStrangers([0, 1, 2].map(() => compose(p, randomLook(p)))); setSleeper(sleepSheet(p, s.look)); }).catch(() => {}); }, []);
   const lines = [
     ZH ? `${co.name}的入职培训……终于结束了。` : `Orientation at ${co.name}... finally over.`,
     s.company === 'stitchlight'
@@ -132,9 +149,9 @@ export function GoHome({ s, name, sheet, fresh, start }: { s: Save; name: string
   ];
   const vibe = s.vibe && VIBE_LINE[s.vibe] ? s.vibe : 'stretcher';
   const cv = useRef<HTMLCanvasElement>(null);
-  const st = useRef({ stage, t0: performance.now(), sheet, strangers });
+  const st = useRef({ stage, t0: performance.now(), sheet, strangers, sleeper });
   useEffect(() => { st.current.stage = stage; st.current.t0 = performance.now(); }, [stage]);
-  st.current.sheet = sheet; st.current.strangers = strangers;
+  st.current.sheet = sheet; st.current.strangers = strangers; st.current.sleeper = sleeper;
   // move through the scenes on their own; a click skips ahead
   useEffect(() => {
     if (stage === 'black') { const id = setTimeout(() => (line < lines.length - 1 ? setLine(line + 1) : setStage('exit')), line < lines.length - 1 ? 2300 : 2600); return () => clearTimeout(id); }
@@ -151,7 +168,7 @@ export function GoHome({ s, name, sheet, fresh, start }: { s: Save; name: string
   useEffect(() => {
     const x = cv.current!.getContext('2d')!; x.imageSmoothingEnabled = false; let raf = 0;
     const draw = (now: number) => {
-      const { stage, t0, sheet, strangers } = st.current, t = (now - t0) / 1000, len = LEN[stage];
+      const { stage, t0, sheet, strangers, sleeper } = st.current, t = (now - t0) / 1000, len = LEN[stage];
       x.clearRect(0, 0, 1280, 720);
       if (stage === 'exit') {
         if (ok(exitBg)) x.drawImage(exitBg, 0, 0);
@@ -172,8 +189,8 @@ export function GoHome({ s, name, sheet, fresh, start }: { s: Save; name: string
         x.save(); x.translate(0, sway);
         if (ok(trainBg)) x.drawImage(trainBg, 0, 0);
         // people heading home: one reading the ads, one dozing, one looking out
-        [[36, 0], [100, 1], [272, 2]].forEach(([bx, i]) => { const sh = strangers[i]; if (sh) char(x, sh, DIR_COL.front + (i === 1 ? 0 : fr(t + i)), 0, bx, 113, 0, 27); });
-        if (strangers[1]) zzz(x, 100 * B + 20, 66 * B, t, '#f4f4f4');
+        [[36, 0], [100, 1], [272, 2]].forEach(([bx, i]) => { const sh = strangers[i]; if (sh) char(x, sh, DIR_COL.front + (i === 1 ? 0 : fr(t + i)), 0, bx, 125); });
+        if (strangers[1]) zzz(x, 100 * B + 20, 70 * B, t, '#f4f4f4');
         // you, by the pole, doing your thing
         const pcx = 180, feet = 150;
         if (vibe === 'spinner') { const d = [DIR_COL.front, DIR_COL.right, DIR_COL.back, DIR_COL.left][Math.floor(t * 2.5) % 4]; char(x, sheet, d, 0, pcx, feet); }
@@ -196,10 +213,10 @@ export function GoHome({ s, name, sheet, fresh, start }: { s: Save; name: string
           if (wt < 0) char(x, sheet, DIR_COL.front + fr(t), 0, 27, 140);
           else if (wt < 4.2) char(x, sheet, DIR_COL.right + fr(t, 8), 1, 27 + Math.min(1, wt / 4.2) * 180, 140);
           else char(x, sheet, DIR_COL.back, 0, 207, 140);
-          if (ok(blanketN)) x.drawImage(blanketN, 0, 0);
+          if (ok(blanketMade)) x.drawImage(blanketMade, 0, 0);
         } else {
           // lights out: the sleeper's head on the pillow, the quilt pulled up, moonlight through the window
-          x.save(); x.translate(222 * B, 89 * B); x.rotate(-Math.PI / 2); if (ok(sheet as HTMLImageElement)) x.drawImage(sheet!, DIR_COL.front * 16, 8, 16, 17, -8 * K, -8.5 * K, 16 * K, 17 * K); x.restore();
+          lie(x, sleeper ?? sheet, 0);
           if (ok(blanketN)) x.drawImage(blanketN, 0, 0);
           x.fillStyle = 'rgba(14,10,40,.42)'; x.fillRect(0, 0, 1280, 720);
           x.fillStyle = 'rgba(220,230,255,.13)'; x.beginPath(); x.moveTo(91 * B, 72 * B); x.lineTo(148 * B, 72 * B); x.lineTo(210 * B, 180 * B); x.lineTo(120 * B, 180 * B); x.closePath(); x.fill();
@@ -211,10 +228,10 @@ export function GoHome({ s, name, sheet, fresh, start }: { s: Save; name: string
         const ring = stage === 'alarm';
         if (stage === 'ask') {
           // awake: sitting up in bed, a big yawn
-          char(x, sheet, DIR_COL.front + fr(t), 0, 224, 98, 0, 27);
-          if (ok(blanketD)) x.drawImage(blanketD, 0, 0);
+          char(x, sheet, DIR_COL.front + fr(t), 0, 225, 105.5);
+          if (ok(blanketSit)) x.drawImage(blanketSit, 0, 0);
         } else {
-          x.save(); x.translate(222 * B, 89 * B); x.rotate(-Math.PI / 2 + (ring ? Math.sin(t * 30) * 0.03 : 0)); if (ok(sheet as HTMLImageElement)) x.drawImage(sheet!, DIR_COL.front * 16, 8, 16, 17, -8 * K, -8.5 * K, 16 * K, 17 * K); x.restore();
+          lie(x, sleeper ?? sheet, ring ? Math.sin(t * 30) * 0.02 : 0);
           if (ok(blanketD)) x.drawImage(blanketD, 0, 0);
           if (stage === 'bed') zzz(x, 232 * B, 80 * B, t, '#9a86c8');
         }

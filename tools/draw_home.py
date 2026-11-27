@@ -255,20 +255,38 @@ def bedroom(day):
             for x in range(80 + (y - 76) // 2, 160 + (y - 76) // 2):
                 if (x + y) % 2 == 0 and y > 108: p.px(x, y, (255, 240, 190, 70))
     p.save(OUT + f'home_room_{"day" if day else "night"}.png')
-    # blanket layer: a quilt over the sleeper, folded at the top
-    b = Pic(W, H)
+    # blanket layers: lying down (the quilt over the whole body, from the neck to the foot of the bed), and sitting up
+    # (the quilt over the lap). The sleeper's head rests on the pillow, the body runs to the right under the quilt.
     QU = hx('f4a9b8') if day else hx('8f6a9a'); QUD = hx('d98a9c') if day else hx('765682'); QUH = hx('fcd0da') if day else hx('a582b0')
-    for y in range(94, 112):
-        x0 = 236 - (2 if y > 98 else 0); b.hl(x0, 306, y, QU)
-    for x in range(238, 306, 10):
-        for y in range(100, 112, 6): b.px(x + (y // 6 % 2) * 5, y, QUH); b.px(x + 1 + (y // 6 % 2) * 5, y + 1, QUD)
-    b.rect(232, 92, 306, 97, hx('ffffff') if day else hx('d2cae6')); b.hl(232, 306, 97, QUD)
-    b.hl(232, 306, 91, OL); b.vl(231, 92, 99, OL); b.vl(233, 100, 112, OL); b.hl(233, 306, 112, OL); b.vl(306, 91, 112, OL)
-    # a soft lump where the knees are
-    b.ellipse(282, 92, 14, 4, QU); b.hl(270, 294, 88, OL)
-    for x in range(268, 297):
-        top = 92 - round(4 * math.sqrt(max(0, 1 - ((x - 282) / 14.5) ** 2))); b.px(x, top, OL)
-        for y in range(top + 1, 92): b.px(x, y, QU)
-    b.save(OUT + f'home_blanket_{"day" if day else "night"}.png')
+    SH = hx('ffffff') if day else hx('d2cae6'); SHD = hx('e6e0ee') if day else hx('b4abcc')
+    def quilt(x0, top_at, name):
+        q = Pic(W, H)
+        tops = {x: top_at(x) for x in range(x0, 307)}
+        for x, tp in tops.items():
+            for y in range(tp, 110): q.px(x, y, QU)
+            q.px(x, tp, OL); q.px(x, tp + 1, QUH)
+        for x in range(x0 + 6, 306):                     # quilted squares
+            for y in range(tops[x] + 4, 109):
+                if (x - x0) % 10 == 0 or (y - 96) % 7 == 0: q.px(x, y, QUD)
+        for x in range(x0 + 2, 306, 10):
+            for y in range(tops[x] + 6, 108, 7): q.px(x + 3, y + 3, QUH)
+        # the folded-back sheet along the edge near the sleeper's neck
+        for y in range(tops[x0], 110): q.rect(x0, y, x0 + 4, y, SH); q.px(x0 + 4, y, SHD)
+        q.vl(x0 - 1, tops[x0], 110, OL); q.hl(x0, 306, 110, OL); q.vl(306, tops[306] if 306 in tops else 96, 110, OL)
+        # hanging over the side of the bed
+        q.rect(x0, 106, 306, 112, QUD); q.hl(x0, 306, 112, OL); q.vl(x0 - 1, 106, 112, OL)
+        for x in range(x0 + 4, 306, 8): q.px(x, 113, QUD)
+        q.save(OUT + name)
+    # lying: high over the chest and tummy, sloping down to the feet
+    def lying(x):
+        if x < 240: return [79, 77, 76, 75][x - 236]          # a rounded edge at the shoulder
+        if x <= 252: return 75
+        return min(90, 75 + round((x - 252) * 0.3))
+    quilt(236, lying, f'home_blanket_{"day" if day else "night"}.png')
+    # sitting up: flat over the lap, a little bump at the knees
+    def sitting(x):
+        k = 274
+        return 98 - round(5 * math.sqrt(max(0, 1 - ((x - k) / 16) ** 2)))
+    quilt(214, sitting, f'home_blanket_{"day" if day else "night"}_sit.png')
 
 exit_scene('stitchlight'); exit_scene('moonpuff'); train(); bedroom(False); bedroom(True); print('ok')
