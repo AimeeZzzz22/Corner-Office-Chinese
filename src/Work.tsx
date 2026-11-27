@@ -34,6 +34,30 @@ function zzz(x: CanvasRenderingContext2D, cx: number, cy: number, t: number, col
   for (let i = 0; i < 3; i++) { const k = ((t * 0.6 + i / 3) % 1); x.globalAlpha = Math.sin(k * Math.PI); x.fillText('z', cx + k * 40 + i * 4, cy - k * 70); }
   x.globalAlpha = 1;
 }
+// sitting side-on on a chair: the body (rows 0-27) on the seat, and legs drawn bent at the knee, in the colours of the
+// character's own trousers and shoes. f = +1 faces right, -1 faces left. Seat top at y (scene pixels).
+const legCache = new WeakMap<object, { pants: string; shoe: string }>();
+function legColours(sh: Sheet) {
+  const hit = legCache.get(sh); if (hit) return hit;
+  const c = document.createElement('canvas'); c.width = 16; c.height = 32; const x = c.getContext('2d')!;
+  x.drawImage(sh, DIR_COL.front * 16, 0, 16, 32, 0, 0, 16, 32);
+  const px = (cx: number, cy: number) => { const d = x.getImageData(cx, cy, 1, 1).data; return d[3] ? `rgb(${d[0]},${d[1]},${d[2]})` : null; };
+  const out = { pants: px(5, 29) ?? px(6, 29) ?? px(5, 28) ?? '#4a5a8a', shoe: px(5, 31) ?? px(4, 31) ?? '#2b2b33' };
+  legCache.set(sh, out); return out;
+}
+function seated(x: CanvasRenderingContext2D, sh: Sheet | null | undefined, col: number, cx: number, seat: number, f: 1 | -1) {
+  if (!ok(sh as HTMLImageElement)) return;
+  const { pants, shoe } = legColours(sh!), u = K, sx = cx * B, sy = seat * B;
+  // thigh along the seat, shin down from the knee, a shoe pointing forward (outline first, then colour)
+  const parts: [number, number, number, number, string][] = [
+    [f > 0 ? sx - u : sx - 8 * u, sy - 2 * u, 9 * u, 2 * u, pants],
+    [f > 0 ? sx + 6 * u : sx - 8 * u, sy, 2 * u, 3 * u, pants],
+    [f > 0 ? sx + 6 * u : sx - 9 * u, sy + 3 * u, 3 * u, u, shoe],
+  ];
+  x.fillStyle = '#2a2234'; for (const [a, b, w, h] of parts) x.fillRect(a - u / 2, b - u / 2, w + u, h + u);
+  for (const [a, b, w, h, c] of parts) { x.fillStyle = c; x.fillRect(a, b, w, h); }
+  char(x, sh, col, 0, cx, seat + 4 * 1.5, 0, 28);
+}
 // a speech bubble that types its words out
 function Bubble({ text, who, at, side = 'up', w = 420, done }: { text: string; who?: string; at: [number, number]; side?: 'up' | 'left'; w?: number; done?: () => void }) {
   const [n, setN] = useState(0);
@@ -60,23 +84,23 @@ export function Meeting({ s, msg, sheet, close }: { s: Save; msg: ChatMsg; sheet
       const talking = stepRef.current === 'hello' || stepRef.current === 'ask' || stepRef.current === 'reply';
       const nod = talking && Math.floor(t * 5) % 4 === 0 ? 1 : 0;
       // Moonpuff: the studio kitchen, Rio across a little bistro table (both seen from the side)
-      if (rio) char(x, bossSheet, DIR_COL.left + fr(t), 0, 196, 148 + nod * 0.25, 0, 28);
+      if (rio) seated(x, bossSheet, DIR_COL.left + fr(t), 196, 140 + nod * 0.25, -1);
       else char(x, bossSheet, fr(t), 2, 160, 110 + nod * 0.25);
       if (ok(desk) && !rio) x.drawImage(desk, 0, 0);
       // steam from the mugs
-      if (rio) for (const [mx, my] of [[175, 124], [143, 124]]) for (let i = 0; i < 3; i++) {
+      if (rio) for (const [mx, my] of [[173, 121], [146, 121]]) for (let i = 0; i < 3; i++) {
         const k = (t * 0.7 + i / 3) % 1; x.fillStyle = `rgba(255,255,255,${0.7 * Math.sin(k * Math.PI)})`;
         x.fillRect((mx + Math.round(Math.sin(k * 6 + i) * 1.5)) * B, (my - k * 12) * B, B, B);
       }
       // you: walk in from the left, then sit down across the desk (seen from behind)
       const walkT = 2.1, wt = Math.min(1, t / walkT);
       if (stepRef.current === 'walk') {
-        if (rio) { if (ok(desk)) x.drawImage(desk, 0, 0); char(x, sheet, DIR_COL.right + fr(t, 8), 1, -14 + wt * 124, 176); }
+        if (rio) { if (ok(desk)) x.drawImage(desk, 0, 0); char(x, sheet, DIR_COL.right + fr(t, 8), 1, -14 + wt * 120, 160); }
         else { if (ok(chairs)) x.drawImage(chairs, 0, 0); char(x, sheet, DIR_COL.right + fr(t, 8), 1, -14 + wt * 132, 177); }
       } else {
         if (!sat.current) sat.current = t;
         const settle = Math.max(0, 1 - (t - sat.current) * 5);
-        if (rio) { char(x, sheet, DIR_COL.right, 0, 124, 148 - settle * 2, 0, 28); if (ok(desk)) x.drawImage(desk, 0, 0); }
+        if (rio) { seated(x, sheet, DIR_COL.right, 124, 140 - settle * 2, 1); if (ok(desk)) x.drawImage(desk, 0, 0); }
         else { char(x, sheet, DIR_COL.back, 0, 118, 150 - settle * 2); if (ok(chairs)) x.drawImage(chairs, 0, 0); }
       }
       // walking in: the room fades up from black
