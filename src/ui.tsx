@@ -161,6 +161,9 @@ export function MagnifyDock({ apps, open }: { apps: DockApp[]; open: (key: strin
 export function LiquidTabs<T extends string>({ tabs, value, onChange, className = '' }: { tabs: { key: T; label: React.ReactNode }[]; value: T; onChange: (t: T) => void; className?: string }) {
   const box = useRef<HTMLDivElement>(null), blob = useRef<HTMLSpanElement>(null);
   const st = useRef({ l: 0, r: 0, vl: 0, vr: 0, tl: 0, tr: 0, init: false }), raf = useRef(0);
+  // a tab can change size (a count badge appears or changes): follow it so the highlight always wraps the whole tab
+  const [ver, setVer] = useState(0);
+  useEffect(() => { const el = box.current; if (!el || typeof ResizeObserver === 'undefined') return; const ro = new ResizeObserver(() => setVer((v) => v + 1)); el.querySelectorAll('button').forEach((b) => ro.observe(b)); return () => ro.disconnect(); }, [tabs.length]);
   useLayoutEffect(() => {
     const el = box.current?.querySelector<HTMLElement>(`[data-k="${value}"]`); if (!el) return;
     const s = st.current; s.tl = el.offsetLeft; s.tr = el.offsetLeft + el.offsetWidth;
@@ -178,7 +181,7 @@ export function LiquidTabs<T extends string>({ tabs, value, onChange, className 
     };
     raf.current = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf.current);
-  }, [value, tabs.length]);
+  }, [value, tabs.length, ver]);
   return (
     <div className={`liquid ${className}`} ref={box}>
       <span className="liquid-blob" ref={blob} />

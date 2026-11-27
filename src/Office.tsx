@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { t } from './lang';
-import { COWORKERS, Company, CoworkerId } from './data';
+import { COWORKERS, Company, CoworkerId, HomeAct } from './data';
 import { officeClock } from './clock';
 import { gEmit } from './Guide';
 
@@ -110,10 +110,11 @@ export interface OfficeProps {
   onCoworker: (id: CoworkerId | null, x?: number) => void; frozen: boolean; menu: CoworkerId | null; onPc: () => void;
   startAt?: Tile;      // where the player stands when the office opens (back from the desk: right beside it)
   goDesk?: number;     // bump to walk the player to their desk
-  goBoss?: { n: number; id: CoworkerId } | null;   // walk the player over to a coworker (the boss, for a one-to-one); onBoss fires on arrival
+  goBoss?: { n: number; id: CoworkerId; via?: string } | null;   // via: a place the two of you then walk to together (Rio: the kitchen)   // walk the player over to a coworker (the boss, for a one-to-one); onBoss fires on arrival
   onBoss?: (id: CoworkerId) => void;
-  extras?: { fridge: boolean; surprise: boolean; deco?: string | null };   // a treat waiting in the fridge; the welcome gift still waiting
+  extras?: { fridge: boolean; surprise: boolean; deco?: string | null; doing?: string | null };   // a treat waiting in the fridge; the welcome gift still waiting
   onSpot?: (kind: 'food' | 'fridge' | 'surprise') => void;
+  onAct?: (key: HomeAct) => void; actLabel?: (key: HomeAct) => string;
   editing: boolean; labels: string[] | null; onLabels: (rows: string[], defaults: string[]) => void; co: Company;
   playerSheet: HTMLCanvasElement | null;
   tour: { zone: [number, number, number, number]; stop: number } | null;   // welcome tour: host and player walk to this zone; camera zooms in
@@ -130,12 +131,13 @@ function frame([zx, zy, zw, zh]: [number, number, number, number]) {
   return clampCam(z, (zx + zw / 2) * K, (zy + zh / 2) * K, zy + zh / 2 > 190 ? 470 : 250);
 }
 const follow = (mx: number, my: number) => clampCam(2.2, mx * K, my * K, 360);
-export default function Office({ onCoworker, frozen, menu, editing, labels, onLabels, co, playerSheet, tour, onPc, onTourArrive, clockScale, startAt, goDesk, goBoss, onBoss, extras, onSpot }: OfficeProps) {
+export default function Office({ onCoworker, frozen, menu, editing, labels, onLabels, co, playerSheet, tour, onPc, onTourArrive, clockScale, startAt, goDesk, goBoss, onBoss, extras, onSpot, onAct, actLabel = () => '' }: OfficeProps) {
   const bossRef = useRef<CoworkerId | null>(null), onBossRef = useRef(onBoss); onBossRef.current = onBoss;
+  const viaRef = useRef<string | null>(null), withRef = useRef<{ id: CoworkerId; target: Tile; t: number } | null>(null);
   const extrasRef = useRef(extras); extrasRef.current = extras;
   // every place with a bubble: mini-games, the treat counter, the fridge, and the welcome gift while it's waiting
-  type Spot = { name: string; at: [number, number]; stand: [number, number]; kind: 'game' | 'food' | 'fridge' | 'surprise' };
-  const allSpots = (): Spot[] => [...co.games.map((g) => ({ ...g, kind: 'game' as const })), { ...co.food, kind: 'food' },
+  type Spot = { name: string; at: [number, number]; stand: [number, number]; kind: 'game' | 'food' | 'fridge' | 'surprise' | 'act'; key?: HomeAct };
+  const allSpots = (): Spot[] => co.acts ? co.acts.map((a) => ({ ...a, kind: 'act' as const })) : [...co.games.map((g) => ({ ...g, kind: 'game' as const })), { ...co.food, kind: 'food' },
     { ...co.fridge, name: extrasRef.current?.fridge ? t('Something in the fridge!', '冰箱里有东西！') : t('The fridge', '冰箱'), kind: 'fridge' }, ...(extrasRef.current?.surprise ? [{ ...co.surprise, kind: 'surprise' as const }] : [])];
   const arriveRef = useRef(onTourArrive); arriveRef.current = onTourArrive; const scaleRef = useRef(clockScale); scaleRef.current = clockScale;
   const innerRef = useRef<HTMLDivElement>(null);
@@ -150,8 +152,8 @@ export default function Office({ onCoworker, frozen, menu, editing, labels, onLa
   const grid = useMemo(() => (map && rows ? derive(map, rows) : null), [map, rows]);
   const gridRef = useRef(grid); gridRef.current = grid;
   const editRef = useRef(editing); editRef.current = editing; const rowsRef = useRef(rows); rowsRef.current = rows;
-  const [bubble, setBubble] = useState<{ name: string; x: number; y: number; kind: Spot['kind'] } | null>(null);
-  const me = useRef({ ...walker(startAt ?? co.start), goal: null as CoworkerId | null, target: null as Tile | null, wait: 0, stuck: 0, follow: false, delay: 0, resume: null as Tile | null });
+  const [bubble, setBubble] = useState<{ name: string; x: number; y: number; kind: Spot['kind']; key?: HomeAct } | null>(null);
+  const me = useRef({ ...walker(startAt ?? co.start), goal: null as CoworkerId | null, target: null as Tile | null, wait: 0, stuck: 0, ghost: 0, follow: false, delay: 0, resume: null as Tile | null });
   const npcs = useRef<Npc[] | null>(null);
   const frozenRef = useRef(frozen); frozenRef.current = frozen;
   const menuRef = useRef(menu); menuRef.current = menu;
@@ -249,7 +251,13 @@ export default function Office({ onCoworker, frozen, menu, editing, labels, onLa
       }
       if (p.delay > 0) p.delay -= dt;
       else if (p.path.length) {
-        const taken = takenBy(p), r = advance(p, dt, 64, (tl) => taken.has(tl[1] * g.w + tl[0]));
+        // two people walking into each other (a narrow kitchen, a doorway): after a moment you turn sideways and slip
+        // past them instead of both standing there
+        if ((p.stuck ?? 0) > 1.4 && !p.ghost) { p.ghost = 0.9; p.stuck = 0; }
+        if (p.ghost) p.ghost = Math.max(0, p.ghost - dt);
+        // walking along with the boss: keep level with them instead of racing ahead
+        const pace = () => { const w = withRef.current; if (!w) return 64; const b = list.find((n) => n.id === w.id); return b && p.path.length < b.path.length - 1 ? 28 : 50; };
+        const taken = takenBy(p), r = advance(p, dt, pace(),  (tl) => !p.ghost && taken.has(tl[1] * g.w + tl[0]));
         if (r === 'blocked') {
           p.wait -= dt; p.stuck = (p.stuck ?? 0) + dt;
           // a coworker standing still in the way steps aside after a moment
@@ -272,8 +280,27 @@ export default function Office({ onCoworker, frozen, menu, editing, labels, onLa
           // walking up to your own desk sits you down at it (the close desk view)
           if (!tourRef.current && p.cur[0] === co.pc.stand[0] && p.cur[1] === co.pc.stand[1]) { p.dir = 1; onPcRef.current(); }
           if (p.goal) { const who = list.find((n) => n.id === p.goal)!; const gx = up(who) ? who.x : COWORKERS[who.id].seat[0], gy = up(who) ? who.y : COWORKERS[who.id].seat[1] + 24;
-            faceTo(p, gx, gy); const id = p.goal; p.goal = null; if (bossRef.current === id) { bossRef.current = null; who.hold = false; onBossRef.current?.(id); } else onCoworker(id, gx); }
+            faceTo(p, gx, gy); const id = p.goal; p.goal = null; if (bossRef.current === id) {
+              bossRef.current = null; who.hold = false;
+              const via = viaRef.current, place = via ? co.places[via] : null; viaRef.current = null;
+              if (!place) onBossRef.current?.(id);
+              else {   // "let's grab a coffee": the boss leads the way, you walk along beside them
+                if (who.state === 'sit') standUp(who);
+                const rtN = routes(g, who.cur, takenBy(who)), nt = rtN.nearest(place[0], place[1]), np = rtN.pathTo(nt);
+                const avoid = new Set([nt[1] * g.w + nt[0]]); const rtP = routes(g, p.cur, avoid), pt = rtP.nearest(place[0] + 20, place[1]), pp = rtP.pathTo(pt);
+                if (!np || !pp) onBossRef.current?.(id);
+                else { who.state = 'out'; who.path = np.slice(1); who.until = Infinity; who.timer = Infinity; who.wait = 0; p.path = pp.slice(1); p.target = pt; p.delay = 0.5; withRef.current = { id, target: pt, t: 0 }; }
+              }
+            } else onCoworker(id, gx); }
         }
+      }
+
+      // ---- walking somewhere together with the boss: once you're both there, face each other and start
+      const wr = withRef.current;
+      if (wr) {
+        const who = list.find((n) => n.id === wr.id);
+        wr.t += dt;
+        if (who && ((!p.path.length && !who.path.length && p.delay <= 0) || wr.t > 30)) { faceTo(p, who.x, who.y); faceTo(who, p.x, p.y); who.state = 'idle'; who.timer = 6; withRef.current = null; onBossRef.current?.(wr.id); }
       }
 
       // ---- welcome tour: the host and the player walk to the next stop (the first stop: they are simply there)
@@ -367,7 +394,7 @@ export default function Office({ onCoworker, frozen, menu, editing, labels, onLa
           continue;
         }
         if (n.state === 'idle') { n.timer -= dt; if (n.timer <= 0 || clock >= n.until) { const path = routes(g, n.cur, takenBy(n)).pathTo(n.home); if (path) { n.path = path.slice(1); n.state = 'back'; n.wait = 0; } else n.timer = 2; } if (n.state === 'idle') continue; }
-        const taken = takenBy(n), r = advance(n, dt, 40, (tl) => taken.has(tl[1] * g.w + tl[0]));
+        const taken = takenBy(n), r = advance(n, dt, withRef.current?.id === n.id ? 50 : 40, (tl) => taken.has(tl[1] * g.w + tl[0]));
         if (r === 'blocked') {
           n.wait += dt;
           const nx = key(n.path[0]), o = list.find((x) => x !== n && up(x) && !COWORKERS[x.id].pet && (key(x.cur) === nx || (x.moving && x.path[0] && key(x.path[0]) === key(n.cur))));
@@ -391,8 +418,8 @@ export default function Office({ onCoworker, frozen, menu, editing, labels, onLa
       }
 
       // a mini-game bubble shows only while the player stands at its spot
-      const spot = !p.moving && !tourRef.current ? allSpots().find((s) => s.stand[0] === p.cur[0] && s.stand[1] === p.cur[1]) : undefined;
-      setBubble((b) => (spot ? (b && b.name === spot.name ? b : { name: spot.name, x: spot.at[0], y: spot.at[1], kind: spot.kind }) : b ? null : b));
+      const spot = !p.moving && !tourRef.current && !extrasRef.current?.doing ? allSpots().find((s) => s.stand[0] === p.cur[0] && s.stand[1] === p.cur[1]) : undefined;
+      setBubble((b) => (spot ? (b && b.name === spot.name ? b : { name: spot.name, x: spot.at[0], y: spot.at[1], kind: spot.kind, key: spot.key }) : b ? null : b));
 
       // ---- welcome tour: tell the screen when both have arrived (then the dialog appears), and move the camera
       const trA = tourRef.current, hostA = list.find((n) => n.id === co.host);
@@ -482,6 +509,13 @@ export default function Office({ onCoworker, frozen, menu, editing, labels, onLa
         if (!seated) order.push({ y: n.y, draw: () => drawWalker(n, n.sheet, 1) });
       }
       order.sort((a, b) => a.y - b.y).forEach((o) => o.draw());
+      const doing = extrasRef.current?.doing;
+      if (doing && !p.moving) {
+        const bx = p.x * S, by = (p.y - 30) * S + Math.sin(t * 3) * 4;
+        ctx.fillStyle = '#fff'; ctx.strokeStyle = '#3b2e2a'; ctx.lineWidth = 4; ctx.beginPath(); ctx.roundRect(bx - 30, by - 58, 60, 52, 14); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(bx - 8, by - 8); ctx.lineTo(bx, by + 6); ctx.lineTo(bx + 8, by - 8); ctx.fill(); ctx.stroke(); ctx.fillRect(bx - 9, by - 10, 18, 4);
+        ctx.font = '30px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#000'; ctx.fillText(doing, bx, by - 31);
+      }
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
@@ -511,7 +545,7 @@ export default function Office({ onCoworker, frozen, menu, editing, labels, onLa
       const target = who.state !== 'sit' ? rt.nearest(who.x, who.y) : rt.nearest(COWORKERS[who.id].spot[0], COWORKERS[who.id].spot[1] + 22);
       const path = rt.pathTo(target); if (!path || path.length < 2) { onBossRef.current?.(goBoss.id); return; }
       const rest = path.slice(1), mid = Math.abs(p.x - centre(p.cur)[0]) > 0.01 || Math.abs(p.y - centre(p.cur)[1]) > 0.01;
-      p.path = mid ? [p.cur, ...rest] : rest; p.goal = who.id; p.target = target; p.wait = 0; p.stuck = 0; who.hold = true; bossRef.current = who.id; onCoworker(null);
+      p.path = mid ? [p.cur, ...rest] : rest; p.goal = who.id; p.target = target; p.wait = 0; p.stuck = 0; who.hold = true; bossRef.current = who.id; viaRef.current = goBoss.via ?? null; onCoworker(null);
     };
     go(); return () => clearTimeout(timer);
   }, [goBoss?.n]);
@@ -569,6 +603,7 @@ export default function Office({ onCoworker, frozen, menu, editing, labels, onLa
           {bubble.kind === 'food' && <button className="bubble-btn" onClick={() => onSpot?.('food')}>{t('See the menu', '看看菜单')}</button>}
           {bubble.kind === 'fridge' && (extras?.fridge ? <button className="bubble-btn" onClick={() => onSpot?.('fridge')}>{t('Take a look', '看一看')}</button> : <span>{t("Just milk and someone's lunch today.", '今天只有牛奶和某人的午饭。')}</span>)}
           {bubble.kind === 'surprise' && <button className="bubble-btn" onClick={() => onSpot?.('surprise')}>{t('Open it', '打开')}</button>}
+          {bubble.kind === 'act' && bubble.key && <button className="bubble-btn" onClick={() => onAct?.(bubble.key!)}>{actLabel(bubble.key)}</button>}
         </div>
       )}
     </div></div>

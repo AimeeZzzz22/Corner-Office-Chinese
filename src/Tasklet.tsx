@@ -217,6 +217,7 @@ function ChatApp({ s, name, chrome, up, openMeet }: { s: Save; name: string; chr
   useEffect(() => { if (last > s.chatSeen) up({ chatSeen: last }); }, [last]);
   const listRef = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => { listRef.current?.scrollTo({ top: 1e6 }); }, [s.chat.length]);
+  const [burst, setBurst] = useState(0);   // the perfect-attendance bonus just collected: coins fly up
   const say = (m: ChatMsg, text: string) => { tap(); up({ chat: [...s.chat.map((x) => (x.id === m.id ? { ...x, done: true } : x)), { id: Date.now(), from: 'me', at: Date.now(), text }] }); };
   const today = new Date().toDateString(), mins = focusOn(s, today), on = ruled(s);
   const clocked = s.clock[today];
@@ -244,7 +245,8 @@ function ChatApp({ s, name, chrome, up, openMeet }: { s: Save; name: string; chr
               : <div key={m.id} className={`ch-msg${m.kind ? ' k-' + m.kind : ''}`}><Head id={m.from} size={26} /><div>
                   <p>{m.text}</p>
                   {m.kind === 'award' && (m.done ? <span className="ch-got">{ZH ? `已领取 ${m.coins} 金币 ✓` : `Collected ${m.coins} coins ✓`}</span>
-                    : <button className="btn primary sm" onClick={() => { play('coin', 0.6); up({ coins: s.coins + (m.coins ?? 0), chat: s.chat.map((x) => (x.id === m.id ? { ...x, done: true } : x)) }); }}>{ZH ? `领取全勤奖 ${m.coins} 金币` : `Collect ${m.coins} coins`}</button>)}
+                    : <button className="btn primary sm" onClick={() => { play('coin', 0.7); setTimeout(() => play('coin', 0.5), 160); setBurst(m.id); setTimeout(() => setBurst(0), 1600); up({ coins: s.coins + (m.coins ?? 0), chat: s.chat.map((x) => (x.id === m.id ? { ...x, done: true } : x)) }); }}>{ZH ? `领取全勤奖 ${m.coins} 金币` : `Collect ${m.coins} coins`}</button>)}
+                  {burst === m.id && <span className="ch-burst">{Array.from({ length: 7 }, (_, k) => <i key={k} style={{ ['--k' as string]: k }} />)}<b>+{m.coins} 🪙</b></span>}
                   {m.kind === 'meet' && (m.done ? <span className="ch-got">{tx('Talked it through ✓', '已经聊过了 ✓')}</span>
                     : <button className="btn primary sm" onClick={() => { tap(); openMeet(m); }}>{r.boss === 'rio' ? tx('Grab that coffee', '去喝咖啡') : tx('Go to the one-to-one', '去约谈')}</button>)}
                   {m.replies && !m.done && <div className="ch-quick">{m.replies.map((q) => <button key={q} onClick={() => say(m, q)}>{q}</button>)}</div>}

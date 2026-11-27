@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Office from './Office';
-import { COMPANIES, COWORKERS, CompanyId, CoworkerId, GRADES, GRADE_NAME, HEART_POINTS, PRACTICE_PAY, RAISE, TASK_TYPES, TYPE_LABEL, TaskType, coinsAt, gradeOf, pay, xpAt } from './data';
+import { COMPANIES, COWORKERS, CompanyId, HOME, HomeAct, officeOpen, CoworkerId, GRADES, GRADE_NAME, HEART_POINTS, PRACTICE_PAY, RAISE, TASK_TYPES, TYPE_LABEL, TaskType, coinsAt, gradeOf, pay, xpAt } from './data';
 import { Order, Result, Save, fresh, load, newTray, store, wipe } from './state';
 import { play, setSound } from './sfx';
 import { Badge, Booth, Offer, Quiz, TourCard, Vibe } from './Onboarding';
@@ -22,8 +22,9 @@ import { freeSlot } from './deskSlots';
 import type { Tile } from './Office';
 import { Coach, GCtx, STEPS, TIPS, gEmit } from './Guide';
 import { ChatMsg, MEET_CHOICES, checkLate, clockIn, fmtClock, minsNow, rulesOf, ruled, unreadChat, weekReview, QUICK_LATE, bossLine } from './work';
-import { GoHome, Meeting } from './Work';
+import { GoHome, Meeting, Arrive } from './Work';
 import { GOAL_TEXT } from './meetScript';
+import { ACTS, ActSheet, HomeTimer, actButton, fmtHM, homeStatus, homeXp, isAct } from './Home';
 
 const A = `${import.meta.env.BASE_URL}assets/`;
 const mmss = (ms: number) => { const s = Math.max(0, Math.ceil(ms / 1000)); return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`; };
@@ -43,7 +44,8 @@ export default function App() {
   const [settings, setSettings] = useState(false);
   const [pcOpen, setPcOpen] = useState(false);      // the computer, opened from the desk view
   const [fromDesk, setFromDesk] = useState(false);  // the current order was taken at the desk (so it goes back there after)
-  const [backAt, setBackAt] = useState<Tile | undefined>(undefined);   // back from the desk: the player stands beside it
+  const [backAt, setBackAt] = useState<Tile | undefined>(undefined);
+  const [arrive, setArrive] = useState(0);   // the morning after: the office doors slide open and you're at the entrance   // back from the desk: the player stands beside it
   const [goDesk, setGoDesk] = useState(0);
   const [shop, setShop] = useState<null | 'shop' | 'blind'>(() => (typeof location !== 'undefined' && location.hash === '#blindbox' ? 'blind' : null));   // the shop (and its blind boxes)
   const [spot, setSpot] = useState<null | 'food' | 'fridge' | 'surprise'>(null);   // the bakery menu, the fridge, or the welcome gift
@@ -99,16 +101,56 @@ export default function App() {
   const [clockToast, setClockToast] = useState<string | null>(null);
   const [meet, setMeet] = useState<ChatMsg | null>(null);
   const [meetWalk, setMeetWalk] = useState<ChatMsg | null>(null);   // walking over to the boss's office
-  const [goBoss, setGoBoss] = useState<{ n: number; id: CoworkerId } | null>(null);
+  const [goBoss, setGoBoss] = useState<{ n: number; id: CoworkerId; via?: string } | null>(null);
   // orientation ends once the first-day guide is over (the 1-minute practice order included): you go home, and day one
   // starts the next morning
   useEffect(() => {
     if (s.guide !== -1 || s.day1 || !s.lookDone || (s.phase !== 'desk' && s.phase !== 'free')) return;
-    const id = setTimeout(() => { setPcOpen(false); setMenu(null); setShop(null); setGoHomeFresh(true); up({ phase: 'home' }); }, 700);
+    const id = setTimeout(() => { setPcOpen(false); setMenu(null); setShop(null); setGoHomeFresh(true); setEvening(!officeOpen()); up({ phase: 'home' }); }, 700);
     return () => clearTimeout(id);
   }, [s.guide, s.day1, s.phase]);
   const [loadPhase] = useState(s.phase);   // reloading while at home starts again at the morning alarm
   const [goHomeFresh, setGoHomeFresh] = useState(false);
+  // ---- real time: the office is open 8:00 to 17:00. Outside those hours you're at home (the flat), and at 17:00 you go home
+  const [evening, setEvening] = useState(false);
+  const [actOpen, setActOpen] = useState<HomeAct | null>(null);
+  const [homeToast, setHomeToast] = useState<string | null>(null);
+  const homeSay = (m: string) => { setHomeToast(m); setTimeout(() => setHomeToast((x) => (x === m ? null : x)), 3600); };
+  const settled = s.lookDone && s.guide < 0 && !!s.day1;
+  useEffect(() => {   // opening the game: where should you be right now?
+    if (!settled) return;
+    if (s.phase === 'home') up({ phase: 'house' });                                   // the ride home was interrupted
+    else if (!officeOpen() && ['free', 'desk', 'tray', 'focus'].includes(s.phase)) up({ phase: 'house', picked: null });
+    else if (officeOpen() && s.phase === 'house' && !s.homeTask) { setBackAt(undefined); setArrive(Date.now()); up({ phase: 'free' }); }
+  }, []);
+  const quiet = !meet && !meetWalk && !spot && !shop && !pcOpen;
+  useEffect(() => {   // during the day: at 17:00 sharp you clock out and ride home
+    if (!settled || (s.phase !== 'free' && s.phase !== 'desk') || !quiet) return;
+    const check = () => { if (!officeOpen()) { setMenu(null); setGoHomeFresh(false); setEvening(true); up({ phase: 'home' }); } };
+    check(); const id = setInterval(check, 15000); return () => clearInterval(id);
+  }, [settled, s.phase, quiet]);
+  const [openNote, setOpenNote] = useState(false);
+  useEffect(() => {   // at home when 8:00 comes round
+    if (s.phase !== 'house') return; const id = setInterval(() => { if (officeOpen() && !openNote) { setOpenNote(true); homeSay(t('8:00: the office is open. Head out the front door when you\'re ready.', '8:00 了，公司开门啦。准备好就从大门出发。')); } }, 15000); return () => clearInterval(id);
+  }, [s.phase, openNote]);
+  const onAct = (k: HomeAct) => {
+    play('ui_tap', 0.5);
+    if (k === 'door') {
+      if (s.homeTask) { homeSay(t('Finish what you\'re doing first.', '先把手上的事做完吧。')); return; }
+      if (!officeOpen()) { homeSay(new Date().getHours() < 8 ? t('Too early: the office opens at 8:00.', '太早啦，公司 8:00 才开门。') : t('The office is closed until 8:00 tomorrow. Rest up!', '公司已经下班了，明早 8:00 开门。好好休息！')); return; }
+      setBackAt(undefined); setArrive(Date.now()); up({ phase: 'free' }); return;
+    }
+    if (s.homeTask) { homeSay(t('One thing at a time.', '一次做一件事就好。')); return; }
+    setActOpen(k);
+  };
+  const finishHome = (finished: boolean) => {
+    const task = s.homeTask!; const worked = finished ? task.mins : Math.min(task.mins, Math.floor(((Math.min(Date.now(), task.endsAt) - task.startedAt) / (task.endsAt - task.startedAt)) * task.mins));
+    const xp = finished ? homeXp(task.mins, s.xp) : Math.floor((homeXp(task.mins, s.xp) * worked) / task.mins);
+    const g0 = gradeOf(s.xp), g1 = gradeOf(s.xp + xp);
+    play(finished ? 'order_finished' : 'stopping_here', 0.5); if (g1 > g0) setTimeout(() => play('heart_level', 0.6), 900);
+    up({ homeTask: null, xp: s.xp + xp, homeLog: [...s.homeLog, { at: Date.now(), key: task.key, what: task.what, mins: task.mins, worked, xp, finished }].slice(-200) });
+    homeSay(g1 > g0 ? (ZH ? `+${xp} 经验 · 升职啦！实习生${GRADE_NAME(g1)}` : `+${xp} XP · Promoted to Intern ${GRADE_NAME(g1)}!`) : ZH ? `+${xp} 经验` : `+${xp} XP`);
+  };
   // a new message from the boss pops up as a small toast in the office or at the desk
   const lastBoss = [...s.chat].reverse().find((m) => m.from !== 'me');
   const [toastFor, setToastFor] = useState(0);
@@ -226,16 +268,21 @@ export default function App() {
     <div className={`stage co-${s.company}`} ref={stage}>
       {inOffice && s.phase === 'free' && bdays.length > 0 && <div className="bday-ribbon">🎂 {ZH ? `今天是${bdays.map((id) => COWORKERS[id].name).join('和')}的生日！` : `Today is ${bdays.map((id) => COWORKERS[id].name).join(' and ')}'s birthday!`}<small>{t(' An order for them counts double for friendship.', ' 今天帮TA接单，友情加倍。')}</small></div>}
       {inOffice && <Office key={s.company} co={co} onCoworker={onCoworker} frozen={s.phase !== 'free' || !!spot || !!shop} menu={menu} startAt={backAt} goDesk={goDesk} goBoss={goBoss} onBoss={() => { if (meetWalk) { play('ui_tap', 0.5); setMeet(meetWalk); setMeetWalk(null); } }} extras={{ fridge: !!s.fridge.item && s.fridge.day === new Date().toDateString(), surprise: s.surprise === 'waiting', deco }} onSpot={(k) => { play('ui_tap', 0.5); setMenu(null); setSpot(k); }} onPc={() => { play('ui_tap', 0.5); setMenu(null); up({ phase: 'desk' }); }} editing={editing} labels={myLabels} onLabels={onLabels} playerSheet={sheet} tour={stopZone ? { zone: stopZone, stop: s.tourStop } : null} onTourArrive={setTourReady} clockScale={s.fast ? 60 : 1} />}
+      {s.phase === 'house' && <Office key="home" co={HOME} onCoworker={() => {}} frozen={!!actOpen || !!s.homeTask} menu={null} extras={{ fridge: false, surprise: false, doing: s.homeTask && isAct(s.homeTask.key) ? ACTS[s.homeTask.key].emoji : null }} onAct={onAct} actLabel={actButton} onPc={() => {}} editing={false} labels={null} onLabels={() => {}} playerSheet={sheet} tour={null} onTourArrive={() => {}} clockScale={1} />}
+      {s.phase === 'house' && actOpen && isAct(actOpen) && <div className="home-shade" onClick={() => setActOpen(null)}><ActSheet k={actOpen} s={s} close={() => setActOpen(null)} start={(task) => { play('order_start', 0.5); setActOpen(null); up({ homeTask: task }); }} /></div>}
+      {s.phase === 'house' && s.homeTask && <HomeTimer key={s.homeTask.startedAt} s={s} finish={finishHome} />}
+      {s.phase === 'house' && homeToast && <div className="clock-toast">{homeToast}</div>}
       {(s.phase === 'work' || s.phase === 'timesup' || s.phase === 'result') && <WorkScene sheet={sheet} pet={s.pet} place={s.place} />}
+      {arrive > 0 && inOffice && <Arrive key={arrive} name={co.name} done={() => setArrive(0)} />}
       {s.phase === 'desk' && <DeskView s={s} sheet={sheet} up={up} mode="desk" openPc={() => setPcOpen(true)} leave={() => { setPcOpen(false); setBackAt([...co.pc.stand] as Tile); up({ phase: 'free' }); }} />}
       {s.phase === 'focus' && fromDesk && <DeskView s={s} sheet={sheet} up={up} mode="still" />}
 
       {!onboarding && !editing && (
         <div className="hud">
-          <div className="hud-l"><div className="card hud-left"><div className="pix title">{co.name}</div><div className="sub">{co.role}{ZH ? ' ' : ' '}{GRADE_NAME(gradeOf(s.xp))}</div>
+          <div className="hud-l"><div className="card hud-left">{s.phase === 'house' ? <><div className="pix title">{t('Home', '家')} · {fmtHM()}</div><div className="sub">{homeStatus()}</div></> : <><div className="pix title">{co.name}</div><div className="sub">{co.role}{ZH ? ' ' : ' '}{GRADE_NAME(gradeOf(s.xp))}</div></>}
             {(() => { const g = gradeOf(s.xp), lo = GRADES[g], hi = GRADES[g + 1]; return hi ? <><div className="xp"><span style={{ width: `${((s.xp - lo) / (hi - lo)) * 100}%` }} /></div><div className="sub">{s.xp} / {hi} {ZH ? `经验升到实习生${GRADE_NAME(g + 1)}` : `XP to Intern ${GRADE_NAME(g + 1)}`}{g > 0 ? (ZH ? ` · 加薪 +${g * RAISE * 100}%` : ` · raise +${g * RAISE * 100}%`) : ''}</div></>
             : <><div className="xp"><span style={{ width: '100%' }} /></div><div className="sub">{t(`Top intern grade · raise +${g * RAISE * 100}%`, `实习生最高级 · 加薪 +${g * RAISE * 100}%`)}</div></>; })()}</div>
-            <AvatarStack s={s} /></div>
+            {s.phase !== 'house' && <AvatarStack s={s} />}</div>
           <div className="hud-r">
             {treatsToday(s.treats).have.length > 0 && <div className="card hud-treats">{treatsToday(s.treats).have.map((k) => { const t = treat(k); return (
               <span key={k} className={treatsToday(s.treats).used.includes(k) ? 'used' : ''} title={`${t.name}${t.bonus ? `${ZH ? '：' : ': '}${t.bonus}` : ''}${treatsToday(s.treats).used.includes(k) ? (ZH ? '（今天已用）' : ' (used today)') : ''}`}><img src={`${A}ob/treats/${k}.png`} alt={t.name} /></span>); })}</div>}
@@ -326,7 +373,7 @@ export default function App() {
         </>
       )}
 
-      {pcOpen && s.phase === 'desk' && <Computer s={s} name={name} practice={s.guide >= 0 && s.guide <= STEPS.findIndex((x) => x.id === 'practice')} openShop={(t) => { setShop(t); }} openMail={(note, opened) => { if (note.kind === 'recap') { if (!opened) up({ notes: s.notes.filter((x) => x.id !== note.id), mailbox: [note, ...s.mailbox].slice(0, 40) }); setWeek({ start: new Date(note.week).getTime() }); } else setMail({ note, opened }); }} close={() => setPcOpen(false)} take={(p) => { setPcOpen(false); setFromDesk(true); up({ phase: 'focus', picked: p }); }} upChat={up} openMeet={(m) => { setPcOpen(false); setBackAt([...co.pc.stand] as Tile); up({ phase: 'free' }); setMeetWalk(m); setGoBoss({ n: Date.now(), id: rules.boss }); }} />}
+      {pcOpen && s.phase === 'desk' && <Computer s={s} name={name} practice={s.guide >= 0 && s.guide <= STEPS.findIndex((x) => x.id === 'practice')} openShop={(t) => { setShop(t); }} openMail={(note, opened) => { if (note.kind === 'recap') { if (!opened) up({ notes: s.notes.filter((x) => x.id !== note.id), mailbox: [note, ...s.mailbox].slice(0, 40) }); setWeek({ start: new Date(note.week).getTime() }); } else setMail({ note, opened }); }} close={() => setPcOpen(false)} take={(p) => { setPcOpen(false); setFromDesk(true); up({ phase: 'focus', picked: p }); }} upChat={up} openMeet={(m) => { setPcOpen(false); setBackAt([...co.pc.stand] as Tile); up({ phase: 'free' }); setMeetWalk(m); setGoBoss({ n: Date.now(), id: rules.boss, via: rules.boss === 'rio' ? 'kitchen' : undefined }); }} />}
       {s.phase === 'tray' && <Tray s={s} name={name} pick={(p) => { tap(); up({ picked: p }); }} back={() => { tap(); up({ phase: 'free' }); }} next={() => { tap(); up({ phase: 'focus' }); }} />}
       {s.phase === 'focus' && s.picked && <Focus s={s} name={name} back={() => { tap(); if (fromDesk) { setPcOpen(true); up({ phase: 'desk' }); } else up({ phase: 'tray' }); }} start={start} />}
 
@@ -421,7 +468,7 @@ export default function App() {
         up({ chat: [...s.chat.map((m) => (m.id === id ? { ...m, done: true } : m)), { id: now, from: 'me', at: now, text: o.answer }, { id: now + 1, from: b, at: now + 1, text: o.reply }, ...goalMsg], chatSeen: now + 2,
           goal: o.goal ? { key: o.goal, week: weekKey() } : s.goal, meets: (s.meets ?? 0) + 1, hearts: { ...s.hearts, [b]: s.hearts[b] + 2 },
           treats: { ...tt, have: tt.have.includes(o.treat) ? tt.have : [...tt.have, o.treat] } }); }} />}
-      {s.phase === 'home' && <GoHome s={s} name={name} sheet={sheet} fresh={goHomeFresh || loadPhase !== 'home'} start={() => { setGoHomeFresh(false); const d = new Date().toDateString(); up({ phase: 'free', day1: d, clock: rules.clockIn !== null ? { [d]: minsNow() } : {} }); }} />}
+      {s.phase === 'home' && <GoHome key={evening ? 'eve' : 'first'} s={s} name={name} sheet={sheet} evening={evening} onHome={() => { setEvening(false); setGoHomeFresh(false); up({ phase: 'house', ...(s.day1 ? {} : { day1: new Date().toDateString() }) }); }} fresh={evening ? goHomeFresh : goHomeFresh || loadPhase !== 'home'} start={() => { setGoHomeFresh(false); setBackAt(undefined); setArrive(Date.now()); const d = new Date().toDateString(); up({ phase: 'free', day1: d, clock: rules.clockIn !== null ? { [d]: minsNow() } : {} }); }} />}
       {welcomeBack && (() => {
         const b = piggyToday(s.blind), pal = co.people.filter((p) => s.hearts[p] >= HEART_POINTS).sort((a, b2) => s.hearts[b2] - s.hearts[a])[0];
         const newMonth = new Date(away).getMonth() !== new Date().getMonth(), feat = featured();

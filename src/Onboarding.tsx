@@ -352,7 +352,7 @@ export function Booth({ s, parts, up, done, first }: { s: Save; parts: Parts | n
           {tab === 'Top' && tiles(parts.count.top, (i) => ({ ...s.look, top: i }), (i) => i === s.look.top, [12, 17], (i) => set({ top: i }))}
           {tab === 'Bottom' && tiles(parts.count.bottom, (i) => ({ ...s.look, bottom: i }), (i) => i === s.look.bottom, [20, 12], (i) => set({ bottom: i }))}
           {tab === 'Extras' && <><div className="sub">{t('Glasses, hats and more · tap again to take off · optional, you can go on without one', '眼镜、帽子等等 · 再点一次可以摘掉 · 可选，不选也能继续')}</div>
-            {tiles(parts.count.acc, (i) => ({ ...s.look, acc: i }), (i) => i === s.look.acc, [4, 18], (i) => set({ acc: s.look.acc === i ? null : i }))}</>}
+            {tiles(parts.count.acc, (i) => ({ ...s.look, acc: i }), (i) => i === s.look.acc, [4, 27], (i) => set({ acc: s.look.acc === i ? null : i }))}</>}
           {petTab && <>
             <div className="label">{t('Pick a desk pet', '选一只桌宠')}</div>
             <div className="pets">{Object.keys(PET_NAMES).map((k) => <button key={k} className={k === s.pet && (chosen.has('Pet & birthday') || !first) ? 'tile pet on' : 'tile pet'} onClick={() => { tap(); up({ pet: k }); pick('Pet & birthday'); }}><PetSprite pet={k} scale={3} still /><span>{PET_NAMES[k]}</span></button>)}</div>

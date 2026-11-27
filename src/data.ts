@@ -86,6 +86,8 @@ export const GRADE_NAME = (g: number) => (t(['I', 'II', 'III'][g], ['一级', '�
 export const coinsAt = (base: number, xp: number) => Math.round(base * (1 + RAISE * gradeOf(xp)) / 5) * 5;
 export const xpAt = (base: number, xp: number) => (gradeOf(xp) >= 2 ? Math.round(base * 1.2) : base);
 
+export type HomeAct = 'cook' | 'read' | 'workout' | 'study' | 'door';
+export interface HomeSpot { key: HomeAct; name: string; at: [number, number]; stand: [number, number] }
 export interface GameSpot { name: string; at: [number, number]; stand: [number, number] }
 export interface Company {
   id: CompanyId; name: string; role: string; people: CoworkerId[];
@@ -97,7 +99,8 @@ export interface Company {
   food: GameSpot;       // where treats are sold (Stitchlight: Bobbin Bakery; Moonpuff: the kitchen counter)
   fridge: GameSpot;     // the office fridge: now and then a free little treat turns up in it
   surprise: GameSpot;   // the welcome gift in a common area, waiting after onboarding
-  giftInMap?: { x0: number; x1: number; y0: number; y1: number; src: number };   // the welcome gift is part of the map picture (map px): once opened, the table is painted over it, copying the table rows from `src`
+  giftInMap?: { x0: number; x1: number; y0: number; y1: number; src: number };
+  acts?: HomeSpot[];    // at home: the things you can do (each a spot with a bubble)   // the welcome gift is part of the map picture (map px): once opened, the table is painted over it, copying the table rows from `src`
 }
 export const COMPANIES: Record<CompanyId, Company> = {
   stitchlight: { id: 'stitchlight', name: t('Stitchlight', '织光杂志社'), role: t('Fashion Intern', '时尚实习生'), people: ['margaux', 'priya', 'theo', 'camille', 'jonah', 'odette'], host: 'odette', start: [2, 7],
@@ -109,3 +112,19 @@ export const COMPANIES: Record<CompanyId, Company> = {
     places: { kitchen: [96, 304], colab: [256, 196], game_room: [440, 100], arcade: [440, 262], idea_wall: [100, 208], booth: [240, 300] },
     food: { name: t('Kitchen counter', '厨房吧台'), at: [112, 274], stand: [6, 19] }, fridge: { name: t('The fridge', '冰箱'), at: [136, 268], stand: [8, 19] }, surprise: { name: t('A gift for you!', '给你的礼物！'), at: [184, 214], stand: [11, 14] } },   // on the coffee table by the green chairs
 };
+
+// The player's flat (public/assets/office_home.*, built by tools/build_home_map.py). Open outside office hours.
+// It reuses the office walking engine: no coworkers, and the bubbles are things to do at home.
+const NOWHERE: GameSpot = { name: '', at: [-999, -999], stand: [-1, -1] };
+export const HOME: Company = { id: 'home' as CompanyId, name: t('Home', '家'), role: '', people: [], host: 'mei', start: [15, 20], games: [],
+  pc: { at: [-999, -999], stand: [-1, -1], desk: [0, 0, 0, 0] }, places: {}, food: NOWHERE, fridge: NOWHERE, surprise: NOWHERE,
+  acts: [
+    { key: 'cook', name: t('Kitchen', '厨房'), at: [104, 100], stand: [6, 5] },
+    { key: 'read', name: t('Bookshelf', '书架'), at: [312, 56], stand: [19, 5] },
+    { key: 'study', name: t('My desk', '我的书桌'), at: [376, 60], stand: [25, 5] },
+    { key: 'workout', name: t('Workout corner', '健身角'), at: [72, 266], stand: [4, 17] },
+    { key: 'door', name: t('Front door', '大门'), at: [256, 330], stand: [15, 20] },
+  ] };
+// office hours: 8:00 to 17:00, every day (weekends are optional and pay 1.5x)
+export const OPEN_H = 8, CLOSE_H = 17;
+export const officeOpen = (d = new Date()) => d.getHours() >= OPEN_H && d.getHours() < CLOSE_H;

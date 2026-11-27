@@ -39,7 +39,8 @@ export interface DeskItem {
   fits: SlotKind[];                         // the kinds of slot it may go in
   home: string;                             // the slot it starts in when unwrapped
   starter?: boolean;                        // one of the first-day gifts on the desk (default yes)
-  src?: [number, number, number, number];   // a blind-pack or shop thing: where it sits in the blind/items.png atlas (drawn at 2x)
+  src?: [number, number, number, number];   // a blind-pack or shop thing: where it sits in the blind/items.png atlas
+  sk?: number;                              // and how much it is scaled up on the desk
 }
 export const ITEMS: DeskItem[] = [
   { id: 'lamp', name: t('Desk lamp', '台灯'), line: t('A warm little lamp for late study sessions.', '一盏暖暖的小台灯，陪你熬夜学习。'), box: [356, 456, 64, 72], fits: ['desk'], home: 'desk-l1' },
@@ -59,9 +60,12 @@ const NOT_DESK = new Set(['pet:pet_bed', 'pet:food_bowl']);
 export const deskable = (id: string) => DESK_CATS.includes(id.split(':')[0]) && !NOT_DESK.has(id);
 export const bbId = (id: string) => `bb:${id}`;
 const BLIND = new Map<string, DeskItem>();
+// things are drawn at 2x, except where that would make them the wrong size next to each other on the desk:
+// a file box is a lot smaller than a big storage box, and organisers and trays are wider than a mug
+const SIZE: Record<string, number> = { 'small:file_box': 1.4, 'wide:snack_organiser': 2.6, 'wide:perfume_tray': 2.4, 'wide:tea_set': 2.4, 'wide:record_player': 2.6, 'wide:sewing_machine': 2.4, 'small:desk_calendar': 1.6, 'small:film_camera': 1.6, 'small:pumpkin_mug': 1.6, 'small:polaroids': 1.7, 'small:washi_tape': 1.6 };
 export function registerBlind(list: { id: string; name: string; x: number; y: number; w: number; h: number }[]) {
-  for (const i of list) if (deskable(i.id)) BLIND.set(bbId(i.id), { id: bbId(i.id), name: i.name, line: '', box: [0, 0, i.w * 2, i.h * 2], src: [i.x, i.y, i.w, i.h],
-    fits: /^wall_/.test(i.id) ? ['wall'] : /^trailing/.test(i.id) ? ['shelf'] : ['desk', 'shelf'], home: '', starter: false });
+  for (const i of list) if (deskable(i.id)) { const k = SIZE[i.id] ?? 2; BLIND.set(bbId(i.id), { id: bbId(i.id), name: i.name, line: '', box: [0, 0, Math.round(i.w * k), Math.round(i.h * k)], src: [i.x, i.y, i.w, i.h], sk: k,
+    fits: /^wall_/.test(i.id) ? ['wall'] : /^trailing/.test(i.id) ? ['shelf'] : ['desk', 'shelf'], home: '', starter: false }); }
 }
 export const item = (id: string): DeskItem => ITEMS.find((i) => i.id === id) ?? BLIND.get(id) ?? { id, name: '', line: '', box: [0, 0, 48, 48], fits: ['desk', 'shelf'], home: '', starter: false };
 export const slot = (id: string) => SLOTS.find((s) => s.id === id)!;

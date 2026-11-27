@@ -119,7 +119,6 @@ export function BlindBoxTab({ s, up, close }: { s: Save; up: (p: Partial<Save>) 
     for (let i = 0; i < n; i++) t[draw(data.items, data.odds).tier as Tier] += 1; setSim(t); tap();
   };
   useEffect(() => { if (wantNext) { setWantNext(false); open(); } }, [wantNext]);
-  const pigImg = `${A}piggy_${Math.min(3, b.ready)}.png`;
   const left = BOX_MINS - b.mins, full = b.earned >= BOX_DAY_MAX;
 
   return (
@@ -129,7 +128,12 @@ export function BlindBoxTab({ s, up, close }: { s: Save; up: (p: Partial<Save>) 
           <div className="bb-panel">
             <div className="pix bb-h">{t('Your piggy bank', '你的存钱罐')}</div>
             <div className="sub">{t('Every hour of finished tasks earns a blind pack.', '每完成一小时的任务，就能得到一个盲包。')}</div>
-            <div className="bb-pig"><img key={puff} className={puff ? 'puff' : ''} style={{ position: 'relative', left: [42, 24, 0, 0][Math.min(3, b.ready)] }} src={pigImg} alt={t('The glass piggy bank', '玻璃存钱罐')} /></div>
+            {/* the piggy bank, drawn like the packs' own stickers, with the packs it has earned stacked beside it */}
+            <div className="bb-pig"><div className="bb-pig-row">
+              <img key={puff} className={puff ? 'puff' : ''} src={`${A}piggy_bank.png`} alt={t('The piggy bank', '存钱罐')} />
+              {b.ready > 0 && <div className={`bb-minipacks n${Math.min(3, b.ready)}`}>{LOOKS.slice(0, Math.min(3, b.ready)).map((lk, k) => <div key={k} className="bb-minipack" style={{ ['--k' as string]: k }}><PackArt look={lk} n={1} /></div>)}
+                {b.ready > 3 && <em className="bb-more">+{b.ready - 3}</em>}</div>}
+            </div></div>
             <div className="fill-pill" style={{ ['--pct' as string]: `${(b.mins / BOX_MINS) * 100}%` }}><span className="pix">{Math.floor(b.mins)} / {BOX_MINS} {t('min', '分钟')}</span><small>{t('to the next pack', '到下一个盲包')}</small></div>
             <div className="bb-line">{full ? t("That's 8 packs today. The piggy bank rests until tomorrow.", '今天已经攒了 8 个盲包。存钱罐休息到明天。') : ZH ? `再做 ${left} 分钟任务，就能得到下一个盲包` : `${left} more minutes of tasks to your next pack`}</div>
             <div className="sub">{t('Short tasks add up, and nothing resets.', '短任务也会累积，什么都不会清零。')}</div>

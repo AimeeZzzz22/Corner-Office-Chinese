@@ -22,6 +22,17 @@ const CHAR_K = 6, CHAR_ROW0 = 9, CHAR_ROWS = 19, CHAR_TOP = 378;   // size; the 
 type Place = Record<string, string | null>;
 
 // ---------------- drawing the desk: back wall and desk, the things on it, the character in the chair, the chair ----------------
+// where a hanging picture's string ties on: the top of its frame, found from its own pixels (cached per picture)
+const hangCache = new Map<string, { top: number; row: number; l: number; r: number }>();
+function hangPoints(atlas: HTMLImageElement, src: [number, number, number, number]) {
+  const key = src.join(','); const hit = hangCache.get(key); if (hit) return hit;
+  const [sx, sy, w, h] = src, c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d')!;
+  x.drawImage(atlas, sx, sy, w, h, 0, 0, w, h); const d = x.getImageData(0, 0, w, h).data, on = (i: number, j: number) => d[(j * w + i) * 4 + 3] > 0;
+  let top = 0; while (top < h - 1 && ![...Array(w).keys()].some((i) => on(i, top))) top++;
+  const row = Math.min(h - 1, top + Math.max(2, Math.round(h * 0.12)));
+  let l = 0, r = w - 1; while (l < w - 1 && !on(l, row)) l++; while (r > 0 && !on(r, row)) r--;
+  const out = { top, row, l, r }; hangCache.set(key, out); return out;
+}
 type Pics = { back: HTMLImageElement; front: HTMLImageElement; pet: HTMLImageElement; atlas: HTMLImageElement; items: Record<string, HTMLImageElement>; treats: Record<string, HTMLImageElement> };
 function usePics(pet: string): Pics {
   const ref = useRef<Pics | null>(null);
@@ -43,13 +54,14 @@ function drawDesk(x: CanvasRenderingContext2D, pics: Pics, place: Place, sheet: 
     if (it.src) {   // from a blind pack or the shop; a picture on the wall slants with the wall (2:1, like the shelves)
       if (!pics.atlas.complete) continue;
       if (lean) {
-        // hung on the wall: the picture keeps its own look (upright), on a string from a little nail, tipped a touch
-        // towards the wall's slope, with a soft shadow on the wall behind it
-        const top = at[1] - bh, nailY = top - 16, a = lean * 0.04;
-        x.save(); x.fillStyle = 'rgba(90, 60, 40, 0.16)';
-        x.beginPath(); x.moveTo(at[0] - bw / 2 + 6, top + 8 + lean * -3); x.lineTo(at[0] + bw / 2 + 6, top + 8 + lean * 3); x.lineTo(at[0] + bw / 2 + 6, at[1] + 6 + lean * 3); x.lineTo(at[0] - bw / 2 + 6, at[1] + 6 + lean * -3); x.closePath(); x.fill();
-        x.strokeStyle = '#6b5040'; x.lineWidth = 2; x.beginPath(); x.moveTo(at[0] - bw * 0.3, top + 4 - lean * bw * 0.3 * a); x.lineTo(at[0], nailY); x.lineTo(at[0] + bw * 0.3, top + 4 + lean * bw * 0.3 * a); x.stroke();
-        x.translate(at[0], top); x.rotate(a); x.drawImage(pics.atlas, it.src[0], it.src[1], it.src[2], it.src[3], -bw / 2, 0, bw, bh); x.restore();
+        // hung on the wall: the picture keeps its own look (upright), on a string from a little nail; the string is
+        // tied to the frame itself (found from the picture's own pixels), tipped a touch towards the wall's slope
+        const top = at[1] - bh, hp = hangPoints(pics.atlas, it.src), k = bw / it.src[2], a = lean * 0.04;
+        const y0 = top + hp.top * k, nailY = y0 - 16, ax = at[0] - bw / 2 + hp.l * k, bx2 = at[0] - bw / 2 + hp.r * k, ay = top + hp.row * k;
+        x.save(); x.translate(at[0], top); x.rotate(a); x.drawImage(pics.atlas, it.src[0], it.src[1], it.src[2], it.src[3], -bw / 2, 0, bw, bh); x.restore();
+        const rot = (px: number, py: number): [number, number] => { const dx = px - at[0], dy = py - top; return [at[0] + dx * Math.cos(a) - dy * Math.sin(a), top + dx * Math.sin(a) + dy * Math.cos(a)]; };
+        const [l1, l2] = rot(ax + 2, ay), [r1, r2] = rot(bx2 - 2, ay);
+        x.strokeStyle = '#5a4434'; x.lineWidth = 2; x.beginPath(); x.moveTo(l1, l2); x.lineTo(at[0], nailY); x.lineTo(r1, r2); x.stroke();
         x.fillStyle = '#4a3a30'; x.fillRect(at[0] - 3, nailY - 3, 6, 6); x.fillStyle = '#c9b8a0'; x.fillRect(at[0] - 2, nailY - 2, 2, 2);
       }
       else x.drawImage(pics.atlas, it.src[0], it.src[1], it.src[2], it.src[3], at[0] - bw / 2, at[1] - bh, bw, bh);
@@ -73,7 +85,7 @@ function drawDesk(x: CanvasRenderingContext2D, pics: Pics, place: Place, sheet: 
 // a desk item cut from its picture, at any size (for the storage drawer and the one being dragged)
 function ItemPic({ id, k, style }: { id: string; k: number; style?: React.CSSProperties }) {
   const it = item(id), [bx, by, bw, bh] = it.box;
-  if (it.src) return <span className="item-pic" style={{ width: bw * k, height: bh * k, backgroundImage: `url(${A}blind/items.png)`, backgroundSize: `${768 * 2 * k}px ${768 * 2 * k}px`, backgroundPosition: `-${it.src[0] * 2 * k}px -${it.src[1] * 2 * k}px`, ...style }} />;
+  if (it.src) { const q = (it.sk ?? 2) * k; return <span className="item-pic" style={{ width: bw * k, height: bh * k, backgroundImage: `url(${A}blind/items.png)`, backgroundSize: `${768 * q}px ${768 * q}px`, backgroundPosition: `-${it.src[0] * q}px -${it.src[1] * q}px`, ...style }} />; }
   return <span className="item-pic" style={{ width: bw * k, height: bh * k, backgroundImage: `url(${A}ob/starter/${id}.png)`, backgroundSize: `${W * k}px ${H * k}px`, backgroundPosition: `-${bx * k}px -${by * k}px`, ...style }} />;
 }
 

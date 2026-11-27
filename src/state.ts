@@ -1,6 +1,6 @@
 import { ChatMsg } from './work';
 import { ZH } from './lang';
-import { COMPANIES, COWORKERS, COWORKER_IDS, CompanyId, CoworkerId, SLIP_MINS, TaskType } from './data';
+import { COMPANIES, COWORKERS, COWORKER_IDS, CompanyId, CoworkerId, SLIP_MINS, TaskType, HomeAct } from './data';
 import { DEFAULT_LOOK, Look, fixLook } from './look';
 import { Focus, Reminders, SoundMode } from './obdata';
 import { freeSlot } from './deskSlots';
@@ -18,7 +18,9 @@ export interface Result { finished: boolean; coins: number; xp: number; promoted
 // a letter in the mail: a coworker's thank-you when a new heart fills, or the end-of-week payday envelope
 export interface Note { id: number; kind: 'thanks' | 'payday' | 'welcome' | 'recap' | 'birthday'; from: CoworkerId | null; level: number; coins: number; week: string }
 export interface Past { at: number; mins: number; worked: number; who: CoworkerId | null; job: string; focus: string; type: TaskType; finished: boolean; coins: number; xp: number; steps: number; stepsDone: number }
-export type Phase = 'offer' | 'tour' | 'booth' | 'badge' | 'vibe' | 'quiz' | 'gifts' | 'desk' | 'home' | 'free' | 'tray' | 'focus' | 'work' | 'timesup' | 'result';
+export type Phase = 'offer' | 'tour' | 'booth' | 'badge' | 'vibe' | 'quiz' | 'gifts' | 'desk' | 'home' | 'house' | 'free' | 'tray' | 'focus' | 'work' | 'timesup' | 'result';
+export interface HomeTask { key: HomeAct; what: string; mins: number; startedAt: number; endsAt: number; stopped?: number }
+export interface HomeDone { at: number; key: HomeAct; what: string; mins: number; worked: number; xp: number; finished: boolean }
 export interface Save {
   v: 1; name: string; coins: number; xp: number; company: CompanyId;
   hearts: Record<CoworkerId, number>; ordersDone: Record<CoworkerId, number>;
@@ -34,6 +36,8 @@ export interface Save {
   quiz: { focus: Focus | null; sound: SoundMode | null; reminders: Reminders | null };
   tourStop: number; firstOrder: boolean; lookDone: boolean;
   history: Past[];
+  // at home after hours: one self-improvement task at a time (XP only), and a log of them
+  homeTask: HomeTask | null; homeLog: HomeDone[];
   // lookDone: the first-day look was picked (the booth then works as a retake)
   desk: string[];     // starter gifts already unwrapped
   place: Record<string, string | null>;
@@ -64,7 +68,7 @@ export const fresh = (): Save => {
   const company: CompanyId = Math.random() < 0.5 ? 'stitchlight' : 'moonpuff';      // the offer letter comes from a random company
   return { v: 1, name: '', coins: 0, xp: 0, company, hearts: zero(), ordersDone: zero(), tray: newTray(company), picked: null, order: null, result: null, phase: 'offer', fast: false, sound: true, labelsBy: {},
     look: { ...DEFAULT_LOOK }, pet: 'orange_cat', birthday: null, badgeNo: `${String(Math.floor(Math.random() * 9000) + 1000)}`, vibe: null, vibeDraws: 0,
-    quiz: { focus: null, sound: null, reminders: null }, tourStop: 0, firstOrder: true, lookDone: false, history: [], desk: [], place: {}, blind: { mins: 0, ready: 0, day: '', earned: 0 }, pack: {}, treats: { day: '', have: [], used: [] }, fridge: { day: '', item: null, fortune: 0 }, surprise: 'none', notes: [], mailbox: [], payWeek: '', started: Date.now(), recapWeek: '', finds: [], sinceSecret: 0, sparkles: 0, setsClaimed: [], plantDays: 0, plantLast: '', lastSeen: Date.now(), bdayYear: 0, day1: '', clock: {}, lateSent: '', reviewWeek: '', chat: [], chatSeen: 0, goal: null, meets: 0, guide: -1, tipsSeen: [] };
+    quiz: { focus: null, sound: null, reminders: null }, tourStop: 0, firstOrder: true, lookDone: false, history: [], desk: [], place: {}, blind: { mins: 0, ready: 0, day: '', earned: 0 }, pack: {}, treats: { day: '', have: [], used: [] }, fridge: { day: '', item: null, fortune: 0 }, surprise: 'none', notes: [], mailbox: [], payWeek: '', started: Date.now(), recapWeek: '', finds: [], sinceSecret: 0, sparkles: 0, setsClaimed: [], plantDays: 0, plantLast: '', lastSeen: Date.now(), bdayYear: 0, day1: '', clock: {}, lateSent: '', reviewWeek: '', chat: [], chatSeen: 0, goal: null, meets: 0, guide: -1, tipsSeen: [], homeTask: null, homeLog: [] };
 };
 
 const KEY = ZH ? 'corner-office-demo-v1-zh' : 'corner-office-demo-v1';   // both sites share one origin on GitHub Pages
@@ -99,6 +103,7 @@ export function load(): Save {
       if (typeof s.meets !== 'number') { out.meets = 0; out.goal = null; }
       if (typeof s.day1 !== 'string') { out.day1 = s.phase && !['offer', 'tour', 'booth', 'badge', 'vibe', 'quiz', 'gifts', 'desk'].includes(s.phase) ? new Date().toDateString() : ''; out.clock = {}; out.lateSent = ''; out.reviewWeek = ''; out.chat = []; out.chatSeen = 0; }   // letters already read, kept in the computer's Mail app
       if (!s.surprise) out.surprise = s.lookDone && ['free', 'tray', 'focus', 'work', 'timesup', 'result', 'desk'].includes(s.phase) ? 'waiting' : 'none';
+      if (!Array.isArray(s.homeLog)) { out.homeLog = []; out.homeTask = null; }
       out.look = fixLook(out.look); out.history = out.history ?? [];
       return out;
     }

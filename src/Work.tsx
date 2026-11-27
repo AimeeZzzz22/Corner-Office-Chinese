@@ -182,9 +182,11 @@ const VIBE_LINE: Record<string, [string, string]> = {
 };
 type Stage = 'black' | 'exit' | 'train' | 'room' | 'sleep' | 'alarm' | 'ask' | 'bed';
 const LEN: Partial<Record<Stage, number>> = { exit: 6.6, train: 6.2, room: 5.6, sleep: 3.4 };
-export function GoHome({ s, name, sheet, fresh, start }: { s: Save; name: string; sheet: Sheet | null; fresh: boolean; start: () => void }) {
+// evening: the everyday clock-out at 17:00 (or orientation ending after hours): leave, ride home, and you're in the flat (onHome)
+export function GoHome({ s, name, sheet, fresh, start, evening, onHome }: { s: Save; name: string; sheet: Sheet | null; fresh: boolean; start: () => void; evening?: boolean; onHome?: () => void }) {
   const co = COMPANIES[s.company], boss = COWORKERS[rulesOf(s).boss], r = rulesOf(s), host = co.host;
-  const [stage, setStage] = useState<Stage>(fresh ? 'black' : 'alarm');
+  const [stage, setStage] = useState<Stage>(fresh ? 'black' : evening ? 'exit' : 'alarm');
+  const homeRef = useRef(onHome); homeRef.current = onHome;
   const [line, setLine] = useState(0);
   const imgs = useImages([`scene/home_exit_${s.company}.png`, 'scene/home_train.png', 'scene/home_city.png', 'scene/home_room_night.png', 'scene/home_blanket_night.png', 'scene/home_room_day.png', 'scene/home_blanket_day.png', `npc/${host}.png`, 'scene/home_blanket_day_sit.png', 'scene/home_blanket_night_sit.png']);
   const [exitBg, trainBg, city, roomN, blanketN, roomD, blanketD, hostSheet, blanketSit, blanketMade] = imgs;
@@ -209,12 +211,12 @@ export function GoHome({ s, name, sheet, fresh, start }: { s: Save; name: string
     if (stage === 'black') { const id = setTimeout(() => (line < lines.length - 1 ? setLine(line + 1) : setStage('exit')), line < lines.length - 1 ? 2300 : 2600); return () => clearTimeout(id); }
     const len = LEN[stage]; if (!len) return;
     const next: Record<string, Stage> = { exit: 'train', train: 'room', room: 'sleep', sleep: 'alarm' };
-    const id = setTimeout(() => setStage(next[stage]), len * 1000); return () => clearTimeout(id);
+    const id = setTimeout(() => (evening && stage === 'room' ? homeRef.current?.() : setStage(next[stage])), len * 1000); return () => clearTimeout(id);
   }, [stage, line]);
   useEffect(() => { if (stage !== 'alarm') return; const id = setInterval(() => play('ui_tap', 0.55), 380); return () => clearInterval(id); }, [stage]);
   const skip = () => {
     if (stage === 'black') { if (line < lines.length - 1) setLine(line + 1); else setStage('exit'); }
-    else if (stage === 'exit') setStage('train'); else if (stage === 'train') setStage('room'); else if (stage === 'room') setStage('sleep'); else if (stage === 'sleep') setStage('alarm');
+    else if (stage === 'exit') setStage('train'); else if (stage === 'train') setStage('room'); else if (stage === 'room') { if (evening) homeRef.current?.(); else setStage('sleep'); } else if (stage === 'sleep') setStage('alarm');
     else if (stage === 'alarm') { tap(); setStage('ask'); }
   };
   useEffect(() => {
@@ -328,6 +330,23 @@ export function GoHome({ s, name, sheet, fresh, start }: { s: Save; name: string
         <h3>{t('Snug. No rush.', '暖暖的，不着急。')}</h3>
         <p className="sub">{t("Get your space ready: some water, a comfy chair, phone on silent. Your first day starts whenever you're ready.", '先把环境准备好：倒杯水，坐舒服点，手机静音。你准备好了，第一天就开始。')}</p>
         <div className="gh-btns"><button className="btn primary" onClick={() => { play('coin', 0.5); setStage('ask'); }}>{t("Okay, I'm up", '好啦，起床')}</button></div></div>}
+    </div>
+  );
+}
+
+// ---- the next morning: glass doors with the studio's name slide apart onto the office, you're standing at the entrance
+export function Arrive({ name, done }: { name: string; done: () => void }) {
+  const [open, setOpen] = useState(false);
+  useEffect(() => { play('ui_tap', 0.4); const a = setTimeout(() => { setOpen(true); play('coin', 0.25); }, 900), b = setTimeout(done, 2300); return () => { clearTimeout(a); clearTimeout(b); }; }, []);
+  const hh = new Date();
+  return (
+    <div className={'arrive' + (open ? ' open' : '')} onClick={done}>
+      <div className="ar-door l"><span className="ar-handle" /></div>
+      <div className="ar-door r"><span className="ar-handle" /></div>
+      <div className="ar-sign">
+        <b>{name}</b>
+        <span>{t('Good morning', '早上好')} · {String(hh.getHours()).padStart(2, '0')}:{String(hh.getMinutes()).padStart(2, '0')}</span>
+      </div>
     </div>
   );
 }
