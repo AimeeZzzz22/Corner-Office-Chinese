@@ -210,7 +210,7 @@ export default function DeskView({ s, sheet, up, mode, openPc, leave }: {
               <div className="row"><button className="linkish" onClick={() => { tap(); setTut(TUT.length); }}>{t('Skip', '跳过')}</button>
                 <button className="btn ghost" onClick={() => { tap(); setTut(tut + 1); }}>{tut === TUT.length - 1 ? t('Got it', '知道啦') : t('Next', '下一步')}</button></div></div>
           </>}
-          {all && tut >= TUT.length && <div className="between foot"><span /><button className="btn primary" onClick={() => { tap(); up({ phase: 'home', surprise: s.surprise === 'opened' ? 'opened' : 'waiting' }); }}>{t('Wrap up orientation →', '结束入职培训 →')}</button></div>}
+          {all && tut >= TUT.length && <div className="between foot"><span /><button className="btn primary" onClick={() => { tap(); up({ phase: 'free', surprise: s.surprise === 'opened' ? 'opened' : 'waiting', guide: 0 }); }}>{t('Head into the office →', '去办公室转转 →')}</button></div>}
         </div>)}
       {mode === 'desk' && !placing && (
         <div className="desk-bar">

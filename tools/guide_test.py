@@ -1,6 +1,7 @@
 # Walks the whole first-day guide in a browser (serve dist/ or dist-zh/ on :4173 first): python3 tools/guide_test.py <company> [en|zh] [start step]
 import asyncio, sys, json
 from playwright.async_api import async_playwright
+PORT='4175' if (len(sys.argv)>2 and sys.argv[2]=='zh') else '4173'
 co=sys.argv[1]; lang=sys.argv[2] if len(sys.argv)>2 else 'en'
 KEY='corner-office-demo-v1'+('-zh' if lang=='zh' else '')
 SET="""(p)=>{const k='%s';const s=JSON.parse(localStorage.getItem(k));Object.assign(s,p);localStorage.setItem(k,JSON.stringify(s));}"""%KEY
@@ -9,7 +10,7 @@ async def main():
     async with async_playwright() as p:
         b=await p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--no-sandbox']); pg=await b.new_page(viewport={'width':1280,'height':720})
         errs=[]; pg.on('pageerror',lambda e: errs.append(str(e)))
-        await pg.goto('http://localhost:4173/'); await pg.evaluate('localStorage.clear()'); await pg.reload(); await pg.wait_for_timeout(400)
+        await pg.goto('http://localhost:'+PORT+'/'); await pg.evaluate('localStorage.clear()'); await pg.reload(); await pg.wait_for_timeout(400)
         base={'name':'Aimee','company':co,'lookDone':True,'look':{'body':1,'eyes':2,'top':3,'bottom':2,'hair':5,'hairColour':'Brown','acc':None},'birthday':{'m':3,'d':4},'phase':'free','guide':int(sys.argv[3]) if len(sys.argv)>3 else 0,'surprise':'waiting','fast':True,
               'desk':['lamp','clipboard','piggy','phone'],'place':{'lamp':'desk-l1'},'vibe':'spinner'}
         await pg.evaluate(SET,base); await pg.reload(); await pg.wait_for_timeout(1500)
@@ -24,6 +25,13 @@ async def main():
                 seen.append(g); await pg.screenshot(path=f'/tmp/gd/{co}_{lang}_{g:02d}.png'); last=g; same=0
             else: same+=1
             if same>25: print('stuck at',g,sid); await pg.screenshot(path=f'/tmp/gd/stuck_{g}.png'); break
+            # orientation over: the way home, then the morning of day one
+            if await pg.query_selector('.gh'):
+                await pg.screenshot(path=f'/tmp/gd/{co}_{lang}_home.png')
+                for _ in range(12):
+                    if await pg.query_selector('.gh-btns .btn.primary'): break
+                    await pg.mouse.click(640,360); await pg.wait_for_timeout(350)
+                await pg.click('.gh-btns .btn.primary'); await pg.wait_for_timeout(1200); continue
             okb=await pg.query_selector('.coach-say .btn')
             if okb: await okb.click(); await pg.wait_for_timeout(400); continue
             # special cases

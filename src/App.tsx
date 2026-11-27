@@ -99,6 +99,14 @@ export default function App() {
   const [meet, setMeet] = useState<ChatMsg | null>(null);
   const [meetWalk, setMeetWalk] = useState<ChatMsg | null>(null);   // walking over to the boss's office
   const [goBoss, setGoBoss] = useState<{ n: number; id: CoworkerId } | null>(null);
+  // orientation ends once the first-day guide has shown everything and only the first focus is left: you go home,
+  // and the practice order waits for the morning of day one
+  const practiceStep = STEPS.findIndex((x) => x.id === 'practice');
+  useEffect(() => {
+    if (s.guide !== practiceStep || s.day1 || (s.phase !== 'desk' && s.phase !== 'free')) return;
+    const id = setTimeout(() => { setPcOpen(false); setMenu(null); setShop(null); setGoHomeFresh(true); up({ phase: 'home' }); }, 700);
+    return () => clearTimeout(id);
+  }, [s.guide, s.day1, s.phase]);
   const [loadPhase] = useState(s.phase);   // reloading while at home starts again at the morning alarm
   const [goHomeFresh, setGoHomeFresh] = useState(false);
   // a new message from the boss pops up as a small toast in the office or at the desk
@@ -404,7 +412,7 @@ export default function App() {
         <Head id={lastBoss.from} size={30} /><span><b>{COWORKERS[lastBoss.from].name}</b><small>{lastBoss.text}</small><em>{t('Reply in Chat on your computer', '去电脑的「消息」里回复')}</em></span></button>}
       {meet && <Meeting s={s} msg={meet} sheet={sheet} close={(choice) => { const b = rules.boss as 'margaux' | 'rio', c = MEET_CHOICES().find((x) => x.key === choice); const id = meet.id; setMeet(null); if (!c) return;
         const now = Date.now(); up({ chat: [...s.chat.map((m) => (m.id === id ? { ...m, done: true } : m)), { id: now, from: 'me', at: now, text: c.text }, { id: now + 1, from: rules.boss, at: now + 1, text: c.reply[b] }], chatSeen: now + 1 }); }} />}
-      {s.phase === 'home' && <GoHome s={s} name={name} sheet={sheet} fresh={goHomeFresh || loadPhase !== 'home'} start={() => { setGoHomeFresh(false); const d = new Date().toDateString(); up({ phase: 'free', guide: 0, day1: d, clock: rules.clockIn !== null ? { [d]: minsNow() } : {} }); }} />}
+      {s.phase === 'home' && <GoHome s={s} name={name} sheet={sheet} fresh={goHomeFresh || loadPhase !== 'home'} start={() => { setGoHomeFresh(false); const d = new Date().toDateString(), first = s.guide === practiceStep; up({ phase: first ? 'desk' : 'free', day1: d, clock: rules.clockIn !== null ? { [d]: minsNow() } : {} }); }} />}
       {welcomeBack && (() => {
         const b = piggyToday(s.blind), pal = co.people.filter((p) => s.hearts[p] >= HEART_POINTS).sort((a, b2) => s.hearts[b2] - s.hearts[a])[0];
         const newMonth = new Date(away).getMonth() !== new Date().getMonth(), feat = featured();
