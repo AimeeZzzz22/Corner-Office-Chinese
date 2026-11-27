@@ -85,9 +85,24 @@ def stitchlight():
         if w > 12: b.hl(x + 2, x + w - 4, y + h - 3, hx('ffffff'))
     for x in (124, 140, 156, 172, 188): b.px(x + 3, 16, hx('d64545'))
     # left: printer on a white cabinet, the camera on its tripod, the tall vase of white lilies
-    b.box(14, 82, 40, FLOOR + 6, hx('ffffff'), OL, None, hx('e6e6ee')); b.hl(17, 37, 92, OL); b.hl(25, 31, 87, hx('b9b9c6')); b.hl(25, 31, 97, hx('b9b9c6'))
-    b.box(15, 70, 39, 81, hx('e9e9f0'), OL, hx('ffffff')); b.rect(18, 66, 36, 70, hx('ffffff')); b.box(18, 66, 36, 70, hx('ffffff'), OL); b.rect(20, 74, 34, 76, hx('3a3a46')); b.px(36, 73, hx('7fd18a'))
-    for k in range(3): b.hl(21, 33, 67 + k, hx('d7d7e0')) if k == 1 else None
+    # a dress form by the glass wall, a half-finished dress pinned to it, a tape measure round its neck
+    DX = 27
+    b.box(DX - 7, FLOOR + 8, DX + 7, FLOOR + 10, hx('3a3a46'), OL); b.vl(DX, 92, FLOOR + 7, hx('8a6a4a')); b.vl(DX + 1, 92, FLOOR + 7, OL)
+    b.rect(DX - 1, 62, DX + 1, 64, hx('8a6a4a')); b.ellipse(DX, 61, 2, 1, hx('8a6a4a'), OL)
+    for i in range(28):                                  # the torso, with a waist
+        y = 65 + i; half = [7, 8, 8, 8, 8, 7, 7, 6, 6, 5, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 12, 12][i]
+        c = hx('f1e4cc') if i < 9 else hx('f4a9b8') if i < 13 else hx('f7bfc9')
+        b.hl(DX - half, DX + half, y, c); b.px(DX - half - 1, y, OL); b.px(DX + half + 1, y, OL)
+        if i >= 13 and i % 4 == 1: b.px(DX - half + 2 + (i % 3), y, hx('e58a9c')); b.px(DX + half - 3, y, hx('e58a9c'))
+    b.hl(DX - 12, DX + 12, 93, OL)
+    b.hl(DX - 8, DX + 8, 74, hx('e58a9c')); b.hl(DX - 6, DX + 6, 75, hx('fbe0e5'))          # the bodice's edge
+    for k in range(7): b.px(DX - 6 + k, 66 + (k % 2), hx('f2d07a'))                       # tape measure
+    b.vl(DX - 7, 67, 80, hx('f2d07a')); b.vl(DX + 6, 67, 76, hx('f2d07a'))
+    for (px_, py_) in [(DX - 4, 78), (DX + 3, 81), (DX - 1, 84)]: b.px(px_, py_, hx('d64545'))   # pins
+    # a wall clock and a light switch on the left wall
+    b.ellipse(21, 30, 6, 6, hx('ffffff'), OL); b.vl(21, 26, 30, OL); b.hl(21, 24, 30, OL); b.px(21, 25, hx('d64545'))
+    for (cx_, cy_) in [(21, 25), (26, 30), (21, 35), (16, 30)]: b.px(cx_, cy_, hx('b9b9c6'))
+    b.box(14, 62, 17, 68, hx('ffffff'), OL); b.px(15, 64, hx('b9b9c6'))
     TX, TY = 52, 70                                                      # tripod + camera
     b.box(TX - 7, TY, TX + 7, TY + 8, hx('2b2b33'), OL); b.ellipse(TX + 2, TY + 4, 3, 3, hx('5a5a6a'), OL); b.px(TX + 1, TY + 3, hx('bfe0f2')); b.box(TX - 5, TY - 3, TX - 1, TY, hx('2b2b33'), OL)
     for (dx, x1) in [(-1, TX - 9), (0, TX), (1, TX + 9)]:
@@ -121,10 +136,39 @@ def stitchlight():
     b.box(246, 82, 256, 108, SG, OL, SGH); b.box(250, 92, 319, 98, SG, OL, SGH)
     for x in (256, 314): b.rect(x, 107, x + 2, 110, hx('2b2b33'))
     b.box(268, 80, 278, 88, hx('f4c9c4'), OL); b.box(296, 79, 306, 88, hx('e8e8f0'), OL)
+    # small things the map is too far away to show
+    b.box(98, 95, 102, 98, hx('ffffff'), OL); b.px(99, 96, OL); b.px(101, 96, OL)             # a socket
+    b.rect(212, 8, 226, 10, hx('dcdce6')); b.hl(212, 226, 8, OL); b.hl(212, 226, 10, OL)
+    for x in range(214, 226, 2): b.px(x, 9, hx('b9b9c6'))                                    # an air vent
+    b.rect(37, 17, 89, 27, hx('f6efe2')); b.hl(37, 89, 27, hx('d9cdb8')); b.hl(37, 89, 28, OL)   # a roller blind, half down
+    for y in range(19, 27, 2): b.hl(38, 88, y, hx('efe6d4'))
+    b.vl(86, 29, 40, hx('b9b9c6')); b.ellipse(86, 41, 1, 1, hx('d9cdb8'), OL)
+    b.box(256, 53, 262, 59, hx('ffffff'), OL); b.vl(259, 44, 52, hx('6f9b5c'))               # an orchid on the right sill
+    for (fx, fy) in [(256, 45), (261, 47), (258, 49)]: b.ellipse(fx, fy, 1, 1, hx('e9a6d4'), OL)
+    b.box(296, 16, 314, 40, hx('d9b052'), OL); b.rect(298, 18, 312, 38, hx('fffaf0'))         # a framed award
+    b.hl(300, 310, 21, hx('3a3a46')); b.hl(301, 309, 24, hx('b9b9c6')); b.hl(301, 309, 26, hx('b9b9c6')); b.ellipse(305, 32, 3, 3, hx('d9b052'), OL); b.px(304, 36, hx('d64545')); b.px(306, 36, hx('d64545'))
+    # an arc floor lamp over the sofa
+    b.vl(304, 56, 110, hx('3a3a46')); b.vl(305, 56, 110, hx('5a5a6a'))
+    for i in range(41):
+        t_ = i / 40; x = round(304 - 20 * t_); y = round(56 - 12 * math.sin(math.pi * t_ * 0.9)); b.px(x, y, hx('3a3a46')); b.px(x, y + 1, hx('5a5a6a'))
+    b.vl(284, 46, 50, hx('3a3a46'))
+    for i in range(6): b.hl(284 - 2 - i, 284 + 2 + i, 51 + i, hx('fff1d2') if i < 5 else hx('f2d9a8'))
+    b.hl(282, 286, 50, OL); b.hl(277, 291, 57, OL)
+    for i in range(6): b.px(284 - 3 - i, 51 + i, OL); b.px(284 + 3 + i, 51 + i, OL)
+    b.dither(274, 58, 294, 70, (255, 240, 200, 90))
+    b.box(298, 110, 310, 112, hx('3a3a46'), OL)
+    # a blush throw over the sofa's arm, a magazine on the seat, shopping bags on the floor
+    b.box(246, 82, 256, 100, hx('f4c9c4'), OL, hx('fbe3e1')); b.vl(251, 84, 99, hx('e8a9ae'))
+    for x in range(247, 256, 2): b.px(x, 101, hx('f4c9c4'))
+    b.box(284, 92, 298, 95, hx('ffffff'), OL); b.rect(286, 93, 290, 94, hx('e05a5a')); b.hl(291, 296, 93, hx('3a3a46'))
+    b.box(262, 104, 274, 118, hx('f4a9b8'), OL, hx('fbd0da')); b.text(264, 108, 'S', hx('ffffff')); b.px(265, 102, OL); b.px(266, 101, OL); b.px(270, 101, OL); b.px(271, 102, OL)
+    b.box(276, 106, 286, 118, hx('2b2b33'), OL); b.hl(278, 284, 110, hx('d9b052')); b.px(278, 104, OL); b.px(279, 103, OL); b.px(283, 103, OL); b.px(284, 104, OL)
     # Margaux's chair (dark grey, tufted, a high back) and its seat and base behind the glass desk
     CG = hx('4f4f60'); CGD = hx('3c3c4c'); CGH = hx('6a6a7e')
     office_chair_back(b, 144, 176, 62, 104, CG, CGD, CGH, OL, CGD)
     chair_base(b, 160, 106, 117, CG, CGD, OL, hx('a9adb8'))
+    for i in range(12): b.hl(145, 145 + max(2, 9 - i // 2), 63 + i, hx('e9d9bd') if i % 3 else hx('dcc8a6'))   # her cardigan over the chair
+    b.vl(145, 63, 74, OL)
     b.save(OUT + 'meet_stitchlight_back.png')
 
     d = Pic(W, H)
@@ -143,6 +187,14 @@ def stitchlight():
     d.ellipse(186, DESK_TOP - 2, 3, 1, hx('2b2b33')); d.ellipse(193, DESK_TOP - 2, 3, 1, hx('2b2b33')); d.hl(189, 190, DESK_TOP - 3, hx('2b2b33'))
     d.box(196, DESK_TOP - 3, 214, DESK_TOP - 1, hx('f2e6d6'), OL); d.hl(198, 212, DESK_TOP - 2, hx('e8798a')); d.hl(200, 214, DESK_TOP - 4, hx('3a3a46'))
     d.box(176, 96, 181, DESK_TOP - 1, hx('ffffff'), OL); d.hl(177, 180, 97, hx('7a4a2e')); d.px(182, 98, OL); d.px(182, 100, OL); d.px(183, 99, OL)
+    d.ellipse(178, 95, 1, 0, hx('e8798a'))                                                    # lipstick on the cup
+    d.vl(205, DESK_TOP - 6, DESK_TOP - 5, hx('d64545')); d.px(206, DESK_TOP - 7, hx('d64545'))  # a red pen on the notebook
+    for i, c in enumerate(['e8798a', 'f2d07a', '9ab89a', 'c7d9e8']):                         # a fanned swatch book
+        d.box(150 + i * 2, DESK_TOP - 3 - i, 156 + i * 2, DESK_TOP - 1, hx(c), OL)
+    d.box(140, DESK_TOP - 3, 146, DESK_TOP - 1, hx('ffffff'), OL); d.hl(141, 145, DESK_TOP - 2, hx('3a3a46'))   # her phone
+    # under the desk: a wastepaper basket with a few crumpled drafts
+    d.box(190, 116, 202, 128, hx('d9d9e2'), OL, hx('f0f0f5')); d.ellipse(193, 115, 2, 2, hx('ffffff'), OL); d.ellipse(198, 114, 2, 2, hx('fff4d6'), OL)
+    d.ellipse(186, 128, 2, 1, hx('ffffff'), OL)
     d.save(OUT + 'meet_stitchlight_desk.png')
 
     c = Pic(W, H)
@@ -196,11 +248,34 @@ def moonpuff():
     b.dither(GX + 2, 7, W - 1, H - 1, (210, 230, 245, 40))
     # a second desk chair at the long desk (left, empty), a plant, the printer stand
     b.box(12, 84, 36, FLOOR + 6, hx('fbf5e8'), OL, None, hx('e3d4b4')); b.ellipse(24, 74, 10, 10, hx('3fae8f'), OL); b.ellipse(20, 70, 4, 3, hx('7fd6b6')); b.ellipse(29, 77, 3, 3, hx('2f8a70'))
+    # small things the map doesn't show: a moon clock, a skateboard against the wall, warm string lights, a backpack,
+    # a hoodie on a hook, a cable tidy, a socket, and in the games room a lava lamp and a controller on a bean bag
+    b.ellipse(216, 30, 7, 7, hx('2f2a52'), OL)
+    for y in range(24, 37):
+        for x in range(210, 223):
+            if (x - 216) ** 2 + (y - 30) ** 2 <= 36 and (x - 219) ** 2 + (y - 28) ** 2 > 20: b.px(x, y, hx('ffe27a'))
+    b.vl(216, 26, 30, hx('ffffff')); b.hl(216, 219, 30, hx('ffffff'))
+    for x in range(8, 228):
+        y = 9 + round(2 * math.sin(x / 14))
+        b.px(x, y, hx('6a5d8a'))
+        if x % 12 == 4: b.rect(x - 1, y + 1, x + 1, y + 3, hx('ffd98a')); b.dither(x - 3, y, x + 3, y + 6, (255, 217, 138, 80))
+    b.box(208, 64, 214, 103, hx('ff8fc8'), OL); b.vl(209, 66, 101, hx('ffb3d9'))           # skateboard
+    for y in (68, 98): b.ellipse(211, y, 2, 1, hx('2b2b33')); b.hl(208, 214, y, hx('c9ced8'))
+    b.text(209, 78, 'M', hx('ffffff')); b.ellipse(211, 88, 1, 1, hx('7fe0d0'))
+    b.box(42, 66, 46, 69, hx('c9ced8'), OL)                                                # a hook with a hoodie
+    for i in range(20):
+        half = 3 + min(i, 8) // 2; b.hl(44 - half, 44 + half, 70 + i, hx('7fd6b6') if i % 5 else hx('5fbfa0')); b.px(44 - half - 1, 70 + i, OL); b.px(44 + half + 1, 70 + i, OL)
+    b.hl(38, 50, 90, OL); b.ellipse(44, 72, 2, 2, hx('5fbfa0'), OL); b.vl(42, 74, 80, hx('ffffff')); b.vl(46, 74, 79, hx('ffffff'))
+    b.box(100, 95, 104, 98, hx('fbf5e8'), OL); b.px(101, 96, OL); b.px(103, 96, OL)          # a socket
+    b.box(264, 50, 268, 54, hx('b8a2ff'), OL); b.ellipse(266, 47, 2, 3, hx('ff8fc8'), OL); b.px(266, 46, hx('ffd166'))   # lava lamp on the TV stand
+    b.box(268, 92, 276, 95, hx('3a3a46'), OL); b.px(270, 93, hx('ff6f6f')); b.px(274, 93, hx('7fe0d0'))   # a controller on the bean bag
     # Rio's chair: the same grey office chair as on the map
     CG = hx('5e6474'); CGD = hx('4a4f5e'); CGH = hx('7a8194')
     office_chair_back(b, 144, 176, 62, 104, CG, CGD, CGH, OL, None)
     for y in range(68, 100, 4): b.hl(150, 170, y, CGD)                  # mesh back
     chair_base(b, 160, 106, 117, CG, CGD, OL, hx('a9adb8'))
+    for i in range(14): b.hl(171 - max(2, 8 - i // 2), 175, 64 + i, hx('5b8fe0') if i % 3 else hx('4a7acc'))   # his hoodie over the chair
+    b.vl(176, 64, 77, OL); b.vl(172, 70, 82, hx('ffffff'))
     b.save(OUT + 'meet_moonpuff_back.png')
 
     d = Pic(W, H)
@@ -221,6 +296,22 @@ def moonpuff():
     def mug(x, y, c, cd):
         d.box(x, y, x + 7, y + 7, c, OL); d.vl(x + 6, y + 1, y + 6, cd); d.hl(x + 1, x + 6, y + 1, hx('6b3e2a'))
         d.px(x + 8, y + 2, OL); d.px(x + 9, y + 3, OL); d.px(x + 9, y + 4, OL); d.px(x + 8, y + 5, OL)
+    # headphones resting on the monitor, sticky notes on its back
+    for x in range(119, 142):
+        y = 80 - round(3 * math.sqrt(max(0, 1 - ((x - 130.5) / 11.5) ** 2))); d.px(x, y, hx('2b2b33'))
+    d.box(117, 81, 121, 88, hx('ff8fc8'), OL); d.box(139, 81, 143, 88, hx('ff8fc8'), OL)
+    d.box(123, 90, 127, 93, hx('ffe066'), OL); d.box(133, 84, 137, 87, hx('9ae6d8'), OL)
+    # a game controller, a can of fizzy drink, a bag of crisps, stickers on the desk front, a backpack on the floor
+    d.box(108, DESK_TOP - 3, 117, DESK_TOP - 1, hx('3a3a46'), OL); d.px(110, DESK_TOP - 2, hx('ff6f6f')); d.px(115, DESK_TOP - 2, hx('7fe0d0'))
+    d.box(212, DESK_TOP - 8, 216, DESK_TOP - 1, hx('7fd6b6'), OL, hx('c9f0e4')); d.hl(213, 215, DESK_TOP - 5, hx('ffffff'))
+    d.box(219, DESK_TOP - 10, 228, DESK_TOP - 1, hx('ffd166'), OL); d.hl(219, 228, DESK_TOP - 10, hx('e0ad3c')); d.ellipse(223, DESK_TOP - 5, 2, 2, hx('ff6f6f'))
+    d.ellipse(118, 116, 4, 4, hx('ffffff'), OL); d.px(116, 115, OL); d.px(120, 115, OL); d.hl(117, 119, 118, hx('ff8fc8'))
+    d.box(140, 112, 154, 120, hx('3f3355'), OL); d.text(141, 114, 'GG', hx('7fe0d0'))
+    for k in range(5):
+        ang = math.radians(k * 72 - 90); d.px(176 + round(5 * math.cos(ang)), 116 + round(5 * math.sin(ang)), hx('ffd166'))
+    d.ellipse(176, 116, 3, 3, hx('ffd166'), OL)
+    d.box(36, 106, 54, 128, hx('3f5fa8'), OL, hx('5b7fc8')); d.box(39, 116, 51, 126, hx('35508f'), OL)   # backpack
+    d.vl(36, 108, 122, hx('2b2b33')); d.ellipse(45, 120, 2, 2, hx('ffd166')); d.box(41, 109, 46, 113, hx('ff8fc8'), OL)
     mug(180, DESK_TOP - 9, hx('7fe0d0'), hx('5cbfb0'))     # Rio's
     mug(146, DESK_TOP - 9, hx('ffd166'), hx('e0ad3c'))     # yours
     d.save(OUT + 'meet_moonpuff_desk.png')
