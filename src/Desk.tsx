@@ -5,7 +5,8 @@ import { Host } from './Onboarding';
 import { Save } from './state';
 import { play } from './sfx';
 import { ALL_TREATS, treatsToday } from './treats';
-import { ITEMS, SLOTS, STARTER, fits, freeSlot, item, slot } from './deskSlots';
+import { ITEMS, SLOTS, STARTER, bbId, deskable, fits, freeSlot, item, slot } from './deskSlots';
+import { loadItems } from './BlindBox';
 
 const A = `${import.meta.env.BASE_URL}assets/`;
 const tap = () => play('ui_tap', 0.4);
@@ -21,12 +22,12 @@ const CHAR_K = 6, CHAR_ROW0 = 9, CHAR_ROWS = 19, CHAR_TOP = 378;   // size; the 
 type Place = Record<string, string | null>;
 
 // ---------------- drawing the desk: back wall and desk, the things on it, the character in the chair, the chair ----------------
-type Pics = { back: HTMLImageElement; front: HTMLImageElement; pet: HTMLImageElement; items: Record<string, HTMLImageElement>; treats: Record<string, HTMLImageElement> };
+type Pics = { back: HTMLImageElement; front: HTMLImageElement; pet: HTMLImageElement; atlas: HTMLImageElement; items: Record<string, HTMLImageElement>; treats: Record<string, HTMLImageElement> };
 function usePics(pet: string): Pics {
   const ref = useRef<Pics | null>(null);
   if (!ref.current) {
     const ld = (p: string) => { const i = new Image(); i.src = A + p; return i; };
-    ref.current = { back: ld('ob/starter/back.png'), front: ld('ob/starter/front.png'), pet: ld(`ob/pets/${pet}.png`), items: Object.fromEntries(ITEMS.map((i) => [i.id, ld(`ob/starter/${i.id}.png`)])),
+    ref.current = { back: ld('ob/starter/back.png'), front: ld('ob/starter/front.png'), pet: ld(`ob/pets/${pet}.png`), atlas: ld('blind/items.png'), items: Object.fromEntries(ITEMS.map((i) => [i.id, ld(`ob/starter/${i.id}.png`)])),
       treats: Object.fromEntries(ALL_TREATS.map((t) => [t.key, ld(`ob/treats/${t.key}.png`)])) };
   }
   if (!ref.current.pet.src.endsWith(`${pet}.png`)) ref.current.pet.src = `${A}ob/pets/${pet}.png`;
@@ -37,9 +38,10 @@ function drawDesk(x: CanvasRenderingContext2D, pics: Pics, place: Place, sheet: 
   if (pics.back.complete) x.drawImage(pics.back, 0, 0);
   const on = Object.entries(place).filter(([, sl]) => sl).map(([id, sl]) => ({ it: item(id), at: slot(sl!).at })).sort((a, b) => a.at[1] - b.at[1]);
   for (const { it, at } of on) {
-    const im = pics.items[it.id]; if (!im?.complete) continue;
     const [bx, by, bw, bh] = it.box;
     x.globalAlpha = opts.lifted === it.id ? 0.3 : 1;
+    if (it.src) { if (pics.atlas.complete) x.drawImage(pics.atlas, it.src[0], it.src[1], it.src[2], it.src[3], at[0] - bw / 2, at[1] - bh, bw, bh); continue; }   // from a blind pack or the shop
+    const im = pics.items[it.id]; if (!im?.complete) continue;
     x.drawImage(im, bx, by, bw, bh, at[0] - bw / 2, at[1] - bh, bw, bh);
   }
   x.globalAlpha = 1;
@@ -56,7 +58,8 @@ function drawDesk(x: CanvasRenderingContext2D, pics: Pics, place: Place, sheet: 
 
 // a desk item cut from its picture, at any size (for the storage drawer and the one being dragged)
 function ItemPic({ id, k, style }: { id: string; k: number; style?: React.CSSProperties }) {
-  const [bx, by, bw, bh] = item(id).box;
+  const it = item(id), [bx, by, bw, bh] = it.box;
+  if (it.src) return <span className="item-pic" style={{ width: bw * k, height: bh * k, backgroundImage: `url(${A}blind/items.png)`, backgroundSize: `${768 * 2 * k}px ${768 * 2 * k}px`, backgroundPosition: `-${it.src[0] * 2 * k}px -${it.src[1] * 2 * k}px`, ...style }} />;
   return <span className="item-pic" style={{ width: bw * k, height: bh * k, backgroundImage: `url(${A}ob/starter/${id}.png)`, backgroundSize: `${W * k}px ${H * k}px`, backgroundPosition: `-${bx * k}px -${by * k}px`, ...style }} />;
 }
 
@@ -89,6 +92,10 @@ export default function DeskView({ s, sheet, up, mode, openPc, leave }: {
   // first day, once every gift is open: a short hands-on tutorial. 0 click an item, 1 move it or bag it, 2 drag one,
   // 3 the backpack, 4 done
   const [tut, setTut] = useState(0);
+  // things from blind packs and the shop live in the backpack too (also the ones bought before they did)
+  const [, setReady] = useState(0);
+  useEffect(() => { loadItems().then(() => { setReady((n) => n + 1); const miss = Object.keys(s.pack).filter((k) => s.pack[k] > 0 && deskable(k) && !s.desk.includes(bbId(k)));
+    if (miss.length) up({ desk: [...s.desk, ...miss.map(bbId)] }); }).catch(() => {}); }, []);
   const step = (from: number) => setTut((t) => (t === from ? from + 1 : t));
   const place = s.place, live = mode !== 'still';
   const st = useRef({ place, held, sheet, treats: treatsToday(s.treats).have }); st.current = { place, held, sheet, treats: treatsToday(s.treats).have };
@@ -224,7 +231,8 @@ export default function DeskView({ s, sheet, up, mode, openPc, leave }: {
 }
 // the dragged item fills its box
 function ItemPicFill({ id }: { id: string }) {
-  const [bx, by, bw, bh] = item(id).box;
+  const it = item(id), [bx, by, bw, bh] = it.box;
+  if (it.src) return <span className="item-pic fill" style={{ backgroundImage: `url(${A}blind/items.png)`, backgroundSize: `${(768 / it.src[2]) * 100}% ${(768 / it.src[3]) * 100}%`, backgroundPosition: `${(it.src[0] / (768 - it.src[2])) * 100}% ${(it.src[1] / (768 - it.src[3])) * 100}%` }} />;
   return <span className="item-pic fill" style={{ backgroundImage: `url(${A}ob/starter/${id}.png)`, backgroundSize: `${(W / bw) * 100}% ${(H / bh) * 100}%`, backgroundPosition: `${(bx / (W - bw)) * 100}% ${(by / (H - bh)) * 100}%` }} />;
 }
 

@@ -1846,3 +1846,4 @@ html:lang(zh-CN) .bc-title { font-family: 'Caveat', 'Kaiti SC', 'STKaiti', 'KaiT
 .meet-dots i.done { background: #f2c14e; }
 .meet-dots i.on { background: #fff4d1; box-shadow: 0 0 0 2px #f2c14e; }
 .meet-gift { display: block; padding: 8px 10px; border-radius: 10px; background: #fff4d1; border: 2px dashed #e0c070; color: #6b5a48 !important; font: 600 13px Inter, sans-serif !important; letter-spacing: 0 !important; text-transform: none !important; overflow-wrap: anywhere; }
+.clockin.at-desk { left: 50%; bottom: auto; top: 14px; transform: translateX(-50%); animation: none; }

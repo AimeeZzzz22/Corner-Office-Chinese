@@ -33,6 +33,7 @@ export interface DeskItem {
   fits: SlotKind[];                         // the kinds of slot it may go in
   home: string;                             // the slot it starts in when unwrapped
   starter?: boolean;                        // one of the first-day gifts on the desk (default yes)
+  src?: [number, number, number, number];   // a blind-pack or shop thing: where it sits in the blind/items.png atlas (drawn at 2x)
 }
 export const ITEMS: DeskItem[] = [
   { id: 'lamp', name: t('Desk lamp', '台灯'), line: t('A warm little lamp for late study sessions.', '一盏暖暖的小台灯，陪你熬夜学习。'), box: [356, 456, 64, 72], fits: ['desk'], home: 'desk-l1' },
@@ -44,13 +45,25 @@ export const ITEMS: DeskItem[] = [
 ];
 
 export const STARTER = ITEMS.filter((i) => i.starter !== false);
-export const item = (id: string) => ITEMS.find((i) => i.id === id)!;
+
+// ---- things from blind packs and the shop: everything that fits on a desk goes into the backpack ("bb:" + item id)
+// Furniture, rugs, wallpaper and garlands don't fit on a desk, so blind packs no longer hold them.
+const DESK_CATS = ['small', 'wide', 'lamp', 'riser', 'fav', 'pet', 'wall_frame', 'wall_board', 'trailing'];
+const NOT_DESK = new Set(['pet:pet_bed', 'pet:food_bowl']);
+export const deskable = (id: string) => DESK_CATS.includes(id.split(':')[0]) && !NOT_DESK.has(id);
+export const bbId = (id: string) => `bb:${id}`;
+const BLIND = new Map<string, DeskItem>();
+export function registerBlind(list: { id: string; name: string; x: number; y: number; w: number; h: number }[]) {
+  for (const i of list) if (deskable(i.id)) BLIND.set(bbId(i.id), { id: bbId(i.id), name: i.name, line: '', box: [0, 0, i.w * 2, i.h * 2], src: [i.x, i.y, i.w, i.h],
+    fits: /^(wall_|trailing)/.test(i.id) ? ['shelf'] : ['desk', 'shelf'], home: '', starter: false });
+}
+export const item = (id: string): DeskItem => ITEMS.find((i) => i.id === id) ?? BLIND.get(id) ?? { id, name: '', line: '', box: [0, 0, 48, 48], fits: ['desk', 'shelf'], home: '', starter: false };
 export const slot = (id: string) => SLOTS.find((s) => s.id === id)!;
 export const fits = (itemId: string, slotId: string) => item(itemId).fits.includes(slot(slotId).kind);
 // a free slot for an item: its home if that's free, otherwise the first free slot it fits in
 export function freeSlot(itemId: string, place: Record<string, string | null>): string | null {
   const used = new Set(Object.values(place).filter(Boolean));
   const it = item(itemId);
-  if (!used.has(it.home)) return it.home;
+  if (it.home && !used.has(it.home)) return it.home;
   return SLOTS.find((s) => it.fits.includes(s.kind) && !used.has(s.id))?.id ?? null;
 }

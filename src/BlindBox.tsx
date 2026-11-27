@@ -4,6 +4,7 @@ import { Save } from './state';
 import { play } from './sfx';
 import { LiquidTabs, WinDots, stageK, useTear } from './ui';
 import { ZH, t } from './lang';
+import { bbId, deskable, registerBlind } from './deskSlots';
 
 // ---------------- blind boxes, from the glass piggy bank ----------------
 // Every hour of finished work fills the piggy bank and earns one box (at most 8 a day). Opening one costs 45 Coins
@@ -20,7 +21,15 @@ const tAll = t('All', '全部');
 
 let itemsP: Promise<{ odds: Record<Tier, number>; items: Item[] }> | null = null;
 // the Chinese build shows each item's Chinese name (name_zh / why_zh in items.json)
-export const loadItems = () => (itemsP ||= fetch(`${A}items.json`).then((r) => r.json()).then((d) => (ZH ? { ...d, items: d.items.map((i: Item & { name_zh?: string; why_zh?: string }) => ({ ...i, name: i.name_zh ?? i.name, why: i.why_zh ?? i.why })) } : d)));
+export const loadItems = () => (itemsP ||= fetch(`${A}items.json`).then((r) => r.json()).then((d0) => {
+  const d = ZH ? { ...d0, items: d0.items.map((i: Item & { name_zh?: string; why_zh?: string }) => ({ ...i, name: i.name_zh ?? i.name, why: i.why_zh ?? i.why })) } : d0;
+  // blind packs only hold things that fit on a desk (no furniture, rugs, wallpaper or garlands)
+  const items = (d.items as Item[]).filter((i) => !['normal', 'cute', 'secret'].includes(i.tier) || deskable(i.id));
+  registerBlind(items);
+  return { ...d, items };
+}));
+// what you get goes into the desk backpack (one of each; repeats become sparkles)
+export const toBackpack = (desk: string[], ids: string[]) => [...desk, ...[...new Set(ids)].filter((id) => deskable(id) && !desk.includes(bbId(id))).map(bbId)];
 
 // the piggy bank's state for today (a new day resets the 8-a-day count)
 export const piggyToday = (b: Save['blind']) => (b.day === today() ? b : { ...b, day: today(), earned: 0 });
@@ -47,6 +56,8 @@ export const SERIES: { key: string; name: string; icon: string; ids: string[] }[
   { key: 'studio', name: t('Studio & style', '创作时光'), icon: '🎨', ids: ['film_camera', 'signed_polaroid', 'standing_mirror', 'perfume_tray', 'sketchbook', 'fashion_sketch', 'vanity_mirror', 'sewing_machine', 'record_player', 'dress_form', 'mini_mirror', 'camille', 'ada', 'rio', 'kofi'] },
   { key: 'dreamy', name: t('Dreamy', '梦幻'), icon: '🌙', ids: ['crystal', 'snow_globe', 'winter_lights', 'handheld', 'cloud_chair', 'fairy_riser', 'moon_lamp', 'bunny_plush', 'bunny_chair', 'starry_night', 'floral', 'lucky_cat', 'theo', 'sam'] },
 ];
+const GONE = new Set(['velvet_chair', 'floor_lamp', 'rug', 'knit_throw', 'wicker_chair', 'brick', 'beanbag', 'lavender_rug', 'sheep_throw', 'heart_cushion', 'star_lights', 'snake_plant', 'sage_rug', 'sage_wainscot', 'sage_desk', 'pet_bed', 'pastel_bunting', 'gingham', 'polka_dots', 'pink_desk', 'heart_garland', 'strawberry_chair', 'strawberry_rug', 'mint_mesh_chair', 'white_desk', 'standing_mirror', 'dress_form', 'winter_lights', 'cloud_chair', 'bunny_chair', 'starry_night', 'floral']);
+SERIES.forEach((x) => { x.ids = x.ids.filter((id) => !GONE.has(id)); });
 export const seriesOf = (id: string) => SERIES.find((x) => x.ids.includes(id.split(':')[1]));
 export const featured = (d = new Date()) => SERIES[(d.getFullYear() * 12 + d.getMonth()) % SERIES.length];
 function draw(items: Item[], odds: Record<Tier, number>, sinceSecret = 0): Item {
@@ -99,7 +110,7 @@ export function BlindBoxTab({ s, up, close }: { s: Save; up: (p: Partial<Save>) 
       const isNew = !np[it.id], gain = isNew ? 0 : SPARK[it.tier as Tier]; spark += gain;
       got.push({ it, isNew, spark: gain }); np[it.id] = (np[it.id] ?? 0) + 1;
     }
-    up({ coins: s.coins - BOX_COST * howMany, blind: { ...b, ready: b.ready - howMany }, pack: np, sinceSecret: since, sparkles: s.sparkles + spark, finds: [...s.finds, ...got.map((g) => ({ id: g.it.id, at: Date.now() }))].slice(-80) });
+    up({ coins: s.coins - BOX_COST * howMany, blind: { ...b, ready: b.ready - howMany }, pack: np, desk: toBackpack(s.desk, got.map((g) => g.it.id)), sinceSecret: since, sparkles: s.sparkles + spark, finds: [...s.finds, ...got.map((g) => ({ id: g.it.id, at: Date.now() }))].slice(-80) });
     setOpening(got);
   };
   // test: open lots of boxes at once (free, not added to your pack) to see the odds come out
@@ -158,7 +169,7 @@ export function BlindBoxTab({ s, up, close }: { s: Save; up: (p: Partial<Save>) 
                 </div>))}
             </div>
             {swapFor && <div className="bb-swap"><ItemPic it={swapFor} size={36} hide={swapFor.tier === 'secret'} /><span>{swapFor.tier === 'secret' ? t('A mystery secret', '一件神秘的隐藏款') : swapFor.name}</span>
-              <button className="btn primary small" disabled={s.sparkles < SWAP[swapFor.tier as Tier]} onClick={() => { play('purchase', 0.5); up({ sparkles: s.sparkles - SWAP[swapFor.tier as Tier], pack: { ...pack, [swapFor.id]: 1 } }); setSwapFor(null); }}>{ZH ? `用 ${SWAP[swapFor.tier as Tier]} ✦ 换` : `Swap ${SWAP[swapFor.tier as Tier]} ✦`}</button>
+              <button className="btn primary small" disabled={s.sparkles < SWAP[swapFor.tier as Tier]} onClick={() => { play('purchase', 0.5); up({ sparkles: s.sparkles - SWAP[swapFor.tier as Tier], pack: { ...pack, [swapFor.id]: 1 }, desk: toBackpack(s.desk, [swapFor.id]) }); setSwapFor(null); }}>{ZH ? `用 ${SWAP[swapFor.tier as Tier]} ✦ 换` : `Swap ${SWAP[swapFor.tier as Tier]} ✦`}</button>
               <button className="bb-x small" onClick={() => setSwapFor(null)} aria-label={t('Close', '关闭')}>✕</button></div>}
           </div>
         </div>
@@ -217,7 +228,7 @@ function Catalogue({ s, up }: { s: Save; up: (p: Partial<Save>) => void }) {
   const buy = (it: Item) => {
     if (it.price && s.coins >= it.price) gEmit('bought');
     if (!it.price || s.coins < it.price) return;
-    play('purchase', 0.5); up({ coins: s.coins - it.price, pack: { ...s.pack, [it.id]: (s.pack[it.id] ?? 0) + 1 } }); setJust(it.id);
+    play('purchase', 0.5); up({ coins: s.coins - it.price, pack: { ...s.pack, [it.id]: (s.pack[it.id] ?? 0) + 1 }, desk: toBackpack(s.desk, [it.id]) }); setJust(it.id);
   };
   const list = (data ?? []).filter((i) => cat === 'All' || i.cat === cat).sort((a, b) => (a.price ?? 0) - (b.price ?? 0));
   return (
@@ -402,7 +413,7 @@ function Opening({ got, again, againN, next, done }: { got: Got[]; again: boolea
           <span className="ho-sum">{ZH ? (news ? `${news} 件新东西放进了背包` : '都放进了背包') : news ? `${news} new thing${news > 1 ? 's' : ''} in your backpack` : 'All in your backpack'}{n - news > 0 ? (ZH ? `，重复的变成了 ${got.reduce((a, g) => a + g.spark, 0)} 个星屑 ✦` : `, repeats became ${got.reduce((a, g) => a + g.spark, 0)} sparkles ✦`) : ''}</span>
           {again && <button className="btn ghost" onClick={() => { tap(); next(); }}>{ZH ? `再拆 ${againN} 个` : `Open ${againN} more`} · {againN * BOX_COST} {t('coins', '金币')}</button>}
           <button className="btn primary" onClick={() => { tap(); done(); }}>{t('Done', '完成')}</button>
-        </> : stage === 'row' ? <button className="btn ghost small ho-skip" onClick={() => { tap(); setPhase((ph) => ph.map(() => 'up')); }}>{t('Turn them all over', '全部翻开')}</button> : null}
+        </> : null}
       </div>
     </div>
   );
