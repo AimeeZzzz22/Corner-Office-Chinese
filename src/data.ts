@@ -103,7 +103,7 @@ export const COMPANIES: Record<CompanyId, Company> = {
   stitchlight: { id: 'stitchlight', name: t('Stitchlight', '织光杂志社'), role: t('Fashion Intern', '时尚实习生'), people: ['margaux', 'priya', 'theo', 'camille', 'jonah', 'odette'], host: 'odette', start: [2, 7],
     games: [{ name: t('Closet Rush', '衣橱大作战'), at: [96, 80], stand: [6, 6] }], pc: { at: [40, 54], stand: [4, 5], desk: [16, 40, 64, 80] },
     places: { pantry: [70, 270], lounge: [232, 236], bakery: [400, 296], reception: [190, 300], editorial: [300, 196], closet: [104, 150] },
-    food: { name: t('Bobbin Bakery', '线轴面包房'), at: [416, 238], stand: [25, 17] }, fridge: { name: t('The fridge', '冰箱'), at: [136, 222], stand: [8, 16] }, surprise: { name: t('A gift for you!', '给你的礼物！'), at: [263, 176], stand: [17, 10] }, giftInMap: { x0: 257, x1: 268, y0: 161, y1: 175, src: 176 } },
+    food: { name: t('Bobbin Bakery', '线轴面包房'), at: [416, 238], stand: [25, 17] }, fridge: { name: t('The fridge', '冰箱'), at: [136, 222], stand: [8, 16] }, surprise: { name: t('A gift for you!', '给你的礼物！'), at: [263, 176], stand: [17, 10] }, giftInMap: { x0: 257, x1: 270, y0: 160, y1: 175, src: 176 } },
   moonpuff: { id: 'moonpuff', name: t('Moonpuff Studio', '月芙工作室'), role: t('Game Dev Intern', '游戏开发实习生'), people: ['rio', 'sam', 'ada', 'kofi', 'mei', 'bean'], host: 'mei', start: [4, 7],
     games: [{ name: t('Bug Triage', '抓虫大作战'), at: [168, 80], stand: [9, 4] }], pc: { at: [48, 54], stand: [4, 5], desk: [16, 40, 64, 80] },
     places: { kitchen: [96, 304], colab: [256, 196], game_room: [440, 100], arcade: [440, 262], idea_wall: [100, 208], booth: [240, 300] },
