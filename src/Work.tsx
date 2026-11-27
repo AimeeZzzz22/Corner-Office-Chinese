@@ -48,11 +48,10 @@ function legColours(sh: Sheet) {
 function seated(x: CanvasRenderingContext2D, sh: Sheet | null | undefined, col: number, cx: number, seat: number, f: 1 | -1) {
   if (!ok(sh as HTMLImageElement)) return;
   const { pants, shoe } = legColours(sh!), u = K, sx = cx * B, sy = seat * B;
-  // thigh along the seat, shin down from the knee, a shoe pointing forward (outline first, then colour)
+  // legs resting along the seat, the shoes at the seat's front edge, toes up (outline first, then colour)
   const parts: [number, number, number, number, string][] = [
-    [f > 0 ? sx - u : sx - 8 * u, sy - 2 * u, 9 * u, 2 * u, pants],
-    [f > 0 ? sx + 6 * u : sx - 8 * u, sy, 2 * u, 3 * u, pants],
-    [f > 0 ? sx + 6 * u : sx - 9 * u, sy + 3 * u, 3 * u, u, shoe],
+    [f > 0 ? sx - u : sx - 6 * u, sy - 2 * u, 7 * u, 2 * u, pants],
+    [f > 0 ? sx + 6 * u : sx - 8 * u, sy - 3 * u, 2 * u, 3 * u, shoe],
   ];
   x.fillStyle = '#2a2234'; for (const [a, b, w, h] of parts) x.fillRect(a - u / 2, b - u / 2, w + u, h + u);
   for (const [a, b, w, h, c] of parts) { x.fillStyle = c; x.fillRect(a, b, w, h); }
@@ -84,11 +83,11 @@ export function Meeting({ s, msg, sheet, close }: { s: Save; msg: ChatMsg; sheet
       const talking = stepRef.current === 'hello' || stepRef.current === 'ask' || stepRef.current === 'reply';
       const nod = talking && Math.floor(t * 5) % 4 === 0 ? 1 : 0;
       // Moonpuff: the studio kitchen, Rio across a little bistro table (both seen from the side)
-      if (rio) seated(x, bossSheet, DIR_COL.left + fr(t), 196, 140 + nod * 0.25, -1);
+      if (rio) seated(x, bossSheet, DIR_COL.left + fr(t), 196, 134 + nod * 0.25, -1);
       else char(x, bossSheet, fr(t), 2, 160, 110 + nod * 0.25);
       if (ok(desk) && !rio) x.drawImage(desk, 0, 0);
       // steam from the mugs
-      if (rio) for (const [mx, my] of [[173, 121], [146, 121]]) for (let i = 0; i < 3; i++) {
+      if (rio) for (const [mx, my] of [[173, 115], [146, 115]]) for (let i = 0; i < 3; i++) {
         const k = (t * 0.7 + i / 3) % 1; x.fillStyle = `rgba(255,255,255,${0.7 * Math.sin(k * Math.PI)})`;
         x.fillRect((mx + Math.round(Math.sin(k * 6 + i) * 1.5)) * B, (my - k * 12) * B, B, B);
       }
@@ -100,7 +99,7 @@ export function Meeting({ s, msg, sheet, close }: { s: Save; msg: ChatMsg; sheet
       } else {
         if (!sat.current) sat.current = t;
         const settle = Math.max(0, 1 - (t - sat.current) * 5);
-        if (rio) { seated(x, sheet, DIR_COL.right, 124, 140 - settle * 2, 1); if (ok(desk)) x.drawImage(desk, 0, 0); }
+        if (rio) { seated(x, sheet, DIR_COL.right, 124, 134 - settle * 2, 1); if (ok(desk)) x.drawImage(desk, 0, 0); }
         else { char(x, sheet, DIR_COL.back, 0, 118, 150 - settle * 2); if (ok(chairs)) x.drawImage(chairs, 0, 0); }
       }
       // walking in: the room fades up from black

@@ -7,7 +7,7 @@ OUT = 'public/assets/scene/'
 W, H = 320, 180
 OL = hx('3d3552')
 FL = 118          # the back of the floor
-SEAT = 140        # the chair seats: the sitters' bodies (sprite rows 0-27) end here; their legs are drawn by the game
+SEAT = 134        # the chair seats: the sitters' bodies (sprite rows 0-27) end here; their legs are drawn by the game
 
 def octagon_floor(p):
     A = hx('9fdcd2'); Bc = hx('8ccfc4'); D = hx('7bc0b5'); L = hx('b9eae2')
@@ -25,21 +25,31 @@ def octagon_floor(p):
                     if dx == 1 and 2 < dy < 14 or dy == 1 and 2 < dx < 14: p.px(X, Y, L)
 
 def cafe_chair(p, x, f):
-    # a bentwood cafe chair seen from the side. f = +1: the sitter faces right (the chair back is on the left)
-    WD = hx('5a3f33'); WL = hx('7a5646'); bx = x - f * 10
-    for y in range(112, 148): p.px(bx, y, WD); p.px(bx - f, y, OL); p.px(bx + f, y, WL if y < SEAT else WD)
-    for i in range(6): p.px(bx + f * (i // 2), 112 - (1 if i in (2, 3) else 0) - (2 if i >= 4 else 0), WD)   # the curl at the top
-    p.px(bx, 110, OL); p.px(bx + f, 109, OL); p.px(bx + f * 2, 109, OL); p.px(bx + f * 3, 110, OL)
-    for y in (120, 128): 
-        for i in range(5): p.px(bx + f * (1 + i), y + (i // 3), WD)                                       # the back's hoop
-    x0, x1 = sorted((bx, x + f * 8))
-    p.rect(x0, SEAT, x1, SEAT + 2, hx('8a5a4a')); p.hl(x0, x1, SEAT, hx('a87a68')); p.hl(x0 - 1, x1 + 1, SEAT - 1, OL); p.hl(x0 - 1, x1 + 1, SEAT + 3, OL)
-    p.vl(x0 - 1, SEAT - 1, SEAT + 3, OL); p.vl(x1 + 1, SEAT - 1, SEAT + 3, OL)
-    fx = x + f * 7
-    for y in range(SEAT + 3, 148): p.px(fx, y, WD); p.px(fx + f, y, OL); p.px(fx - f, y, OL)
-    for y in range(SEAT + 4, 148): p.px(bx - f * (y - SEAT - 4) // 4, y, WD)                              # the back leg kicks out a little
-    p.hl(x0 + 2, x1 - 2, 143, WD)
-    p.dither(x0 - 3, 148, x1 + 3, 149, (0, 0, 0, 45))
+    # a wooden cafe chair seen from the side. f = +1: the sitter faces right (the chair back is on the left).
+    # The back post leans back a little and has a curved backrest at shoulder height; legs reach the floor at 150.
+    WD = hx('5a3f33'); WL = hx('7a5646'); bx = x - f * 11
+    top = 112
+    for y in range(top, 151):
+        lean = 0 if y > SEAT else (SEAT - y) // 12          # the back leans back slightly as it rises
+        px_ = bx - f * lean
+        p.px(px_, y, WD); p.px(px_ + f, y, WL if y < SEAT else WD); p.px(px_ - f, y, OL); p.px(px_ + 2 * f, y, OL)
+    p.hl(min(bx - 2 * f, bx + 2 * f) - 1, max(bx - 2 * f, bx + 2 * f) + 1, top - 1, OL)
+    # the curved backrest: a thicker band across the post at shoulder height
+    for y in range(116, 124):
+        lean = (SEAT - y) // 12
+        for k in range(3): p.px(bx - f * lean + f * (k - 0), y, WD if k < 2 else WL)
+        p.px(bx - f * lean + f * 3, y, OL); p.px(bx - f * lean - f, y, OL)
+    p.hl(min(bx - f * 2, bx + f * 3), max(bx - f * 2, bx + f * 3), 115, OL); p.hl(min(bx - f * 2, bx + f * 3), max(bx - f * 2, bx + f * 3), 124, OL)
+    # the seat: a padded cushion on a wooden frame
+    x0, x1 = sorted((bx, x + f * 9))
+    p.rect(x0, SEAT, x1, SEAT + 3, hx('8a5a4a')); p.hl(x0, x1, SEAT, hx('b0806c')); p.hl(x0, x1, SEAT + 3, WD)
+    p.hl(x0 - 1, x1 + 1, SEAT - 1, OL); p.hl(x0 - 1, x1 + 1, SEAT + 4, OL); p.vl(x0 - 1, SEAT - 1, SEAT + 4, OL); p.vl(x1 + 1, SEAT - 1, SEAT + 4, OL)
+    # front leg, a stretcher between the legs
+    fx = x + f * 8
+    for y in range(SEAT + 5, 151): p.px(fx, y, WD); p.px(fx + f, y, WL); p.px(fx - f, y, OL); p.px(fx + 2 * f, y, OL)
+    p.hl(x0 + 2, x1 - 2, 144, WD); p.hl(x0 + 2, x1 - 2, 145, OL)
+    p.hl(x0 - 1, x1 + 2, 151, OL)
+    p.dither(x0 - 3, 152, x1 + 3, 153, (0, 0, 0, 45))
 
 def kitchen():
     b = Pic(W, H, hx('f7efdc'))
@@ -104,16 +114,16 @@ def kitchen():
 
     f = Pic(W, H)
     # the round bistro table between us: a white top, a steel pedestal, a round foot
-    f.rect(158, 136, 161, 146, hx('c9ced8')); f.vl(157, 136, 146, OL); f.vl(162, 136, 146, OL); f.vl(159, 137, 145, hx('e4e8ee'))
-    f.ellipse(160, 147, 10, 2, hx('a9adb8'), OL); f.dither(146, 149, 174, 150, (0, 0, 0, 45))
-    f.ellipse(160, 132, 22, 3, hx('ffffff'), OL); f.hl(140, 180, 134, hx('e6e2ee')); f.hl(144, 176, 135, hx('d6d2e0'))
+    f.rect(158, 130, 161, 149, hx('c9ced8')); f.vl(157, 130, 149, OL); f.vl(162, 130, 149, OL); f.vl(159, 131, 148, hx('e4e8ee'))
+    f.ellipse(160, 150, 10, 2, hx('a9adb8'), OL); f.dither(146, 152, 174, 153, (0, 0, 0, 45))
+    f.ellipse(160, 126, 22, 3, hx('ffffff'), OL); f.hl(140, 180, 128, hx('e6e2ee')); f.hl(144, 176, 129, hx('d6d2e0'))
     # two coffees (yours is yellow), a plate with a cookie for each
     def mug(x, y, c, cd, handle):
         f.box(x, y, x + 7, y + 7, c, OL); f.vl(x + 6, y + 1, y + 6, cd); f.hl(x + 1, x + 6, y + 1, hx('6b3e2a'))
         hx_ = x + 8 if handle > 0 else x - 1; f.px(hx_, y + 2, OL); f.px(hx_ + handle, y + 3, OL); f.px(hx_ + handle, y + 4, OL); f.px(hx_, y + 5, OL)
-    mug(143, 123, hx('ffd166'), hx('e0ad3c'), -1)    # yours, on your side
-    mug(170, 123, hx('7fe0d0'), hx('5cbfb0'), +1)    # Rio's
-    f.ellipse(160, 130, 6, 1, hx('f4f4f8'), OL); f.ellipse(157, 128, 2, 1, hx('c49a6a'), OL); f.ellipse(163, 128, 2, 1, hx('c49a6a'), OL); f.px(157, 128, hx('6b3e2a'))
+    mug(143, 117, hx('ffd166'), hx('e0ad3c'), -1)    # yours, on your side
+    mug(170, 117, hx('7fe0d0'), hx('5cbfb0'), +1)    # Rio's
+    f.ellipse(160, 124, 6, 1, hx('f4f4f8'), OL); f.ellipse(157, 122, 2, 1, hx('c49a6a'), OL); f.ellipse(163, 122, 2, 1, hx('c49a6a'), OL); f.px(157, 122, hx('6b3e2a'))
     f.save(OUT + 'meet_moonpuff_desk.png')
     Pic(W, H).save(OUT + 'meet_moonpuff_chairs.png')
 
