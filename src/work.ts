@@ -1,6 +1,7 @@
 import { COMPANIES, CoworkerId, CompanyId } from './data';
 import { Save } from './state';
 import { ZH, t } from './lang';
+import { GOAL_LINE, goalMet } from './meetScript';
 
 // ---------------- the job itself: clocking in, a daily minimum, and a boss who checks in ----------------
 // Stitchlight keeps office hours: clock in by 9:00 on weekdays, and focus at least 30 minutes a day. Moonpuff is
@@ -79,10 +80,15 @@ export function weekReview(s: Save, weekStartOf: (d: Date) => Date, key: string,
   const missed = force === 'meet' ? 2 : days.filter((d) => focusOn(s, d.toDateString()) < r.minFocus).length;
   const onTime = force === 'award' || (r.clockIn !== null && days.length >= 3 && days.every((d) => { const c = s.clock[d.toDateString()]; return c !== undefined && c <= r.clockIn! + r.grace; }));
   const msgs: ChatMsg[] = [], now = Date.now();
+  let goal = s.goal;
+  if (goal && goal.week === new Date(last).toDateString()) {   // the goal from last week's one-to-one: how did it go?
+    const g = GOAL_LINE[r.boss as 'margaux' | 'rio'], txt = goal.key === 'rest' ? g.rest : goalMet(s, goal.key, last) ? g.met : g.missed;
+    msgs.push({ id: now - 1, from: r.boss, at: now - 1, text: txt, kind: 'praise' }); goal = null;
+  }
   if (r.clockIn !== null && onTime) msgs.push({ id: now, from: r.boss, at: now, text: bossLine('award', r.boss), kind: 'award', coins: ATTENDANCE_BONUS });
   if (missed >= 2) msgs.push({ id: now + 1, from: r.boss, at: now + 1, text: bossLine('meet', r.boss), kind: 'meet', coins: missed });
   else if (!force && days.length >= 3 && !onTime) msgs.push({ id: now + 2, from: r.boss, at: now + 2, text: bossLine('praise', r.boss), kind: 'praise' });
-  return { reviewWeek: key, chat: [...s.chat, ...msgs] };
+  return { reviewWeek: key, goal, chat: [...s.chat, ...msgs] };
 }
 export const unreadChat = (s: Save) => s.chat.filter((m) => m.from !== 'me' && m.id > s.chatSeen).length;
 export const bossOf = (s: Save) => rulesOf(s).boss;

@@ -4,7 +4,8 @@ import { Save } from './state';
 import { play } from './sfx';
 import { ZH, t } from './lang';
 import { DIR_COL, Look, Parts, compose, loadParts, randomLook } from './look';
-import { ChatMsg, MEET_CHOICES, meetIntro, rulesOf } from './work';
+import { ChatMsg, MEET_CHOICES, rulesOf } from './work';
+import { Boss, Choice, EMOTE, Emote, GoalKey, Step, askStep, checkIn, followUp, giftStep, goalStep, praiseStep, smallTalk, storyStep } from './meetScript';
 
 const A = `${import.meta.env.BASE_URL}assets/`;
 const tap = () => play('ui_tap', 0.4);
@@ -65,69 +66,95 @@ function Bubble({ text, who, at, side = 'up', w = 420, done }: { text: string; w
 }
 
 // ================================================= the one-to-one, in the boss's office =================================================
-// You walk in, sit down across the desk, and the boss asks how you are. Three honest answers, each met kindly. Never a penalty.
-type MStep = 'walk' | 'hello' | 'ask' | 'answer' | 'reply';
-export function Meeting({ s, msg, sheet, close }: { s: Save; msg: ChatMsg; sheet: Sheet | null; close: (choice: string | null) => void }) {
-  const r = rulesOf(s), boss = COWORKERS[r.boss], rio = r.boss === 'rio', co = s.company;
+// You walk in and sit down. Six short beats (meetScript.ts): small talk, how are you, a follow-up, a small goal for
+// the week, something you did well, a story from the boss, what would help, and a little gift. Both of you react as
+// you talk. Never a penalty.
+export interface MeetOutcome { how: string; goal: GoalKey | null; treat: string; gift: string; reply: string; answer: string }
+type MPhase = 'walk' | 'say' | 'choose' | 'answer' | 'react';
+export function Meeting({ s, msg, sheet, close }: { s: Save; msg: ChatMsg; sheet: Sheet | null; close: (o: MeetOutcome | null) => void }) {
+  const r = rulesOf(s), boss = COWORKERS[r.boss], rio = r.boss === 'rio', co = s.company, bk = r.boss as Boss, n = s.meets ?? 0;
   const [bg, desk, chairs, bossSheet] = useImages([`scene/meet_${co}_back.png`, `scene/meet_${co}_desk.png`, `scene/meet_${co}_chairs.png`, `npc/${r.boss}.png`]);
-  const [step, setStep] = useState<MStep>('walk'), [typed, setTyped] = useState(false);
-  const [pick, setPick] = useState<ReturnType<typeof MEET_CHOICES>[number] | null>(null);
-  const cv = useRef<HTMLCanvasElement>(null), stepRef = useRef(step); stepRef.current = step;
+  const checkChoices: Choice[] = useMemo(() => MEET_CHOICES().map((c) => ({ key: c.key, text: c.text, reply: c.reply[bk], emote: c.key === 'tired' ? 'heart' : 'nod', me: c.key === 'tired' ? 'sweat' : 'think' })), []);
+  // the conversation so far: the steps, and what you picked on each
+  const [steps, setSteps] = useState<Step[]>(() => [smallTalk(bk, n), checkIn(s, bk, msg.coins ?? 2, checkChoices)]);
+  const [i, setI] = useState(0), [phase, setPhase] = useState<MPhase>('walk'), [typed, setTyped] = useState(false);
+  const [picked, setPicked] = useState<Record<string, Choice>>({});
+  const gift = useMemo(() => giftStep(bk), []);
+  const st = steps[i], cur = picked[st?.id ?? ''];
+  // reactions: a little bubble over whoever is reacting
+  const bossEmote: Emote | undefined = phase === 'say' ? st?.emote : phase === 'react' ? cur?.emote : undefined;
+  const meEmote: Emote | undefined = phase === 'answer' ? cur?.me : undefined;
+  const cv = useRef<HTMLCanvasElement>(null), phaseRef = useRef(phase); phaseRef.current = phase;
   const t0 = useRef(performance.now()), sat = useRef(0);
   useEffect(() => {
     const x = cv.current!.getContext('2d')!; x.imageSmoothingEnabled = false; let raf = 0;
     const draw = (now: number) => {
       const t = (now - t0.current) / 1000; x.clearRect(0, 0, 1280, 720);
       if (ok(bg)) x.drawImage(bg, 0, 0);
-      // the boss in their chair: looks up and talks (a small nod while speaking)
-      const talking = stepRef.current === 'hello' || stepRef.current === 'ask' || stepRef.current === 'reply';
+      // the boss: nods a little while talking
+      const talking = phaseRef.current === 'say' || phaseRef.current === 'react';
       const nod = talking && Math.floor(t * 5) % 4 === 0 ? 1 : 0;
-      // Moonpuff: the studio kitchen, Rio across a little bistro table (both seen from the side)
       if (rio) seated(x, bossSheet, DIR_COL.left + fr(t), 196, 134 + nod * 0.25, -1);
       else char(x, bossSheet, fr(t), 2, 160, 110 + nod * 0.25);
       if (ok(desk) && !rio) x.drawImage(desk, 0, 0);
-      // steam from the mugs
-      if (rio) for (const [mx, my] of [[173, 115], [146, 115]]) for (let i = 0; i < 3; i++) {
-        const k = (t * 0.7 + i / 3) % 1; x.fillStyle = `rgba(255,255,255,${0.7 * Math.sin(k * Math.PI)})`;
-        x.fillRect((mx + Math.round(Math.sin(k * 6 + i) * 1.5)) * B, (my - k * 12) * B, B, B);
+      if (rio) for (const [mx, my] of [[173, 115], [146, 115]]) for (let k2 = 0; k2 < 3; k2++) {
+        const k = (t * 0.7 + k2 / 3) % 1; x.fillStyle = `rgba(255,255,255,${0.7 * Math.sin(k * Math.PI)})`;
+        x.fillRect((mx + Math.round(Math.sin(k * 6 + k2) * 1.5)) * B, (my - k * 12) * B, B, B);
       }
-      // you: walk in from the left, then sit down across the desk (seen from behind)
-      const walkT = 2.1, wt = Math.min(1, t / walkT);
-      if (stepRef.current === 'walk') {
+      // you: walk in from the left, then sit down (seen from behind at Stitchlight, side-on in the kitchen)
+      const wt = Math.min(1, t / 2.1), answering = phaseRef.current === 'answer', bob = answering && Math.floor(t * 5) % 4 === 0 ? 0.25 : 0;
+      if (phaseRef.current === 'walk') {
         if (rio) { if (ok(desk)) x.drawImage(desk, 0, 0); char(x, sheet, DIR_COL.right + fr(t, 8), 1, -14 + wt * 120, 160); }
         else { if (ok(chairs)) x.drawImage(chairs, 0, 0); char(x, sheet, DIR_COL.right + fr(t, 8), 1, -14 + wt * 132, 177); }
       } else {
         if (!sat.current) sat.current = t;
         const settle = Math.max(0, 1 - (t - sat.current) * 5);
-        if (rio) { seated(x, sheet, DIR_COL.right, 124, 134 - settle * 2, 1); if (ok(desk)) x.drawImage(desk, 0, 0); }
-        else { char(x, sheet, DIR_COL.back, 0, 118, 150 - settle * 2); if (ok(chairs)) x.drawImage(chairs, 0, 0); }
+        if (rio) { seated(x, sheet, DIR_COL.right, 124, 134 - settle * 2 - bob, 1); if (ok(desk)) x.drawImage(desk, 0, 0); }
+        else { char(x, sheet, DIR_COL.back, 0, 118, 150 - settle * 2 - bob); if (ok(chairs)) x.drawImage(chairs, 0, 0); }
       }
-      // walking in: the room fades up from black
       if (t < 0.6) { x.fillStyle = `rgba(20,14,24,${1 - t / 0.6})`; x.fillRect(0, 0, 1280, 720); }
       raf = requestAnimationFrame(draw);
     };
     raf = requestAnimationFrame(draw);
-    const id = setTimeout(() => setStep('hello'), 2300);
+    const id = setTimeout(() => setPhase('say'), 2300);
     return () => { cancelAnimationFrame(raf); clearTimeout(id); };
   }, [sheet]);
-  useEffect(() => { setTyped(false); }, [step]);
-  const hello = rio ? t("Hey! I made us coffee. The yellow mug's yours, grab a seat.", '嘿！我泡了两杯咖啡，黄色那杯是你的，坐吧。') : t('Come in. Close the door behind you and have a seat.', '进来吧。把门带上，坐。');
-  const bye = rio ? t('Thanks for the chat. Same time next week? Only if you want to.', '谢谢你跟我聊。下周再一起喝杯咖啡？想来再来。') : t('Thank you for being honest with me. My door is open.', '谢谢你跟我说实话。我的门一直开着。');
-  const BOSS_AT: [number, number] = rio ? [560, 300] : [420, 92];
+  useEffect(() => { setTyped(false); }, [phase, i]);
+  // what comes after each step depends on what you said
+  const next = (p: Record<string, Choice>) => {
+    const ids = steps.map((x) => x.id), how = p.checkin?.key ?? 'busy';
+    const more: Step[] = [];
+    if (!ids.includes('follow') && p.checkin) more.push(followUp(bk, how), goalStep(bk, how), praiseStep(s, bk, n), storyStep(bk, n), askStep(bk), gift);
+    if (more.length) setSteps([...steps, ...more]);
+    setI(i + 1); setPhase('say');
+  };
+  const choose = (c: Choice) => { tap(); const p = { ...picked, [st.id]: c }; setPicked(p); setPhase('answer'); };
+  const finish = () => {
+    play('heart_pop', 0.5);
+    close({ how: picked.checkin?.key ?? 'busy', goal: (picked.goal?.key as GoalKey) ?? null, treat: gift.treat, gift: gift.gift, answer: picked.checkin?.text ?? '', reply: picked.checkin?.reply ?? '' });
+  };
+  const last = i === steps.length - 1 && st?.id === 'gift';
+  const BOSS_AT: [number, number] = rio ? [560, 262] : [420, 92];
+  const ME_AT: [number, number] = rio ? [130, 300] : [150, 300];
+  const BOSS_EMO: [number, number] = rio ? [862, 424] : [700, 300], ME_EMO: [number, number] = rio ? [438, 404] : [534, 440];
   return (
     <div className="meet" onClick={(e) => e.stopPropagation()}>
       <canvas ref={cv} width={1280} height={720} />
       <div className="meet-tag pix">{rio ? (ZH ? `茶水间 · 跟${boss.name}喝杯咖啡` : `The kitchen · Coffee with ${boss.name}`) : (ZH ? `${boss.name}的办公室 · 一对一约谈` : `${boss.name}'s office · One-to-one`)}</div>
-      {step === 'walk' && !rio && <div className="meet-knock">{t('*knock knock*', '*咚咚*')}</div>}
-      {step === 'hello' && <Bubble who={boss.name} at={BOSS_AT} text={hello} done={() => setTimeout(() => setStep('ask'), 1400)} />}
-      {step === 'ask' && <Bubble who={boss.name} at={BOSS_AT} text={meetIntro(r.boss, msg.coins ?? 2, r.minFocus)} done={() => setTyped(true)} />}
-      {step === 'ask' && typed && <div className="meet-opts"><span>{t('Your answer', '你的回答')}</span>
-        {MEET_CHOICES().map((c) => <button key={c.key} onClick={() => { tap(); setPick(c); setStep('answer'); }}>{c.text}</button>)}</div>}
-      {step === 'answer' && pick && <Bubble who={t('You', '你')} at={rio ? [130, 300] : [150, 300]} side="left" w={380} text={pick.text} done={() => setTimeout(() => setStep('reply'), 900)} />}
-      {step === 'reply' && pick && <Bubble who={boss.name} at={BOSS_AT} text={`${pick.reply[r.boss as 'margaux' | 'rio']} ${bye}`} done={() => setTyped(true)} />}
-      {step === 'reply' && typed && <div className="meet-opts end"><span>{t('No penalty, ever. Your boss just wanted to check in.', '没有任何惩罚，上司只是想关心一下你。')}</span>
-        <button className="go" onClick={() => { play('heart_pop', 0.5); close(pick!.key); }}>{rio ? t('Thanks, Rio. Back to work', '谢谢里奥，回去工作啦') : t('Thank you. Back to my desk', '谢谢，回工位了')}</button></div>}
-      {step !== 'reply' && <button className="meet-later" onClick={() => { tap(); close(null); }}>{t('Come back later', '晚点再来')}</button>}
+      {phase !== 'walk' && <div className="meet-dots">{steps.length > 2 ? steps.map((x, k) => <i key={x.id} className={k < i ? 'done' : k === i ? 'on' : ''} />) : <><i className={i === 0 ? 'on' : 'done'} /><i className={i === 1 ? 'on' : ''} /><i /><i /><i /><i /><i /><i /></>}</div>}
+      {phase === 'walk' && !rio && <div className="meet-knock">{t('*knock knock*', '*咚咚*')}</div>}
+      {bossEmote && <span key={`b${i}${phase}`} className="emote" style={{ left: BOSS_EMO[0], top: BOSS_EMO[1] }}>{EMOTE[bossEmote]}</span>}
+      {meEmote && <span key={`m${i}`} className="emote me" style={{ left: ME_EMO[0], top: ME_EMO[1] }}>{EMOTE[meEmote]}</span>}
+      {phase === 'say' && st && <Bubble key={`s${i}`} who={boss.name} at={BOSS_AT} text={st.say} done={() => setTyped(true)} />}
+      {phase === 'say' && typed && st?.choices && <div className="meet-opts"><span>{t('Your answer', '你的回答')}</span>
+        {st.choices.map((c) => <button key={c.key} onClick={() => choose(c)}>{c.text}</button>)}</div>}
+      {phase === 'say' && typed && !st?.choices && <div className="meet-opts end">
+        {last && <span className="meet-gift">🎁 {gift.gift} · {t("added to today's treats", '已放进今天的点心')} · {ZH ? `和${boss.name}的友情 +2` : `+2 friendship with ${boss.name}`}</span>}
+        <button className="go" onClick={() => { tap(); if (last) finish(); else next(picked); }}>{st.cont}{last ? (rio ? t(' · Back to work', ' · 回去工作') : t(' · Back to my desk', ' · 回工位')) : ''}</button></div>}
+      {phase === 'answer' && cur && <Bubble key={`a${i}`} who={t('You', '你')} at={ME_AT} side="left" w={380} text={cur.text} done={() => setTimeout(() => setPhase('react'), 700)} />}
+      {phase === 'react' && cur && <Bubble key={`r${i}`} who={boss.name} at={BOSS_AT} text={cur.reply} done={() => setTyped(true)} />}
+      {phase === 'react' && typed && <div className="meet-opts end"><button className="go" onClick={() => { tap(); next(picked); }}>{t('Continue', '继续')}</button></div>}
+      {phase !== 'walk' && !last && <button className="meet-later" onClick={() => { tap(); close(null); }}>{t('Come back later', '晚点再来')}</button>}
     </div>
   );
 }

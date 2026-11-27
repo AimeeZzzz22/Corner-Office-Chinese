@@ -23,6 +23,7 @@ import type { Tile } from './Office';
 import { Coach, GCtx, STEPS, TIPS, gEmit } from './Guide';
 import { ChatMsg, MEET_CHOICES, checkLate, clockIn, fmtClock, minsNow, rulesOf, ruled, unreadChat, weekReview, QUICK_LATE, bossLine } from './work';
 import { GoHome, Meeting } from './Work';
+import { GOAL_TEXT } from './meetScript';
 
 const A = `${import.meta.env.BASE_URL}assets/`;
 const mmss = (ms: number) => { const s = Math.max(0, Math.ceil(ms / 1000)); return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`; };
@@ -411,8 +412,12 @@ export default function App() {
       {meetWalk && !meet && <div className="clock-toast walk">{rules.boss === 'rio' ? (ZH ? `去找${COWORKERS[rules.boss].name}，一起去茶水间喝杯咖啡……` : `Going to get ${COWORKERS[rules.boss].name}, then coffee in the kitchen...`) : (ZH ? `正走去${COWORKERS[rules.boss].name}的办公室……` : `Walking to ${COWORKERS[rules.boss].name}'s office...`)}</div>}
       {working && toastFor > s.chatSeen && lastBoss && lastBoss.from !== 'me' && !pcOpen && <button className="chat-toast" onClick={() => { tap(); setToastFor(0); }}>
         <Head id={lastBoss.from} size={30} /><span><b>{COWORKERS[lastBoss.from].name}</b><small>{lastBoss.text}</small><em>{t('Reply in Chat on your computer', '去电脑的「消息」里回复')}</em></span></button>}
-      {meet && <Meeting s={s} msg={meet} sheet={sheet} close={(choice) => { const b = rules.boss as 'margaux' | 'rio', c = MEET_CHOICES().find((x) => x.key === choice); const id = meet.id; setMeet(null); if (!c) return;
-        const now = Date.now(); up({ chat: [...s.chat.map((m) => (m.id === id ? { ...m, done: true } : m)), { id: now, from: 'me', at: now, text: c.text }, { id: now + 1, from: rules.boss, at: now + 1, text: c.reply[b] }], chatSeen: now + 1 }); }} />}
+      {meet && <Meeting s={s} msg={meet} sheet={sheet} close={(o) => { const id = meet.id; setMeet(null); if (!o) return;
+        const now = Date.now(), b = rules.boss, tt = treatsToday(s.treats);
+        const goalMsg = o.goal ? [{ id: now + 2, from: b, at: now + 2, text: ZH ? `这周的小目标：${GOAL_TEXT[o.goal]}。下周一聊聊进展。` : `This week's small goal: ${GOAL_TEXT[o.goal]}. Let's see how it went on Monday.` }] : [];
+        up({ chat: [...s.chat.map((m) => (m.id === id ? { ...m, done: true } : m)), { id: now, from: 'me', at: now, text: o.answer }, { id: now + 1, from: b, at: now + 1, text: o.reply }, ...goalMsg], chatSeen: now + 2,
+          goal: o.goal ? { key: o.goal, week: weekKey() } : s.goal, meets: (s.meets ?? 0) + 1, hearts: { ...s.hearts, [b]: s.hearts[b] + 2 },
+          treats: { ...tt, have: tt.have.includes(o.treat) ? tt.have : [...tt.have, o.treat] } }); }} />}
       {s.phase === 'home' && <GoHome s={s} name={name} sheet={sheet} fresh={goHomeFresh || loadPhase !== 'home'} start={() => { setGoHomeFresh(false); const d = new Date().toDateString(); up({ phase: 'free', day1: d, clock: rules.clockIn !== null ? { [d]: minsNow() } : {} }); }} />}
       {welcomeBack && (() => {
         const b = piggyToday(s.blind), pal = co.people.filter((p) => s.hearts[p] >= HEART_POINTS).sort((a, b2) => s.hearts[b2] - s.hearts[a])[0];

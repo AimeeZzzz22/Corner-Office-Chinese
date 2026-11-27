@@ -1836,3 +1836,13 @@ html:lang(zh-CN) .bc-title { font-family: 'Caveat', 'Kaiti SC', 'STKaiti', 'KaiT
 .gh-s-black { background: #000; }
 .practice-warn { display: grid; gap: 3px; padding: 10px 12px; border-radius: 12px; background: #fff0ec; border: 2px solid #f4bfae; color: #8a3b2a; font-size: 13px; line-height: 1.4; overflow-wrap: anywhere; }
 .practice-warn b { font-size: 14px; }
+.emote { position: absolute; z-index: 3; min-width: 34px; padding: 3px 8px; border-radius: 12px; background: #fffdf7; border: 3px solid #3e3328; font: 700 15px 'Pixelify Sans', monospace; color: #c9962e; text-align: center; transform: translate(-50%, -100%); animation: emoPop .35s cubic-bezier(.2, 1.6, .5, 1), emoBob 1.6s ease-in-out .35s infinite; pointer-events: none; }
+.emote.me { color: #5d78b8; }
+.emote::after { content: ''; position: absolute; left: 50%; bottom: -9px; margin-left: -6px; border: 6px solid transparent; border-top: 7px solid #3e3328; border-bottom: 0; }
+@keyframes emoPop { from { transform: translate(-50%, -60%) scale(.3); opacity: 0; } }
+@keyframes emoBob { 50% { transform: translate(-50%, -112%); } }
+.meet-dots { position: absolute; left: 50%; top: 18px; transform: translateX(-50%); display: flex; gap: 6px; padding: 6px 10px; border-radius: 99px; background: rgba(43, 32, 44, .7); }
+.meet-dots i { width: 9px; height: 9px; border-radius: 50%; background: rgba(255, 255, 255, .3); }
+.meet-dots i.done { background: #f2c14e; }
+.meet-dots i.on { background: #fff4d1; box-shadow: 0 0 0 2px #f2c14e; }
+.meet-gift { display: block; padding: 8px 10px; border-radius: 10px; background: #fff4d1; border: 2px dashed #e0c070; color: #6b5a48 !important; font: 600 13px Inter, sans-serif !important; letter-spacing: 0 !important; text-transform: none !important; overflow-wrap: anywhere; }
