@@ -59,10 +59,10 @@ export function Meeting({ s, msg, sheet, close }: { s: Save; msg: ChatMsg; sheet
       // the boss in their chair: looks up and talks (a small nod while speaking)
       const talking = stepRef.current === 'hello' || stepRef.current === 'ask' || stepRef.current === 'reply';
       const nod = talking && Math.floor(t * 5) % 4 === 0 ? 1 : 0;
-      char(x, bossSheet, fr(t), 2, 160, 79 + nod * 0.25);
+      char(x, bossSheet, fr(t), 2, 160, 110 + nod * 0.25);
       if (ok(desk)) x.drawImage(desk, 0, 0);
       // steam from the mugs
-      if (rio) for (const [mx, my] of [[185, 82], [125, 81]]) for (let i = 0; i < 3; i++) {
+      if (rio) for (const [mx, my] of [[184, 93], [150, 93]]) for (let i = 0; i < 3; i++) {
         const k = (t * 0.7 + i / 3) % 1; x.fillStyle = `rgba(255,255,255,${0.7 * Math.sin(k * Math.PI)})`;
         x.fillRect((mx + Math.round(Math.sin(k * 6 + i) * 1.5)) * B, (my - k * 12) * B, B, B);
       }
@@ -74,7 +74,7 @@ export function Meeting({ s, msg, sheet, close }: { s: Save; msg: ChatMsg; sheet
       } else {
         if (!sat.current) sat.current = t;
         const settle = Math.max(0, 1 - (t - sat.current) * 5);
-        char(x, sheet, DIR_COL.back, 0, 118, 124.5 - settle * 2);
+        char(x, sheet, DIR_COL.back, 0, 118, 150 - settle * 2);
         if (ok(chairs)) x.drawImage(chairs, 0, 0);
       }
       // walking in: the room fades up from black

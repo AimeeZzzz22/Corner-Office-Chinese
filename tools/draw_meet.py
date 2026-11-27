@@ -1,330 +1,232 @@
-# The boss's office for the one-to-one (Stitchlight: Margaux, editor-in-chief; Moonpuff: Rio, creative director).
-# Three layers per company, 320x180 drawn at 4x: back (room, boss chair), desk (covers the boss below the chest),
-# chairs (the visitor chairs, covering the player below the shoulders). The boss sits between back and desk;
-# the player sits between desk and chairs, seen from behind.
-import sys; sys.path.insert(0, 'tools')
+# The boss's office for the one-to-one, drawn to match the office map (seen from the front, with more detail).
+# Stitchlight: Margaux's glass-walled editor's office: white walls and windows, light grey tiles, a glass desk on thin
+#   legs, her dark grey tufted chair, the white lilies, the camera on a tripod, the printer, the brass trolley of pens,
+#   the tall calla lily and the grey sectional sofa.
+# Moonpuff: Rio's spot at the long wooden desk in the open studio: cream wall and windows, blue tiles, the desk with
+#   binders, the gift box, the flower pot and the little green figure; through the glass, the games room with its TV,
+#   bookshelf, moon rug and bean bags.
+# Three layers per company, 320x180 drawn at 4x: back (room, boss chair), desk (in front of the boss), chairs (the
+# visitor chair, in front of the player, who sits with their back to us).
+import sys, math, random; sys.path.insert(0, 'tools')
 from pix import Pic, hx, tw
 OUT = 'public/assets/scene/'
 W, H = 320, 180
+FLOOR = 104          # where the back wall meets the floor
+DESK_TOP = 104       # the desk top, at the boss's waist (the boss's feet are at 110)
 
-def planks(p, y0, y1, base, line, joint, hi):
-    p.rect(0, y0, W - 1, y1, base)
-    row = 0
-    for y in range(y0, y1 + 1, 7):
-        p.hl(0, W - 1, y, line); p.hl(0, W - 1, y + 1, hi) if y + 1 <= y1 else None
-        off = (row * 23) % 41
-        for x in range(off, W, 41): p.vl(x, y + 1, min(y + 6, y1), joint)
-        row += 1
+def tiles(p, y0, a, b, grout, hi=None, tw_=24, th=12):
+    for y in range(y0, H, th):
+        for x in range(0, W, tw_):
+            c = a if ((x // tw_) + (y - y0) // th) % 2 == 0 else b
+            p.rect(max(0, x), y, min(W - 1, x + tw_ - 1), min(H - 1, y + th - 1), c)
+            p.hl(max(0, x), min(W - 1, x + tw_ - 1), y, grout); p.vl(max(0, x), y, min(H - 1, y + th - 1), grout)
+            if hi: p.hl(max(0, x + 1), min(W - 1, x + tw_ - 2), y + 1, hi)
 
-def rug(p, top, bot, xt0, xt1, xb0, xb1, fill, border, fringe, pattern=None):
-    for y in range(top, bot + 1):
-        f = (y - top) / (bot - top); a = round(xt0 + (xb0 - xt0) * f); b = round(xt1 + (xb1 - xt1) * f)
-        p.hl(a, b, y, fill)
-        p.px(a, y, border); p.px(b, y, border); p.px(a + 1, y, border); p.px(b - 1, y, border)
-        if y in (top + 3, bot - 3): p.hl(a + 3, b - 3, y, border)
-        if pattern and top + 6 < y < bot - 6 and (y - top) % 6 == 0:
-            for x in range(a + 8, b - 7, 6): p.px(x, y, pattern)
-    p.hl(xt0, xt1, top, border); p.hl(xb0, xb1, bot, border)
-    for x in range(xb0 + 1, xb1, 2): p.px(x, bot + 1, fringe)
-
-def window(p, x0, y0, x1, y1, frame, ol, sky, city, lit):
+def window(p, x0, y0, x1, y1, frame, ol, glass, glass2, streak):
     p.box(x0, y0, x1, y1, frame, ol)
-    ix0, iy0, ix1, iy1 = x0 + 3, y0 + 3, x1 - 3, y1 - 3
-    p.grad(ix0, iy0, ix1, iy1, sky)
-    import random; r = random.Random(7)
-    x = ix0
-    while x < ix1:
-        bw = r.randint(5, 10); bh = r.randint(10, (iy1 - iy0) * 2 // 3)
-        c = city[r.randint(0, len(city) - 1)]
-        p.rect(x, iy1 - bh, min(x + bw, ix1), iy1, c)
-        for wy in range(iy1 - bh + 2, iy1 - 1, 3):
-            for wx in range(x + 1, min(x + bw, ix1) - 0, 2):
-                if r.random() < .35: p.px(wx, wy, lit)
-        x += bw + 1
-    mx = (x0 + x1) // 2; p.rect(mx - 1, y0, mx + 1, y1, frame); p.vl(mx - 1, y0, y1, ol); p.vl(mx + 1, y0, y1, ol)
-    my = (y0 + y1) // 2 - 4; p.rect(x0, my - 1, x1, my + 1, frame); p.hl(x0, x1, my - 1, ol); p.hl(x0, x1, my + 1, ol)
+    p.rect(x0 + 3, y0 + 3, x1 - 3, y1 - 3, glass); p.rect(x0 + 3, y0 + (y1 - y0) // 2, x1 - 3, y1 - 3, glass2)
+    mx = (x0 + x1) // 2; p.rect(mx - 1, y0 + 1, mx + 1, y1 - 1, frame); p.vl(mx - 1, y0 + 3, y1 - 3, ol); p.vl(mx + 1, y0 + 3, y1 - 3, ol)
+    p.hl(x0 + 3, x1 - 3, y0 + 3, ol); p.vl(x0 + 3, y0 + 3, y1 - 3, ol)
+    for (sx, sy) in [(x0 + 6, y0 + 14), (x0 + 9, y0 + 20), (mx + 4, y0 + 12), (mx + 7, y0 + 19)]:
+        for k in range(5): p.px(sx + k, sy - k, streak)
     p.box(x0 - 2, y1, x1 + 2, y1 + 3, frame, ol)
-    # glass shine
-    for k in range(6): p.px(ix0 + 3 + k, iy0 + 8 - k, (255, 255, 255, 110)); p.px(mx + 4 + k, iy0 + 10 - k, (255, 255, 255, 90))
 
-def curtain(p, x0, x1, y0, y1, c, d, hi, ol):
-    p.rect(x0, y0, x1, y1, c)
-    for x in range(x0 + 2, x1, 3): p.vl(x, y0 + 2, y1, d)
-    p.vl(x0 + 1, y0, y1, hi)
-    p.vl(x0, y0, y1, ol); p.vl(x1, y0, y1, ol); p.hl(x0, x1, y1, ol)
-    # tie-back
-    ty = y0 + (y1 - y0) * 3 // 5; p.hl(x0, x1, ty, ol); p.hl(x0, x1, ty + 1, hi)
-
-def frame_cover(p, x0, y0, x1, y1, gold, gold_d, bg, mast, fig, figd, ol, title):
-    p.box(x0, y0, x1, y1, gold, ol); p.rect(x0 + 1, y0 + 1, x1 - 1, y0 + 1, (255, 236, 170, 255)); p.vl(x1 - 1, y0 + 1, y1 - 1, gold_d); p.hl(x0 + 1, x1 - 1, y1 - 1, gold_d)
-    ix0, iy0, ix1, iy1 = x0 + 2, y0 + 2, x1 - 2, y1 - 2
-    p.rect(ix0, iy0, ix1, iy1, bg)
-    w = tw(title); p.text(ix0 + (ix1 - ix0 - w) // 2 + 1, iy0 + 2, title, mast)
-    # a model in a wide-brim hat and a long coat
-    cx = (ix0 + ix1) // 2 + 2; top = iy0 + 10; hgt = iy1 - top - 2
-    p.ellipse(cx, top + 3, 2, 2, figd)                       # head
-    p.hl(cx - 5, cx + 5, top + 1, fig); p.hl(cx - 3, cx + 3, top, fig)   # hat
-    for i in range(hgt - 6):
-        y = top + 6 + i; half = 2 + i * 5 // max(1, hgt - 6)
-        p.hl(cx - half, cx + half, y, fig)
-    p.vl(cx, top + 6, top + hgt - 1, figd)
-    for k in range(3): p.hl(ix0 + 2, ix0 + 6 - k, iy1 - 3 - k * 2, mast)
-
-def lamp(p, x, ytop, ybot, pole, shade, shade_d, ol, glow):
-    for r in range(18, 0, -3):
-        for y in range(ytop - r, ytop + r):
-            for xx in range(x - r, x + r):
-                if (xx - x) ** 2 + (y - ytop - 4) ** 2 < r * r and (xx + y) % 2 == 0: p.px(xx, y, glow)
-    p.vl(x, ytop + 8, ybot, pole); p.vl(x + 1, ytop + 8, ybot, ol)
-    p.box(x - 5, ybot, x + 6, ybot + 2, pole, ol)
-    for i in range(9): p.hl(x - 3 - i // 3, x + 4 + i // 3, ytop + i, shade if i < 7 else shade_d)
-    p.hl(x - 3, x + 4, ytop - 1, ol); p.hl(x - 6, x + 7, ytop + 9, ol)
-    for i in range(9): p.px(x - 4 - i // 3, ytop + i, ol); p.px(x + 5 + i // 3, ytop + i, ol)
-
-def plant_tall(p, x, ybase, pot, pot_d, ol, leaf, leaf_d, leaf_l, stem):
-    p.vl(x, ybase - 46, ybase - 10, stem)
-    for i, (dx, dy, s) in enumerate([(-7, -44, 1), (6, -40, -1), (-8, -32, 1), (7, -27, -1), (-6, -20, 1), (6, -16, -1), (0, -50, 1)]):
-        cx, cy = x + dx, ybase + dy
-        p.ellipse(cx, cy, 5, 4, leaf, ol); p.ellipse(cx - s, cy - 1, 2, 1, leaf_l)
-        p.hl(cx - 3, cx + 3, cy, leaf_d)
-    p.box(x - 7, ybase - 10, x + 7, ybase, pot, ol); p.hl(x - 8, x + 8, ybase - 10, ol); p.hl(x - 7, x + 7, ybase - 9, pot_d)
-    p.vl(x + 5, ybase - 8, ybase - 1, pot_d)
-
-def chair_back_tall(p, x0, x1, y0, y1, c, d, hi, ol, tuft=None):
+def office_chair_back(p, x0, x1, y0, y1, c, d, hi, ol, tuft):
     for y in range(y0, y1 + 1):
-        inset = 2 if y < y0 + 2 else 0
-        p.hl(x0 + inset, x1 - inset, y, c)
-    p.vl(x0 + 2, y0 + 3, y1 - 1, hi)
-    p.vl(x1 - 2, y0 + 3, y1 - 1, d)
-    p.hl(x0 + 2, x1 - 2, y0, ol); p.px(x0 + 1, y0 + 1, ol); p.px(x1 - 1, y0 + 1, ol); p.vl(x0, y0 + 2, y1, ol); p.vl(x1, y0 + 2, y1, ol)
+        ins = 3 if y == y0 else 1 if y == y0 + 1 else 0
+        p.hl(x0 + ins, x1 - ins, y, c)
+    p.vl(x0 + 2, y0 + 3, y1 - 2, hi); p.vl(x1 - 2, y0 + 3, y1 - 2, d)
+    p.hl(x0 + 3, x1 - 3, y0, ol); p.px(x0 + 1, y0 + 1, ol); p.px(x0 + 2, y0 + 1, ol); p.px(x1 - 1, y0 + 1, ol); p.px(x1 - 2, y0 + 1, ol)
+    p.vl(x0, y0 + 2, y1, ol); p.vl(x1, y0 + 2, y1, ol)
     if tuft:
-        for y in range(y0 + 5, y1 - 3, 6):
-            for x in range(x0 + 5 + (y // 6 % 2) * 3, x1 - 3, 6): p.px(x, y, tuft)
+        for y in range(y0 + 5, y1 - 2, 5):
+            for x in range(x0 + 4 + (y // 5 % 2) * 3, x1 - 2, 6): p.px(x, y, tuft)
+
+def chair_base(p, cx, seat_y, floor_y, c, d, ol, metal):
+    # seat cushion, the column, a five-star base on wheels
+    p.box(cx - 13, seat_y, cx + 13, seat_y + 4, c, ol, None, d)
+    p.rect(cx - 1, seat_y + 5, cx + 1, floor_y - 3, metal); p.vl(cx - 2, seat_y + 5, floor_y - 3, ol); p.vl(cx + 2, seat_y + 5, floor_y - 3, ol)
+    p.hl(cx - 11, cx + 11, floor_y - 2, metal); p.hl(cx - 11, cx + 11, floor_y - 3, ol); p.hl(cx - 11, cx + 11, floor_y - 1, ol)
+    for x in (cx - 11, cx, cx + 11): p.rect(x - 1, floor_y, x + 1, floor_y + 1, hx('2b2b33'))
+
+def visitor_chair(p, x0, c, d, hi, ol, leg):
+    # seen from behind: a padded back, the seat edge, four legs on the floor
+    for y in range(138, 153):
+        ins = [3, 2, 1][y - 138] if y < 141 else 0
+        p.hl(x0 + ins, x0 + 28 - ins, y, c)
+    p.vl(x0 + 2, 141, 151, hi); p.vl(x0 + 26, 141, 151, d); p.hl(x0 + 3, x0 + 25, 151, d)
+    for x in range(x0 + 6, x0 + 24, 6): p.vl(x, 143, 149, d)
+    p.hl(x0 + 3, x0 + 25, 138, ol); p.px(x0 + 2, 139, ol); p.px(x0 + 1, 140, ol); p.px(x0 + 26, 139, ol); p.px(x0 + 27, 140, ol)
+    p.vl(x0, 141, 153, ol); p.vl(x0 + 28, 141, 153, ol)
+    p.rect(x0 - 2, 153, x0 + 30, 156, d); p.hl(x0 - 2, x0 + 30, 153, ol); p.hl(x0 - 2, x0 + 30, 156, ol); p.vl(x0 - 2, 153, 156, ol); p.vl(x0 + 30, 153, 156, ol)
+    for lx in (x0, x0 + 26): p.rect(lx, 157, lx + 1, 169, leg); p.vl(lx - 1, 157, 169, ol); p.vl(lx + 2, 157, 169, ol); p.hl(lx - 1, lx + 2, 170, ol)
+    # its shadow on the floor
+    p.dither(x0 - 3, 170, x0 + 31, 172, (0, 0, 0, 40))
 
 # ======================================================================================== Stitchlight: Margaux
 def stitchlight():
-    OL = hx('6b5043'); WALL = hx('f6ebdc'); WALL2 = hx('efe0cb'); PANEL = hx('ead9c2'); PANEL_D = hx('dcc6a8'); PANEL_H = hx('fbf3e6')
+    OL = hx('4b4a58'); WALL = hx('f7f7fa'); SEAM = hx('ebebf1'); TRIM = hx('dcdce6')
     b = Pic(W, H, WALL)
-    # wallpaper: fine vertical stripes
-    for x in range(0, W, 8): b.vl(x, 0, 70, WALL2)
-    # crown moulding
-    b.rect(0, 0, W - 1, 3, PANEL_H); b.hl(0, W - 1, 4, PANEL_D); b.hl(0, W - 1, 5, OL)
-    # wainscoting with panels
-    b.rect(0, 72, W - 1, 103, PANEL); b.hl(0, W - 1, 71, OL); b.hl(0, W - 1, 72, PANEL_H); b.hl(0, W - 1, 73, PANEL_D)
-    for x in range(6, W - 20, 34): b.box(x, 78, x + 26, 98, PANEL, PANEL_D, PANEL_H)
-    # floor: honey oak planks + baseboard
-    planks(b, 104, H - 1, hx('cf9f6f'), hx('b48557'), hx('bd8d5f'), hx('dcb184'))
-    b.rect(0, 99, W - 1, 103, hx('fbf3e6')); b.hl(0, W - 1, 98, OL); b.hl(0, W - 1, 103, OL); b.hl(0, W - 1, 102, PANEL_D)
-    # window with the city at golden hour, blush curtains
-    window(b, 16, 12, 88, 66, hx('fffaf2'), OL, [hx('a9cdea'), hx('c5dcef'), hx('f2d9cf'), hx('f8c9b0')], [hx('8d9fbf'), hx('9aa9c6'), hx('7f90b2')], hx('ffe7a3'))
-    b.hl(6, 98, 8, OL); b.hl(6, 98, 9, hx('c9a24f')); b.px(5, 8, hx('c9a24f')); b.px(99, 8, hx('c9a24f'))
-    curtain(b, 6, 18, 10, 86, hx('eab5ba'), hx('d9989f'), hx('f6d2d4'), OL); curtain(b, 86, 98, 10, 86, hx('eab5ba'), hx('d9989f'), hx('f6d2d4'), OL)
-    # the big framed cover behind the desk, two small ones to the right
-    frame_cover(b, 132, 8, 188, 52, hx('d9b052'), hx('a8822e'), hx('f4c9c4'), hx('ffffff'), hx('6d3b5a'), hx('4d2740'), OL, 'STITCH')
-    frame_cover(b, 202, 16, 228, 50, hx('d9b052'), hx('a8822e'), hx('cfe6d6'), hx('2f5c4e'), hx('2f5c4e'), hx('1e3d33'), OL, 'SL')
-    frame_cover(b, 234, 16, 260, 50, hx('d9b052'), hx('a8822e'), hx('fbe3a6'), hx('9a4a3a'), hx('b5553f'), hx('7d3226'), OL, 'SL')
-    # floor lamp beside the window
-    lamp(b, 112, 30, 118, hx('c9a24f'), hx('fff1d2'), hx('f2d9a8'), OL, (255, 240, 200, 60))
-    # tall plant in the corner by the window
-    plant_tall(b, 30, 126, hx('f4efe6'), hx('d9d0c2'), OL, hx('6f9b5c'), hx('557d46'), hx('9cc47f'), hx('5b4a3a'))
-    # clothing rack: chrome rail, wheels, six garments
-    CH = hx('c8ccd6'); CHD = hx('8c92a0')
-    b.hl(266, 314, 50, OL); b.hl(266, 314, 51, CH); b.hl(266, 314, 52, OL)
-    for x in (267, 313): b.vl(x, 50, 118, CHD); b.vl(x + 1, 50, 118, CH)
-    b.hl(262, 272, 118, OL); b.hl(308, 318, 118, OL)
-    for x in (263, 271, 309, 317): b.ellipse(x, 120, 1, 1, hx('4b4b55'))
-    garments = [('dress', hx('e98a7a'), hx('c86a5c')), ('coat', hx('f1e4cc'), hx('d7c5a5')), ('dress', hx('3e4a7a'), hx('2b345a')),
-                ('coat', hx('9ab89a'), hx('7a987a')), ('dress', hx('e8b84a'), hx('c4962e')), ('coat', hx('8a4f78'), hx('6a3758'))]
-    for i, (kind, c, d) in enumerate(garments):
-        gx = 274 + i * 7
-        b.px(gx, 51, OL); b.px(gx, 52, CHD); b.hl(gx - 2, gx + 2, 53, CHD)
-        ln = 34 if kind == 'coat' else 28 + (i % 2) * 6
-        for k in range(ln):
-            half = 3 if k < 6 else 3 + (k - 6) // 9 if kind == 'dress' else 3
-            b.hl(gx - half, gx + half, 54 + k, c)
-            b.px(gx - half - 1, 54 + k, OL); b.px(gx + half + 1, 54 + k, OL)
-            b.px(gx + half, 54 + k, d)
-        b.hl(gx - 4, gx + 4, 54 + ln, OL)
-        if kind == 'coat': b.vl(gx, 56, 54 + ln - 1, d)
-        if kind == 'dress': b.hl(gx - 3, gx + 3, 60, d)
-    # a shoe pair under the rack, a hatbox
-    b.box(276, 112, 286, 118, hx('f4c9c4'), OL, hx('fbe3e1')); b.hl(276, 286, 114, hx('6d3b5a'))
-    b.box(296, 114, 300, 118, hx('2b2b33'), OL); b.box(302, 114, 306, 118, hx('2b2b33'), OL)
-    # side table with books and a candle, left of the desk
-    b.box(70, 96, 96, 99, hx('d8b98d'), OL, hx('ecd3ab')); b.vl(73, 100, 122, OL); b.vl(93, 100, 122, OL); b.hl(72, 94, 112, OL)
-    for i, c in enumerate([hx('6d3b5a'), hx('e9c46a'), hx('9ab89a')]): b.box(74 + i * 5, 84 + i, 78 + i * 5, 95, c, OL)
-    b.box(88, 89, 92, 95, hx('fff8e8'), OL); b.px(90, 87, hx('ffb347')); b.px(90, 88, hx('ffd27a'))
-    # rug: cream with a blush border
-    rug(b, 118, 176, 92, 228, 52, 268, hx('f8efe2'), hx('e6a9ae'), hx('efe3d2'), hx('eccfc6'))
-    # Margaux's chair: tall burgundy leather, tufted
-    chair_back_tall(b, 145, 175, 54, 96, hx('8a3e4e'), hx('6c2c3a'), hx('a8586a'), OL, hx('6c2c3a'))
+    for x in range(0, W, 40): b.vl(x, 6, FLOOR - 6, SEAM)          # wall panels
+    b.rect(0, 0, W - 1, 4, hx('ffffff')); b.hl(0, W - 1, 5, TRIM); b.hl(0, W - 1, 6, OL)
+    tiles(b, FLOOR, hx('ececf2'), hx('e1e1ea'), hx('d3d3de'), hx('f6f6fa'))
+    b.rect(0, FLOOR - 4, W - 1, FLOOR - 1, hx('ffffff')); b.hl(0, W - 1, FLOOR - 5, TRIM); b.hl(0, W - 1, FLOOR, OL)
+    # the glass wall on the left (the office is glassed in), with the outer floor beyond
+    b.rect(0, 6, 10, FLOOR + 75, hx('dfeef6')); b.vl(10, 6, H - 1, OL); b.vl(9, 6, H - 1, hx('ffffff'))
+    for k in range(0, 60, 12): b.px(3 + k % 6, 30 + k, hx('ffffff')); b.px(4 + k % 6, 29 + k, hx('ffffff'))
+    # two windows like the map's: white frames, pale blue glass
+    window(b, 34, 14, 92, 60, hx('ffffff'), OL, hx('bfe0f2'), hx('a9d3ec'), hx('ffffff'))
+    window(b, 228, 14, 286, 60, hx('ffffff'), OL, hx('bfe0f2'), hx('a9d3ec'), hx('ffffff'))
+    # mood board between the windows, behind the desk
+    b.box(118, 14, 202, 50, hx('f3ece2'), OL, hx('fbf7f0'))
+    for (x, y, w, h, c) in [(122, 18, 12, 16, 'e8798a'), (136, 20, 14, 12, '2f3a5a'), (152, 17, 10, 14, 'f2d07a'), (164, 19, 16, 12, 'c7d9e8'),
+                            (182, 17, 16, 18, 'd9a9b8'), (124, 36, 18, 10, '9ab89a'), (146, 34, 12, 12, 'f4c9c4'), (162, 34, 20, 10, '3a3a46'), (186, 38, 12, 8, 'e8b84a')]:
+        b.box(x, y, x + w, y + h, hx(c), OL)
+        if w > 12: b.hl(x + 2, x + w - 4, y + h - 3, hx('ffffff'))
+    for x in (124, 140, 156, 172, 188): b.px(x + 3, 16, hx('d64545'))
+    # left: printer on a white cabinet, the camera on its tripod, the tall vase of white lilies
+    b.box(14, 82, 40, FLOOR + 6, hx('ffffff'), OL, None, hx('e6e6ee')); b.hl(17, 37, 92, OL); b.hl(25, 31, 87, hx('b9b9c6')); b.hl(25, 31, 97, hx('b9b9c6'))
+    b.box(15, 70, 39, 81, hx('e9e9f0'), OL, hx('ffffff')); b.rect(18, 66, 36, 70, hx('ffffff')); b.box(18, 66, 36, 70, hx('ffffff'), OL); b.rect(20, 74, 34, 76, hx('3a3a46')); b.px(36, 73, hx('7fd18a'))
+    for k in range(3): b.hl(21, 33, 67 + k, hx('d7d7e0')) if k == 1 else None
+    TX, TY = 52, 70                                                      # tripod + camera
+    b.box(TX - 7, TY, TX + 7, TY + 8, hx('2b2b33'), OL); b.ellipse(TX + 2, TY + 4, 3, 3, hx('5a5a6a'), OL); b.px(TX + 1, TY + 3, hx('bfe0f2')); b.box(TX - 5, TY - 3, TX - 1, TY, hx('2b2b33'), OL)
+    for (dx, x1) in [(-1, TX - 9), (0, TX), (1, TX + 9)]:
+        for i in range(0, 38):
+            x = round(TX + (x1 - TX) * i / 37); b.px(x, TY + 9 + i, hx('3a3a46'))
+    b.dither(TX - 10, TY + 47, TX + 10, TY + 48, (0, 0, 0, 40))
+    VX = 74                                                              # lilies in a tall glass vase
+    b.box(VX - 4, 86, VX + 4, FLOOR + 6, hx('d7eef6'), OL, hx('ffffff')); b.rect(VX - 3, 98, VX + 3, FLOOR + 5, hx('bfe0ee'))
+    for (sx, sy) in [(VX - 6, 62), (VX, 56), (VX + 6, 61), (VX - 3, 70), (VX + 4, 72)]:
+        b.vl(sx + (VX - sx) // 2 * 0, sy + 4, 86, hx('6f9b5c'))
+    for (sx, sy) in [(VX - 6, 62), (VX, 56), (VX + 6, 61), (VX - 3, 70), (VX + 4, 72)]:
+        b.ellipse(sx, sy, 3, 2, hx('ffffff'), OL); b.px(sx, sy, hx('f2d07a'))
+    for (lx, ly) in [(VX - 4, 78), (VX + 4, 76)]: b.ellipse(lx, ly, 2, 1, hx('7fae6a'))
+    # right: the brass trolley of pens and swatches, the calla lily, the grey sectional sofa
+    CX = 236
+    for y in (88, 100, 112):
+        b.box(CX - 9, y, CX + 9, y + 2, hx('e8c05a'), OL, hx('f6df99'))
+    b.vl(CX - 9, 88, 116, hx('b78f30')); b.vl(CX + 9, 88, 116, hx('b78f30'))
+    for x in (CX - 8, CX + 8): b.ellipse(x, 118, 1, 1, hx('3a3a46'))
+    for i, c in enumerate(['e05a5a', '3f7ad6', '2f2f3a', 'f2d07a', '7fae6a']): b.vl(CX - 6 + i * 3, 80, 87, hx(c)); b.px(CX - 6 + i * 3, 79, OL)
+    for i, c in enumerate(['f4c9c4', 'c7d9e8', '9ab89a']): b.box(CX - 7 + i * 5, 95, CX - 4 + i * 5, 99, hx(c), OL)
+    b.box(CX - 7, 106, CX + 7, 111, hx('ffffff'), OL); b.hl(CX - 5, CX + 5, 108, hx('d64545'))
+    PX = 208                                                              # calla lily in a white pot
+    b.box(PX - 6, 90, PX + 6, FLOOR + 6, hx('ffffff'), OL, None, hx('e6e6ee')); b.hl(PX - 7, PX + 7, 90, OL)
+    b.vl(PX, 56, 89, hx('5b8a4a')); b.vl(PX + 1, 60, 89, hx('6f9b5c'))
+    b.ellipse(PX + 4, 54, 4, 3, hx('ffffff'), OL); b.px(PX + 2, 53, hx('f2d07a')); b.px(PX + 7, 51, OL)
+    b.ellipse(PX - 4, 76, 3, 5, hx('6f9b5c'), OL); b.ellipse(PX + 5, 80, 3, 5, hx('7fae6a'), OL)
+    SG = hx('6b6b7a'); SGD = hx('55556a'); SGH = hx('8a8a9a')            # sectional sofa
+    b.box(252, 74, 319, 92, SG, OL, SGH); b.box(252, 90, 319, 106, SGD, OL)
+    for x in range(256, 318, 21): b.box(x, 76, x + 18, 90, SG, OL, SGH); b.px(x + 9, 83, SGD)
+    b.box(246, 82, 256, 108, SG, OL, SGH); b.box(250, 92, 319, 98, SG, OL, SGH)
+    for x in (256, 314): b.rect(x, 107, x + 2, 110, hx('2b2b33'))
+    b.box(268, 80, 278, 88, hx('f4c9c4'), OL); b.box(296, 79, 306, 88, hx('e8e8f0'), OL)
+    # Margaux's chair (dark grey, tufted, a high back) and its seat and base behind the glass desk
+    CG = hx('4f4f60'); CGD = hx('3c3c4c'); CGH = hx('6a6a7e')
+    office_chair_back(b, 144, 176, 62, 104, CG, CGD, CGH, OL, CGD)
+    chair_base(b, 160, 106, 117, CG, CGD, OL, hx('a9adb8'))
     b.save(OUT + 'meet_stitchlight_back.png')
 
     d = Pic(W, H)
-    # white lacquer desk with brass trim
-    TOP = hx('fffaf3'); FR = hx('f2e8da'); FRD = hx('e1d3bf'); BR = hx('d4a94e'); BRD = hx('a8822e')
-    d.rect(104, 88, 216, 93, TOP); d.hl(104, 216, 88, OL); d.hl(105, 215, 89, hx('ffffff')); d.vl(104, 88, 93, OL); d.vl(216, 88, 93, OL)
-    d.hl(104, 216, 93, BR); d.hl(104, 216, 94, BRD)
-    d.rect(108, 95, 212, 124, FR); d.vl(108, 95, 124, OL); d.vl(212, 95, 124, OL); d.hl(108, 212, 124, OL)
-    for x0 in (112, 182):                   # drawer stacks
-        for k in range(3):
-            y0 = 98 + k * 9; d.box(x0, y0, x0 + 26, y0 + 7, FR, FRD, hx('fbf5ec')); d.hl(x0 + 10, x0 + 16, y0 + 3, BR)
-    d.box(142, 98, 178, 120, FR, FRD, hx('fbf5ec'))       # centre panel with a brass monogram
-    d.ellipse(160, 109, 5, 5, BR, BRD); d.text(159, 107, 'S', hx('fffaf3'))
-    for x in (110, 208): d.rect(x, 125, x + 2, 130, BR); d.vl(x, 125, 130, OL); d.vl(x + 3, 125, 130, OL); d.hl(x, x + 3, 130, OL)
-    # on the desk: proofs, laptop (seen from behind), nameplate, coffee, a vase of peonies, pen cup
-    for k in range(4): d.box(110, 84 - k * 2, 124, 87 - k * 2 + 1, hx('ffffff') if k % 2 else hx('f4ede2'), OL)
-    d.box(126, 70, 146, 87, hx('d6d9e0'), OL, hx('eceef3'), hx('b9bdc8')); d.ellipse(136, 78, 1, 1, hx('f4b6bc')); d.hl(124, 148, 87, OL)
-    d.box(150, 84, 170, 87, BR, OL, hx('f0d48a')); d.hl(153, 167, 85, BRD)
-    d.box(174, 81, 179, 87, hx('ffffff'), OL); d.px(180, 83, OL); d.px(180, 84, OL); d.hl(175, 178, 82, hx('7a4a2e'))
-    d.box(188, 76, 196, 87, hx('e7f0f4'), OL, hx('ffffff'))
-    for (fx, fy, c) in [(186, 70, 'f19fae'), (192, 67, 'f7c3cd'), (198, 71, 'f19fae'), (190, 73, 'fbe0e5'), (195, 74, 'e57f93')]:
-        d.ellipse(fx, fy, 3, 3, hx(c), OL); d.px(fx - 1, fy - 1, hx('ffffff'))
-    for (lx, ly) in [(184, 75), (200, 76)]: d.ellipse(lx, ly, 2, 1, hx('7fa36a'), OL)
-    d.box(202, 80, 207, 87, hx('6d3b5a'), OL); d.vl(203, 75, 79, hx('2b2b33')); d.vl(205, 76, 79, hx('d4a94e'))
-    d.im = d.im.transform(d.im.size, 0, (1, 0, 0, 0, 1, -4)); d.save(OUT + 'meet_stitchlight_desk.png')
+    # the glass desk: a pale blue top you can see through, thin steel legs, things on it
+    GL = (196, 226, 240, 170); GLE = hx('9cc6dc'); ST = hx('c9ced8'); STD = hx('8e94a3')
+    d.rect(100, DESK_TOP, 220, DESK_TOP + 3, GL); d.hl(100, 220, DESK_TOP, hx('eaf6fb')); d.hl(100, 220, DESK_TOP + 3, GLE)
+    d.hl(100, 220, DESK_TOP - 1, OL); d.hl(100, 220, DESK_TOP + 4, OL); d.vl(99, DESK_TOP - 1, DESK_TOP + 4, OL); d.vl(221, DESK_TOP - 1, DESK_TOP + 4, OL)
+    for x in (106, 212):              # front legs to the floor, back legs a little higher (further away)
+        d.rect(x, DESK_TOP + 5, x + 1, 128, ST); d.vl(x - 1, DESK_TOP + 5, 128, OL); d.vl(x + 2, DESK_TOP + 5, 128, OL); d.hl(x - 1, x + 2, 129, OL)
+    for x in (114, 204): d.rect(x, DESK_TOP + 5, x, 118, STD)
+    d.hl(108, 211, DESK_TOP + 8, STD)                                     # a thin steel rail under the glass
+    d.dither(102, 129, 218, 131, (0, 0, 0, 30))
+    # on the desk: the framed cover (white frame, red picture), the camera, sunglasses, a notebook and pen, a coffee
+    d.box(104, 84, 120, DESK_TOP - 1, hx('ffffff'), OL); d.rect(107, 87, 117, 99, hx('e05a5a')); d.ellipse(112, 91, 2, 2, hx('f7d5b5')); d.rect(110, 94, 114, 99, hx('2f2f3a')); d.hl(107, 117, 88, hx('ffffff'))
+    d.box(124, 96, 140, DESK_TOP - 1, hx('2b2b33'), OL); d.ellipse(134, 99, 3, 3, hx('5a5a6a'), OL); d.px(133, 98, hx('bfe0f2')); d.box(126, 93, 130, 96, hx('2b2b33'), OL)
+    d.ellipse(186, DESK_TOP - 2, 3, 1, hx('2b2b33')); d.ellipse(193, DESK_TOP - 2, 3, 1, hx('2b2b33')); d.hl(189, 190, DESK_TOP - 3, hx('2b2b33'))
+    d.box(196, DESK_TOP - 3, 214, DESK_TOP - 1, hx('f2e6d6'), OL); d.hl(198, 212, DESK_TOP - 2, hx('e8798a')); d.hl(200, 214, DESK_TOP - 4, hx('3a3a46'))
+    d.box(176, 96, 181, DESK_TOP - 1, hx('ffffff'), OL); d.hl(177, 180, 97, hx('7a4a2e')); d.px(182, 98, OL); d.px(182, 100, OL); d.px(183, 99, OL)
+    d.save(OUT + 'meet_stitchlight_desk.png')
 
     c = Pic(W, H)
-    for x0 in (104, 188):    # blush velvet visitor chairs, seen from behind, brass legs
-        V = hx('e9b0b5'); VD = hx('cf8d94'); VH = hx('f6d0d3')
-        for y in range(127, 153):
-            inset = max(0, 3 - (y - 127)) if y < 130 else 0
-            c.hl(x0 + inset, x0 + 28 - inset, y, V)
-        c.vl(x0 + 3, 130, 151, VH); c.vl(x0 + 25, 130, 151, VD); c.hl(x0 + 4, x0 + 24, 151, VD)
-        for x in range(x0 + 7, x0 + 22, 5): c.vl(x, 133, 148, VD)
-        c.hl(x0 + 3, x0 + 25, 127, OL); c.px(x0 + 2, 128, OL); c.px(x0 + 1, 129, OL); c.px(x0 + 26, 128, OL); c.px(x0 + 27, 129, OL)
-        c.vl(x0, 130, 152, OL); c.vl(x0 + 28, 130, 152, OL)
-        c.rect(x0 - 2, 152, x0 + 30, 155, VD); c.hl(x0 - 2, x0 + 30, 152, OL); c.hl(x0 - 2, x0 + 30, 155, OL); c.vl(x0 - 2, 152, 155, OL); c.vl(x0 + 30, 152, 155, OL)
-        for lx in (x0 + 1, x0 + 26): c.rect(lx, 156, lx + 1, 168, hx('d4a94e')); c.vl(lx - 1, 156, 168, OL); c.vl(lx + 2, 156, 168, OL); c.hl(lx - 1, lx + 2, 169, OL)
+    visitor_chair(c, 104, hx('5a5a6c'), hx('46465a'), hx('76768c'), OL, hx('a9adb8'))
     c.save(OUT + 'meet_stitchlight_chairs.png')
 
 # ======================================================================================== Moonpuff: Rio
 def moonpuff():
-    OL = hx('3f3355'); WALL = hx('dcd3f2'); WALL2 = hx('d2c8ec'); LOW = hx('8fd0c8'); LOW_D = hx('6fb3ab'); LOW_H = hx('b5e4dd')
+    OL = hx('3d3552'); WALL = hx('f7eedb'); WALL2 = hx('efe3c9')
     b = Pic(W, H, WALL)
-    for y in range(8, 70, 10):           # soft dotted wallpaper
-        for x in range((y // 10 % 2) * 8, W, 16): b.px(x, y, WALL2); b.px(x + 1, y, WALL2)
-    b.rect(0, 0, W - 1, 2, hx('c7bce6')); b.hl(0, W - 1, 3, OL)
-    b.rect(0, 74, W - 1, 103, LOW); b.hl(0, W - 1, 73, OL); b.hl(0, W - 1, 74, LOW_H)
-    for x in range(0, W, 12): b.vl(x, 76, 102, LOW_D)
-    # floor: speckled carpet tiles
-    b.rect(0, 104, W - 1, H - 1, hx('7e86a6'))
-    for y in range(104, H, 18):
-        for x in range(((y - 104) // 18 % 2) * 18, W, 36): b.rect(x, y, x + 17, min(y + 17, H - 1), hx('737b9b'))
-    import random; r = random.Random(3)
-    for _ in range(500): b.px(r.randrange(W), r.randrange(104, H), hx('9aa1bf') if r.random() < .5 else hx('646b89'))
-    b.rect(0, 100, W - 1, 103, hx('5f6787')); b.hl(0, W - 1, 99, OL); b.hl(0, W - 1, 103, OL)
-    # string lights
-    import math
-    for x in range(0, W, 1):
-        y = 9 + int(4 * math.sin(x / 26 * math.pi)) ** 2 // 4
-        b.px(x, y, hx('4a3d66'))
-        if x % 13 == 6:
-            col = [hx('ffd166'), hx('ff8fc8'), hx('7fe0d0'), hx('b8a2ff')][(x // 13) % 4]
-            b.rect(x - 1, y + 1, x + 1, y + 3, col); b.px(x, y + 4, col); b.dither(x - 3, y, x + 3, y + 6, (col[0], col[1], col[2], 70))
-    # neon moon + sign behind Rio's chair
-    NEON = hx('ff8fc8'); NEON_D = hx('e0559f'); TEAL = hx('7fe0d0')
-    for rr in (17, 14):
-        for y in range(31 - rr, 31 + rr):
-            for x in range(160 - rr, 160 + rr):
-                if (x - 160) ** 2 + (y - 31) ** 2 < rr * rr and (x + y) % 2 == 0: b.px(x, y, (255, 160, 210, 40))
-    for y in range(18, 44):
-        for x in range(146, 176):
-            d1 = (x - 160) ** 2 + (y - 31) ** 2; d2 = (x - 166) ** 2 + (y - 27) ** 2
-            if 100 <= d1 <= 144 and d2 >= 110: b.px(x, y, NEON)
-            elif 81 <= d1 < 100 and d2 >= 110: b.px(x, y, NEON_D)
-    w = tw('MOONPUFF'); b.text(160 - w // 2, 46, 'MOONPUFF', TEAL)
-    b.dither(160 - w // 2 - 1, 45, 160 + w // 2 + 1, 52, (127, 224, 208, 60))
-    # left wall: two posters for made-up games
-    def poster(x0, y0, x1, y1, bg, art):
-        b.box(x0, y0, x1, y1, bg, OL); b.px(x0 + 2, y0 + 1, hx('d64545')); b.px(x1 - 2, y0 + 1, hx('d64545')); art(x0, y0, x1, y1)
-    def puff(x0, y0, x1, y1):
-        cx, cy = (x0 + x1) // 2, (y0 + y1) // 2 + 2
-        b.ellipse(cx, cy, 8, 6, hx('ffffff'), OL); b.ellipse(cx - 5, cy - 3, 4, 3, hx('ffffff')); b.ellipse(cx + 4, cy - 4, 4, 3, hx('ffffff'))
-        b.px(cx - 3, cy, OL); b.px(cx + 2, cy, OL); b.hl(cx - 1, cx, cy + 2, hx('ff8fc8'))
-        b.text(x0 + 3, y1 - 7, 'PUFF', hx('3f3355'))
-        for k in range(5): b.px(x0 + 3 + k * 4, y0 + 4 + (k % 2) * 3, hx('fff4b0'))
-    def rocket(x0, y0, x1, y1):
-        cx = (x0 + x1) // 2
-        b.rect(cx - 2, y0 + 7, cx + 2, y1 - 12, hx('f4f1ff')); b.px(cx, y0 + 5, hx('ff6f6f')); b.hl(cx - 1, cx + 1, y0 + 6, hx('ff6f6f'))
-        b.px(cx, y0 + 11, hx('7fe0d0')); b.hl(cx - 4, cx - 3, y1 - 13, hx('ff6f6f')); b.hl(cx + 3, cx + 4, y1 - 13, hx('ff6f6f'))
-        b.vl(cx - 1, y1 - 11, y1 - 9, hx('ffd166')); b.vl(cx + 1, y1 - 11, y1 - 8, hx('ffb347'))
-        b.text(x0 + 3, y1 - 6, 'GO', hx('ffd166'))
-        for k in range(6): b.px(x0 + 2 + (k * 7) % (x1 - x0 - 3), y0 + 3 + (k * 5) % 12, hx('ffffff'))
-    poster(14, 16, 40, 50, hx('b8e6ff'), puff); poster(48, 20, 72, 52, hx('2f2a52'), rocket)
-    # shelf with plushies and figures, above the arcade
-    b.box(10, 58, 74, 61, hx('f2c98a'), OL, hx('fbe2b8')); b.px(14, 62, OL); b.px(70, 62, OL)
-    b.ellipse(20, 53, 5, 4, hx('ffffff'), OL); b.px(18, 53, OL); b.px(22, 53, OL)                 # puff plush
-    b.ellipse(34, 54, 4, 3, hx('ffd166'), OL); b.px(32, 50, hx('ffd166')); b.px(36, 50, hx('ffd166'))   # star buddy
-    b.box(42, 48, 47, 57, hx('7fe0d0'), OL); b.box(43, 45, 46, 48, hx('f7d5b5'), OL)                  # little figure
-    b.box(52, 50, 60, 57, hx('ff8fc8'), OL); b.hl(53, 59, 52, hx('ffffff'))                           # game box
-    b.box(63, 47, 70, 57, hx('b8a2ff'), OL); b.hl(64, 69, 50, hx('ffffff'))
-    # mini arcade cabinet on the floor, left
-    AC = hx('5b4d8a'); ACD = hx('453a6d')
-    b.box(12, 66, 44, 124, AC, OL, hx('7466a8'), ACD); b.rect(16, 70, 40, 76, hx('ff8fc8')); b.text(17, 71, 'PLAY', hx('ffffff'))
-    b.box(16, 80, 40, 98, hx('1d1a33'), OL); b.rect(18, 82, 38, 96, hx('2b6f7a'))
-    for k in range(5): b.rect(20 + k * 4, 92 - (k % 3) * 3, 21 + k * 4, 95, hx('ffd166'))
-    b.px(29, 86, hx('ff8fc8')); b.px(30, 85, hx('ff8fc8'))
-    b.rect(14, 100, 42, 106, ACD); b.hl(14, 42, 100, OL); b.ellipse(22, 103, 1, 1, hx('ff6f6f')); b.ellipse(34, 103, 1, 1, hx('7fe0d0')); b.vl(26, 101, 103, hx('ffffff'))
-    # whiteboard with sticky notes and a flow doodle (right wall)
-    b.box(214, 14, 300, 66, hx('fbfbff'), OL, hx('ffffff'), hx('e3e3ef')); b.hl(214, 300, 66, hx('c9cbd8')); b.hl(216, 298, 67, OL)
-    for (sx, sy, cc) in [(220, 20, 'ffe066'), (232, 22, 'ff9ec7'), (244, 19, '9ae6d8'), (222, 34, 'b8a2ff'), (282, 46, 'ffe066'), (288, 20, 'ff9ec7')]:
-        b.box(sx, sy, sx + 9, sy + 9, hx(sc := cc), OL); b.hl(sx + 2, sx + 7, sy + 3, hx('6a5d8a')); b.hl(sx + 2, sx + 5, sy + 5, hx('6a5d8a'))
-    for (x0, y0) in [(258, 22), (258, 40)]: b.box(x0, y0, x0 + 14, y0 + 8, hx('fbfbff'), hx('5b7bd6'))
-    b.vl(265, 31, 39, hx('5b7bd6')); b.hl(273, 284, 26, hx('5b7bd6')); b.px(283, 25, hx('5b7bd6')); b.px(283, 27, hx('5b7bd6'))
-    b.box(238, 40, 252, 48, hx('fbfbff'), hx('e05a5a')); b.hl(252, 257, 44, hx('e05a5a'))
-    b.text(236, 54, 'LVL 3', hx('5b7bd6')); b.ellipse(282, 58, 4, 3, hx('fbfbff'), hx('3fae8f'))
-    # monstera in a striped pot, right of the desk
-    plant_tall(b, 292, 128, hx('ffd166'), hx('e0ad3c'), OL, hx('3fae8f'), hx('2f8a70'), hx('7fd6b6'), hx('2f6b56'))
-    # bean bag on the floor
-    b.ellipse(252, 138, 16, 10, hx('ffb347'), OL); b.ellipse(248, 133, 9, 5, hx('ffc777')); b.hl(244, 262, 141, hx('e08f2a'))
-    # rug: round, pastel rings
-    for (rx, ry, cc) in [(96, 24, '6fcfc4'), (90, 21, 'b8a2ff'), (82, 18, 'ffd1e6'), (72, 15, 'b8a2ff'), (64, 12, 'fff1c9')]:
-        b.ellipse(160, 150, rx, ry, hx(cc))
-    b.ellipse(160, 150, 96, 24, None, OL)
-    # Rio's gaming chair: teal with a pink stripe
-    chair_back_tall(b, 145, 175, 52, 96, hx('3c8f8a'), hx('2c6b67'), hx('5fb5ae'), OL)
-    b.rect(158, 54, 162, 95, hx('ff8fc8')); b.vl(158, 54, 95, hx('e0559f'))
-    b.rect(150, 58, 170, 64, hx('2c6b67')); b.hl(150, 170, 58, OL)
+    b.rect(0, 0, W - 1, 4, hx('fbf5e8')); b.hl(0, W - 1, 5, hx('e3d4b4')); b.hl(0, W - 1, 6, OL)
+    for y in range(12, FLOOR - 6, 14):
+        for x in range((y // 14 % 2) * 12, 232, 24): b.px(x, y, WALL2)
+    tiles(b, FLOOR, hx('7d9fd1'), hx('7395ca'), hx('6584b8'), hx('8eaedb'))
+    b.rect(0, FLOOR - 4, 230, FLOOR - 1, hx('fbf5e8')); b.hl(0, 230, FLOOR - 5, hx('e3d4b4')); b.hl(0, 230, FLOOR, OL)
+    # windows like the map's
+    window(b, 22, 14, 76, 58, hx('fffaf0'), OL, hx('bfe0f2'), hx('a9d3ec'), hx('ffffff'))
+    window(b, 150, 14, 204, 58, hx('fffaf0'), OL, hx('bfe0f2'), hx('a9d3ec'), hx('ffffff'))
+    # a pin board of game art between the windows
+    b.box(88, 18, 138, 52, hx('d9b98a'), OL, hx('e9cfa4'))
+    for (x, y, c, art) in [(91, 21, 'b8e6ff', 'puff'), (106, 22, '2f2a52', 'rocket'), (121, 21, 'ffd9e8', 'star'), (93, 37, 'c9f0d8', 'map'), (110, 38, 'fff1b8', 'note')]:
+        b.box(x, y, x + 13, y + 12, hx(c), OL); b.px(x + 6, y + 1, hx('e05a5a'))
+        if art == 'puff': b.ellipse(x + 7, y + 7, 4, 3, hx('ffffff'), OL); b.px(x + 5, y + 7, OL); b.px(x + 8, y + 7, OL)
+        if art == 'rocket': b.vl(x + 6, y + 3, y + 9, hx('ffffff')); b.px(x + 6, y + 10, hx('ffb347')); b.px(x + 3, y + 3, hx('ffffff')); b.px(x + 10, y + 5, hx('ffffff'))
+        if art == 'star': b.hl(x + 4, x + 9, y + 6, hx('ffb347')); b.vl(x + 6, y + 3, y + 9, hx('ffb347'))
+        if art == 'map': b.hl(x + 2, x + 11, y + 6, hx('3fae8f')); b.vl(x + 5, y + 3, y + 10, hx('3fae8f')); b.px(x + 9, y + 3, hx('e05a5a'))
+        if art == 'note': b.hl(x + 2, x + 10, y + 4, hx('6a5d8a')); b.hl(x + 2, x + 8, y + 7, hx('6a5d8a'))
+    # the glass wall into the games room (right): wood floor, TV on a stand, bookshelf, moon rug, bean bags
+    GX = 232
+    b.rect(GX, 7, W - 1, H - 1, hx('a87d55'))
+    for y in range(7, H, 6):
+        b.hl(GX, W - 1, y, hx('94693f'))
+        for x in range(GX + ((y // 6) * 13) % 31, W, 31): b.vl(x, y + 1, min(y + 5, H - 1), hx('94693f'))
+    b.rect(GX, 7, W - 1, 72, hx('5c4a6e'))                               # the games room's dim wall
+    for y in range(10, 72, 8):
+        for x in range(GX + 4 + (y // 8 % 2) * 6, W, 12): b.px(x, y, hx('6a5880'))
+    b.hl(GX, W - 1, 72, OL)
+    b.box(250, 28, 290, 54, hx('2b2b33'), OL); b.rect(253, 31, 287, 51, hx('3f6fb0')); b.ellipse(262, 40, 3, 3, hx('ffd166')); b.rect(276, 36, 281, 41, hx('ff8fc8')); b.rect(253, 46, 287, 51, hx('5cb85c'))
+    b.box(246, 55, 294, 66, hx('c49a6a'), OL, hx('d9b384')); b.rect(250, 58, 258, 63, hx('3a3a46')); b.box(262, 58, 270, 62, hx('ffffff'), OL); b.vl(274, 57, 64, OL)
+    b.box(300, 18, 318, 72, hx('b98a5a'), OL, hx('d1a575'))
+    for y in (30, 44, 58):
+        b.hl(300, 318, y, OL)
+        for i, cc in enumerate(['e05a5a', '3f7ad6', 'ffd166', '5cb85c', 'b8a2ff']): b.rect(303 + i * 3, y - 9, 304 + i * 3, y - 1, hx(cc))
+    b.ellipse(272, 88, 30, 9, hx('5b8fe0'), OL); b.ellipse(266, 87, 6, 4, hx('ffe27a')); b.ellipse(269, 85, 5, 4, hx('5b8fe0'))
+    for (x, y) in [(252, 85), (290, 89), (282, 83)]: b.px(x, y, hx('ffffff'))
+    b.ellipse(252, 98, 8, 5, hx('ff9eb5'), OL); b.ellipse(272, 99, 7, 4, hx('f4f4f8'), OL); b.px(270, 98, OL); b.px(274, 98, OL); b.ellipse(292, 98, 8, 5, hx('7fd6b6'), OL)
+    # the glass itself: a frame and some shine
+    b.rect(GX - 2, 6, GX, H - 1, hx('c9d0dc')); b.vl(GX - 3, 6, H - 1, OL); b.vl(GX + 1, 6, H - 1, OL)
+    for k in range(0, 120, 30):
+        for i in range(10): b.px(GX + 10 + i + (k % 60), 20 + k - i, (255, 255, 255, 120))
+    b.dither(GX + 2, 7, W - 1, H - 1, (210, 230, 245, 40))
+    # a second desk chair at the long desk (left, empty), a plant, the printer stand
+    b.box(12, 84, 36, FLOOR + 6, hx('fbf5e8'), OL, None, hx('e3d4b4')); b.ellipse(24, 74, 10, 10, hx('3fae8f'), OL); b.ellipse(20, 70, 4, 3, hx('7fd6b6')); b.ellipse(29, 77, 3, 3, hx('2f8a70'))
+    # Rio's chair: the same grey office chair as on the map
+    CG = hx('5e6474'); CGD = hx('4a4f5e'); CGH = hx('7a8194')
+    office_chair_back(b, 144, 176, 62, 104, CG, CGD, CGH, OL, None)
+    for y in range(68, 100, 4): b.hl(150, 170, y, CGD)                  # mesh back
+    chair_base(b, 160, 106, 117, CG, CGD, OL, hx('a9adb8'))
     b.save(OUT + 'meet_moonpuff_back.png')
 
     d = Pic(W, H)
-    TOP = hx('f2d6a8'); TOPH = hx('fbe7c6'); FR = hx('e8c48e'); FRD = hx('cfa56b'); FRH = hx('f5dcb3')
-    d.rect(104, 88, 216, 94, TOP); d.hl(105, 215, 89, TOPH); d.hl(104, 216, 88, OL); d.vl(104, 88, 94, OL); d.vl(216, 88, 94, OL); d.hl(104, 216, 94, OL)
-    d.rect(108, 95, 212, 124, FR); d.vl(108, 95, 124, OL); d.vl(212, 95, 124, OL); d.hl(108, 212, 124, OL); d.hl(109, 211, 95, FRD)
-    for k in range(0, 104, 8): d.vl(109 + k, 96, 123, FRH if k % 16 == 0 else FR)
-    # stickers on the desk front
-    d.ellipse(126, 106, 5, 5, hx('ffffff'), OL); d.px(124, 105, OL); d.px(128, 105, OL); d.hl(125, 127, 108, hx('ff8fc8'))
-    d.box(144, 101, 158, 109, hx('3f3355'), OL); d.text(145, 103, 'GG', hx('7fe0d0'))
-    for k in range(5):
-        ang = k * 72; import math
-        d.px(186 + round(5 * math.cos(math.radians(ang - 90))), 110 + round(5 * math.sin(math.radians(ang - 90))), hx('ffd166'))
-    d.ellipse(186, 110, 3, 3, hx('ffd166'), OL)
-    d.box(196, 112, 206, 118, hx('b8a2ff'), OL); d.text(197, 113, 'UX', hx('ffffff'))
-    for x in (112, 206): d.rect(x, 125, x + 3, 132, hx('5b4d8a')); d.vl(x - 1, 125, 132, OL); d.vl(x + 4, 125, 132, OL); d.hl(x - 1, x + 4, 132, OL)
-    # on the desk: tablet with stylus, sketchbook, moon plush, cactus, two mugs (Rio's and yours)
-    d.box(110, 84, 132, 88, hx('2b2b3a'), OL); d.hl(112, 130, 85, hx('3c8f8a')); d.vl(134, 82, 88, hx('ffffff')); d.px(134, 81, OL)
-    d.box(138, 80, 150, 88, hx('ff8fc8'), OL, hx('ffb3d9')); d.hl(140, 148, 83, hx('ffffff')); d.hl(140, 146, 85, hx('ffffff'))
-    d.ellipse(206, 83, 5, 5, hx('fff4b0'), OL); d.ellipse(209, 81, 4, 4, TOP); d.px(204, 83, OL); d.px(205, 85, hx('ff8fc8'))
-    d.box(194, 80, 200, 88, hx('ff8fc8'), OL); d.box(195, 72, 199, 80, hx('5cb85c'), OL); d.px(193, 76, hx('5cb85c')); d.px(201, 75, hx('5cb85c')); d.px(197, 71, hx('ffd166'))
+    # the long light-wood desk from the map: a solid front, a drawer pedestal on the right, things on top
+    TOP = hx('e9c99a'); TOPH = hx('f6dfb8'); FR = hx('dcb47e'); FRD = hx('c49a62'); FRH = hx('eccb98')
+    d.rect(60, DESK_TOP - 1, 230, DESK_TOP + 3, TOP); d.hl(61, 229, DESK_TOP, TOPH); d.hl(60, 230, DESK_TOP - 1, OL); d.hl(60, 230, DESK_TOP + 4, OL); d.vl(59, DESK_TOP - 1, DESK_TOP + 4, OL); d.vl(231, DESK_TOP - 1, DESK_TOP + 4, OL)
+    d.rect(64, DESK_TOP + 5, 226, 128, FR); d.vl(63, DESK_TOP + 5, 128, OL); d.vl(227, DESK_TOP + 5, 128, OL); d.hl(63, 227, 129, OL); d.hl(64, 226, DESK_TOP + 5, FRD)
+    for x in range(70, 226, 16): d.vl(x, DESK_TOP + 7, 127, FRH)
+    for k in range(3): y0 = DESK_TOP + 8 + k * 7; d.box(190, y0, 222, y0 + 5, FR, FRD, FRH); d.hl(202, 210, y0 + 2, hx('8a6a4a'))
+    d.box(68, DESK_TOP + 8, 100, DESK_TOP + 20, FR, FRD, FRH); d.hl(80, 88, DESK_TOP + 13, hx('8a6a4a'))
+    d.dither(60, 130, 230, 132, (0, 0, 0, 35))
+    # on the desk (left to right): the gift box, the flower pot, the binders, the monitor (its back to us), the figure
+    d.box(66, 92, 82, DESK_TOP - 2, hx('fbf5f5'), OL); d.vl(74, 92, DESK_TOP - 2, hx('e86a8a')); d.hl(66, 82, 96, hx('e86a8a')); d.ellipse(71, 90, 2, 1, hx('e86a8a'), OL); d.ellipse(77, 90, 2, 1, hx('e86a8a'), OL)
+    d.box(88, 94, 96, DESK_TOP - 2, hx('ffffff'), OL); d.vl(92, 86, 93, hx('5cb85c')); d.ellipse(92, 84, 3, 2, hx('ff6f6f'), OL); d.px(92, 84, hx('ffd166')); d.px(89, 90, hx('5cb85c')); d.px(95, 89, hx('5cb85c'))
+    for i, cc in enumerate(['5b8fe0', 'e05a5a', '3fae8f']): d.box(100 + i * 6, 88, 105 + i * 6, DESK_TOP - 2, hx(cc), OL); d.hl(101 + i * 6, 104 + i * 6, 92, hx('ffffff'))
+    d.box(120, 82, 140, DESK_TOP - 9, hx('9aa1b2'), OL, hx('b9bfcc')); d.ellipse(130, 89, 1, 1, hx('7fe0d0')); d.rect(128, DESK_TOP - 8, 132, DESK_TOP - 3, hx('9aa1b2')); d.box(124, DESK_TOP - 3, 136, DESK_TOP - 2, hx('9aa1b2'), OL)
+    d.box(196, 98, 204, DESK_TOP - 2, hx('2b2b33'), OL); d.ellipse(200, 92, 4, 4, hx('8ad66a'), OL); d.px(198, 92, OL); d.px(202, 92, OL); d.px(197, 87, hx('8ad66a')); d.px(203, 87, hx('8ad66a'))
     def mug(x, y, c, cd):
         d.box(x, y, x + 7, y + 7, c, OL); d.vl(x + 6, y + 1, y + 6, cd); d.hl(x + 1, x + 6, y + 1, hx('6b3e2a'))
         d.px(x + 8, y + 2, OL); d.px(x + 9, y + 3, OL); d.px(x + 9, y + 4, OL); d.px(x + 8, y + 5, OL)
-    mug(182, 80, hx('7fe0d0'), hx('5cbfb0'))     # Rio's
-    mug(122, 79, hx('ffd166'), hx('e0ad3c'))     # the one waiting for you, at the front edge
-    d.im = d.im.transform(d.im.size, 0, (1, 0, 0, 0, 1, -4)); d.save(OUT + 'meet_moonpuff_desk.png')
+    mug(180, DESK_TOP - 9, hx('7fe0d0'), hx('5cbfb0'))     # Rio's
+    mug(146, DESK_TOP - 9, hx('ffd166'), hx('e0ad3c'))     # yours
+    d.save(OUT + 'meet_moonpuff_desk.png')
 
     c = Pic(W, H)
-    for x0 in (104, 188):    # round-backed mustard chairs, black legs
-        V = hx('ffc75f'); VD = hx('e0a13a'); VH = hx('ffe0a0')
-        for y in range(126, 153):
-            t = (y - 126); inset = [6, 3, 2, 1, 1][t] if t < 5 else 0
-            c.hl(x0 + inset, x0 + 28 - inset, y, V)
-            c.px(x0 + inset, y, OL); c.px(x0 + 28 - inset, y, OL)
-        c.hl(x0 + 6, x0 + 22, 126, OL); c.vl(x0 + 3, 130, 150, VH); c.vl(x0 + 25, 130, 150, VD)
-        c.hl(x0 + 6, x0 + 22, 140, VD); c.hl(x0 + 6, x0 + 22, 141, VH)
-        c.rect(x0 - 1, 152, x0 + 29, 155, VD); c.hl(x0 - 1, x0 + 29, 152, OL); c.hl(x0 - 1, x0 + 29, 155, OL); c.vl(x0 - 1, 152, 155, OL); c.vl(x0 + 29, 152, 155, OL)
-        for lx in (x0 + 2, x0 + 25): c.rect(lx, 156, lx + 1, 168, hx('2b2b3a')); c.hl(lx - 1, lx + 2, 169, OL)
+    visitor_chair(c, 104, hx('ffc75f'), hx('e0a13a'), hx('ffe0a0'), OL, hx('2b2b3a'))
     c.save(OUT + 'meet_moonpuff_chairs.png')
 
 stitchlight(); moonpuff(); print('ok')

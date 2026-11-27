@@ -118,7 +118,7 @@ export function BlindBoxTab({ s, up, close }: { s: Save; up: (p: Partial<Save>) 
           <div className="bb-panel">
             <div className="pix bb-h">{t('Your piggy bank', '你的存钱罐')}</div>
             <div className="sub">{t('Every hour of finished tasks earns a blind pack.', '每完成一小时的任务，就能得到一个盲包。')}</div>
-            <div className="bb-pig"><img key={puff} className={puff ? 'puff' : ''} src={pigImg} alt={t('The glass piggy bank', '玻璃存钱罐')} /></div>
+            <div className="bb-pig"><img key={puff} className={puff ? 'puff' : ''} style={{ position: 'relative', left: [42, 24, 0, 0][Math.min(3, b.ready)] }} src={pigImg} alt={t('The glass piggy bank', '玻璃存钱罐')} /></div>
             <div className="fill-pill" style={{ ['--pct' as string]: `${(b.mins / BOX_MINS) * 100}%` }}><span className="pix">{Math.floor(b.mins)} / {BOX_MINS} {t('min', '分钟')}</span><small>{t('to the next pack', '到下一个盲包')}</small></div>
             <div className="bb-line">{full ? t("That's 8 packs today. The piggy bank rests until tomorrow.", '今天已经攒了 8 个盲包。存钱罐休息到明天。') : ZH ? `再做 ${left} 分钟任务，就能得到下一个盲包` : `${left} more minutes of tasks to your next pack`}</div>
             <div className="sub">{t('Short tasks add up, and nothing resets.', '短任务也会累积，什么都不会清零。')}</div>
