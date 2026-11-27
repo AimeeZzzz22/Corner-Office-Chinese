@@ -324,4 +324,4 @@ def moonpuff():
     visitor_chair(c, 104, hx('ffc75f'), hx('e0a13a'), hx('ffe0a0'), OL, hx('2b2b3a'))
     c.save(OUT + 'meet_moonpuff_chairs.png')
 
-stitchlight(); moonpuff(); print('ok')
+stitchlight(); print('ok')   # Moonpuff's coffee chat is in the kitchen now: tools/draw_kitchen.py

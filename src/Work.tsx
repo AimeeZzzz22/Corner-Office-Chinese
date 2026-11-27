@@ -59,23 +59,25 @@ export function Meeting({ s, msg, sheet, close }: { s: Save; msg: ChatMsg; sheet
       // the boss in their chair: looks up and talks (a small nod while speaking)
       const talking = stepRef.current === 'hello' || stepRef.current === 'ask' || stepRef.current === 'reply';
       const nod = talking && Math.floor(t * 5) % 4 === 0 ? 1 : 0;
-      char(x, bossSheet, fr(t), 2, 160, 110 + nod * 0.25);
-      if (ok(desk)) x.drawImage(desk, 0, 0);
+      // Moonpuff: the studio kitchen, Rio across a little bistro table (both seen from the side)
+      if (rio) char(x, bossSheet, DIR_COL.left + fr(t), 0, 196, 148 + nod * 0.25, 0, 28);
+      else char(x, bossSheet, fr(t), 2, 160, 110 + nod * 0.25);
+      if (ok(desk) && !rio) x.drawImage(desk, 0, 0);
       // steam from the mugs
-      if (rio) for (const [mx, my] of [[184, 93], [150, 93]]) for (let i = 0; i < 3; i++) {
+      if (rio) for (const [mx, my] of [[175, 124], [143, 124]]) for (let i = 0; i < 3; i++) {
         const k = (t * 0.7 + i / 3) % 1; x.fillStyle = `rgba(255,255,255,${0.7 * Math.sin(k * Math.PI)})`;
         x.fillRect((mx + Math.round(Math.sin(k * 6 + i) * 1.5)) * B, (my - k * 12) * B, B, B);
       }
       // you: walk in from the left, then sit down across the desk (seen from behind)
       const walkT = 2.1, wt = Math.min(1, t / walkT);
       if (stepRef.current === 'walk') {
-        if (ok(chairs)) x.drawImage(chairs, 0, 0);
-        char(x, sheet, DIR_COL.right + fr(t, 8), 1, -14 + wt * 132, 177);
+        if (rio) { if (ok(desk)) x.drawImage(desk, 0, 0); char(x, sheet, DIR_COL.right + fr(t, 8), 1, -14 + wt * 124, 176); }
+        else { if (ok(chairs)) x.drawImage(chairs, 0, 0); char(x, sheet, DIR_COL.right + fr(t, 8), 1, -14 + wt * 132, 177); }
       } else {
         if (!sat.current) sat.current = t;
         const settle = Math.max(0, 1 - (t - sat.current) * 5);
-        char(x, sheet, DIR_COL.back, 0, 118, 150 - settle * 2);
-        if (ok(chairs)) x.drawImage(chairs, 0, 0);
+        if (rio) { char(x, sheet, DIR_COL.right, 0, 124, 148 - settle * 2, 0, 28); if (ok(desk)) x.drawImage(desk, 0, 0); }
+        else { char(x, sheet, DIR_COL.back, 0, 118, 150 - settle * 2); if (ok(chairs)) x.drawImage(chairs, 0, 0); }
       }
       // walking in: the room fades up from black
       if (t < 0.6) { x.fillStyle = `rgba(20,14,24,${1 - t / 0.6})`; x.fillRect(0, 0, 1280, 720); }
@@ -86,19 +88,19 @@ export function Meeting({ s, msg, sheet, close }: { s: Save; msg: ChatMsg; sheet
     return () => { cancelAnimationFrame(raf); clearTimeout(id); };
   }, [sheet]);
   useEffect(() => { setTyped(false); }, [step]);
-  const hello = rio ? t("Hey, come in! The yellow mug's yours. Sit anywhere.", '嘿，进来吧！黄色那杯是给你的，随便坐。') : t('Come in. Close the door behind you and have a seat.', '进来吧。把门带上，坐。');
+  const hello = rio ? t("Hey! I made us coffee. The yellow mug's yours, grab a seat.", '嘿！我泡了两杯咖啡，黄色那杯是你的，坐吧。') : t('Come in. Close the door behind you and have a seat.', '进来吧。把门带上，坐。');
   const bye = rio ? t('Thanks for the chat. Same time next week? Only if you want to.', '谢谢你跟我聊。下周再一起喝杯咖啡？想来再来。') : t('Thank you for being honest with me. My door is open.', '谢谢你跟我说实话。我的门一直开着。');
-  const BOSS_AT: [number, number] = [420, 92];
+  const BOSS_AT: [number, number] = rio ? [560, 300] : [420, 92];
   return (
     <div className="meet" onClick={(e) => e.stopPropagation()}>
       <canvas ref={cv} width={1280} height={720} />
-      <div className="meet-tag pix">{rio ? (ZH ? `${boss.name}的办公室 · 咖啡小聊` : `${boss.name}'s office · Coffee chat`) : (ZH ? `${boss.name}的办公室 · 一对一约谈` : `${boss.name}'s office · One-to-one`)}</div>
-      {step === 'walk' && <div className="meet-knock">{t('*knock knock*', '*咚咚*')}</div>}
+      <div className="meet-tag pix">{rio ? (ZH ? `茶水间 · 跟${boss.name}喝杯咖啡` : `The kitchen · Coffee with ${boss.name}`) : (ZH ? `${boss.name}的办公室 · 一对一约谈` : `${boss.name}'s office · One-to-one`)}</div>
+      {step === 'walk' && !rio && <div className="meet-knock">{t('*knock knock*', '*咚咚*')}</div>}
       {step === 'hello' && <Bubble who={boss.name} at={BOSS_AT} text={hello} done={() => setTimeout(() => setStep('ask'), 1400)} />}
       {step === 'ask' && <Bubble who={boss.name} at={BOSS_AT} text={meetIntro(r.boss, msg.coins ?? 2, r.minFocus)} done={() => setTyped(true)} />}
       {step === 'ask' && typed && <div className="meet-opts"><span>{t('Your answer', '你的回答')}</span>
         {MEET_CHOICES().map((c) => <button key={c.key} onClick={() => { tap(); setPick(c); setStep('answer'); }}>{c.text}</button>)}</div>}
-      {step === 'answer' && pick && <Bubble who={t('You', '你')} at={[150, 300]} side="left" w={380} text={pick.text} done={() => setTimeout(() => setStep('reply'), 900)} />}
+      {step === 'answer' && pick && <Bubble who={t('You', '你')} at={rio ? [130, 300] : [150, 300]} side="left" w={380} text={pick.text} done={() => setTimeout(() => setStep('reply'), 900)} />}
       {step === 'reply' && pick && <Bubble who={boss.name} at={BOSS_AT} text={`${pick.reply[r.boss as 'margaux' | 'rio']} ${bye}`} done={() => setTyped(true)} />}
       {step === 'reply' && typed && <div className="meet-opts end"><span>{t('No penalty, ever. Your boss just wanted to check in.', '没有任何惩罚，上司只是想关心一下你。')}</span>
         <button className="go" onClick={() => { play('heart_pop', 0.5); close(pick!.key); }}>{rio ? t('Thanks, Rio. Back to work', '谢谢里奥，回去工作啦') : t('Thank you. Back to my desk', '谢谢，回工位了')}</button></div>}
